@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { CardDefinition } from "../models/definition";
 import { createCardInstance } from "../models/instance";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
-import { applyRareCandy, applyTrainerEffect } from "./trainerEffects";
+import {
+  applyRareCandy,
+  applyTrainerEffect,
+  applyWallysCompassion,
+  canPlayTrainerEffect,
+  continueNightStretcherPick,
+} from "./trainerEffects";
 import { createInitialGame } from "./rules";
 import { getPlayer } from "./types";
 
@@ -139,10 +145,168 @@ describe("trainerEffects", () => {
     player.hand = [
       createCardInstance(mockBasic("A").apiId, PlayerId.P1, Zone.Hand),
       createCardInstance(mockBasic("B").apiId, PlayerId.P1, Zone.Hand),
+      createCardInstance(mockBasic("C").apiId, PlayerId.P1, Zone.Hand),
     ];
 
+    expect(canPlayTrainerEffect(state, PlayerId.P1, ultraBall).ok).toBe(true);
     applyTrainerEffect(state, PlayerId.P1, ultraBall);
     expect(state.pendingAction?.type).toBe("ULTRA_BALL_DISCARD");
+  });
+
+  it("Ultra Ball cannot be played with fewer than 3 cards in hand", () => {
+    const ultraBall = mockTrainer("Ultra Ball");
+    const cards = [mockBasic("Dreepy"), ...Array.from({ length: 59 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    const player = getPlayer(state, PlayerId.P1);
+    player.hand = [
+      createCardInstance(mockBasic("A").apiId, PlayerId.P1, Zone.Hand),
+      createCardInstance(mockBasic("B").apiId, PlayerId.P1, Zone.Hand),
+    ];
+
+    expect(canPlayTrainerEffect(state, PlayerId.P1, ultraBall).ok).toBe(false);
+  });
+
+  it("Boss's Orders requires opponent Bench", () => {
+    const boss = mockTrainer("Boss's Orders", ["Supporter"]);
+    const cards = [mockBasic("Dreepy"), ...Array.from({ length: 59 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    getPlayer(state, PlayerId.P2).bench = [];
+
+    expect(canPlayTrainerEffect(state, PlayerId.P1, boss).ok).toBe(false);
+  });
+
+  it("Lillie's Pearl does not trigger Lillie's Determination effect", () => {
+    const pearl = mockTrainer("Lillie's Pearl", ["Item"]);
+    const cards = [mockBasic("Dreepy"), ...Array.from({ length: 59 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    const player = getPlayer(state, PlayerId.P1);
+    player.hand = [createCardInstance(mockBasic("A").apiId, PlayerId.P1, Zone.Hand)];
+
+    applyTrainerEffect(state, PlayerId.P1, pearl);
+    expect(player.hand).toHaveLength(1);
+  });
+
+  it("Night Stretcher can pick up to 3 Pokémon", () => {
+    const stretcher = mockTrainer("Night Stretcher");
+    const dreepy = mockBasic("Dreepy");
+    const cards = [dreepy, ...Array.from({ length: 59 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    const player = getPlayer(state, PlayerId.P1);
+    const p1 = createCardInstance(dreepy.apiId, PlayerId.P1, Zone.Discard);
+    const p2 = createCardInstance(dreepy.apiId, PlayerId.P1, Zone.Discard);
+    const p3 = createCardInstance(dreepy.apiId, PlayerId.P1, Zone.Discard);
+    player.discard = [p1, p2, p3];
+
+    applyTrainerEffect(state, PlayerId.P1, stretcher);
+    expect(state.pendingAction?.type).toBe("PICK_DISCARD");
+    if (state.pendingAction?.type === "PICK_DISCARD") {
+      expect(state.pendingAction.slotsRemaining).toBe(3);
+    }
+
+    continueNightStretcherPick(state, PlayerId.P1, p1.instanceId);
+    expect(player.hand).toHaveLength(1);
+    expect(state.pendingAction?.type).toBe("PICK_DISCARD");
+    if (state.pendingAction?.type === "PICK_DISCARD") {
+      expect(state.pendingAction.slotsRemaining).toBe(2);
+    }
+  });
+
+  it("Hilda searches an Evolution Pokémon and an Energy card", () => {
+    const hilda = mockTrainer("Hilda", ["Supporter"]);
+    const drakloak = {
+      ...mockBasic("Drakloak", "90"),
+      subtypes: ["Stage 1"],
+      evolvesFrom: "Dreepy",
+    };
+    const fireEnergy = mockEnergy("Fire Energy");
+    const cards = [
+      mockBasic("Dreepy"),
+      drakloak,
+      hilda,
+      fireEnergy,
+      ...Array.from({ length: 55 }, (_, i) => mockEnergy(`E${i}`)),
+    ];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+      extraDefinitions: [drakloak],
+    });
+    state.phase = GamePhase.Active;
+    const player = getPlayer(state, PlayerId.P1);
+    player.deck = [
+      createCardInstance(drakloak.apiId, PlayerId.P1, Zone.Deck),
+      createCardInstance(fireEnergy.apiId, PlayerId.P1, Zone.Deck),
+    ];
+
+    applyTrainerEffect(state, PlayerId.P1, hilda);
+    expect(player.hand.some((card) => card.definitionId === drakloak.apiId)).toBe(true);
+    expect(player.hand.some((card) => card.definitionId === fireEnergy.apiId)).toBe(true);
+    expect(state.pendingAction).toBeNull();
+  });
+
+  it("Hilda can be played with only Energy in deck", () => {
+    const hilda = mockTrainer("Hilda", ["Supporter"]);
+    const fireEnergy = mockEnergy("Fire Energy");
+    const cards = [mockBasic("Dreepy"), hilda, fireEnergy, ...Array.from({ length: 57 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    const player = getPlayer(state, PlayerId.P1);
+    player.deck = [createCardInstance(fireEnergy.apiId, PlayerId.P1, Zone.Deck)];
+
+    expect(canPlayTrainerEffect(state, PlayerId.P1, hilda).ok).toBe(true);
+    applyTrainerEffect(state, PlayerId.P1, hilda);
+    expect(player.hand.some((card) => card.definitionId === fireEnergy.apiId)).toBe(true);
+  });
+
+  it("Wally's Compassion heals and shuffles Pokémon into deck", () => {
+    const wally = mockTrainer("Wally's Compassion", ["Supporter"]);
+    const dreepy = mockBasic("Dreepy");
+    const cards = [dreepy, wally, ...Array.from({ length: 58 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    const player = getPlayer(state, PlayerId.P1);
+    player.active = createCardInstance(dreepy.apiId, PlayerId.P1, Zone.Active);
+    player.active!.damageCounters = 80;
+
+    applyWallysCompassion(state, PlayerId.P1, player.active!.instanceId);
+    expect(player.active).toBeNull();
+    expect(player.deck.some((card) => card.definitionId === dreepy.apiId)).toBe(true);
   });
 
   it("Judge shuffles both hands and draws 4", () => {

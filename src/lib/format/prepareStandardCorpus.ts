@@ -4,6 +4,7 @@ import { mapApiCard } from "../catalog/mapApiCard";
 import type { PokemonTcgApiResponse } from "../catalog/types";
 import type { CardDefinition } from "../models/definition";
 import { parseAbilityText, parseAttackText } from "../engine/effects/parseText";
+import { parseTrainerText } from "../engine/effects/trainerText";
 import type { ParsedAbility, ParsedEffect } from "../engine/effects/types";
 import { analyzeParsedEffects } from "./effectCoverage";
 import { STANDARD_FORMAT } from "./standard";
@@ -13,7 +14,7 @@ const PAGE_SIZE = 250;
 
 export interface EffectTextRecord {
   id: string;
-  kind: "attack" | "ability";
+  kind: "attack" | "ability" | "trainer";
   text: string;
   coverage: "full" | "partial" | "none" | "empty";
   parsedEffects: ParsedEffect[];
@@ -23,18 +24,25 @@ export interface EffectTextRecord {
   implementationCoverage?: import("./effectCoverage").ImplementationCoverage;
   cardCount: number;
   exampleCards: string[];
+  trainerSubtype?: string;
 }
 
 export interface StandardCorpusManifest {
   generatedAt: string;
   format: typeof STANDARD_FORMAT;
-  totalCards: number;
+  totalPokemonCards: number;
+  totalTrainerCards: number;
   cardsWithAttacks: number;
   cardsWithAbilities: number;
+  cardsWithTrainerRules: number;
   uniqueAttackTexts: number;
   uniqueAbilityTexts: number;
+  uniqueTrainerTexts: number;
   attackCoverage: CoverageStats;
   abilityCoverage: CoverageStats;
+  trainerCoverage: CoverageStats;
+  /** @deprecated use totalPokemonCards */
+  totalCards?: number;
 }
 
 export interface CoverageStats {
@@ -56,8 +64,11 @@ export interface StandardCardIndex {
   set: string;
   number: string;
   regulationMark?: string;
+  supertype: CardDefinition["supertype"];
+  subtypes: string[];
   attacks: { name: string; damage: string; text: string; textId: string }[];
   abilities: { name: string; text: string; textId: string }[];
+  trainerRules?: { text: string; textId: string };
 }
 
 function getApiKey(): string | undefined {
@@ -68,7 +79,7 @@ function normalizeTextKey(text: string): string {
   return text.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-function textId(kind: "attack" | "ability", text: string): string {
+function textId(kind: "attack" | "ability" | "trainer", text: string): string {
   const key = normalizeTextKey(text);
   let hash = 0;
   for (let i = 0; i < key.length; i += 1) {
@@ -85,9 +96,9 @@ function countCoverage(records: EffectTextRecord[]): CoverageStats {
   return stats;
 }
 
-async function fetchStandardPokemonPage(page: number): Promise<PokemonTcgApiResponse> {
+async function fetchStandardPage(query: string, page: number): Promise<PokemonTcgApiResponse> {
   const params = new URLSearchParams({
-    q: STANDARD_FORMAT.pokemonQuery,
+    q: query,
     pageSize: String(PAGE_SIZE),
     page: String(page),
     orderBy: "set.releaseDate",
@@ -104,14 +115,14 @@ async function fetchStandardPokemonPage(page: number): Promise<PokemonTcgApiResp
   return (await response.json()) as PokemonTcgApiResponse;
 }
 
-async function fetchAllStandardPokemon(): Promise<CardDefinition[]> {
-  const first = await fetchStandardPokemonPage(1);
+async function fetchAllStandardCards(query: string): Promise<CardDefinition[]> {
+  const first = await fetchStandardPage(query, 1);
   const totalCount = first.totalCount ?? first.data.length;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const cards = first.data.map(mapApiCard);
 
   for (let page = 2; page <= totalPages; page += 1) {
-    const payload = await fetchStandardPokemonPage(page);
+    const payload = await fetchStandardPage(query, page);
     cards.push(...payload.data.map(mapApiCard));
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
@@ -119,18 +130,29 @@ async function fetchAllStandardPokemon(): Promise<CardDefinition[]> {
   return cards;
 }
 
-function buildCorpus(cards: CardDefinition[]): StandardCorpus {
+async function fetchAllStandardPokemon(): Promise<CardDefinition[]> {
+  return fetchAllStandardCards(STANDARD_FORMAT.pokemonQuery);
+}
+
+async function fetchAllStandardTrainers(): Promise<CardDefinition[]> {
+  return fetchAllStandardCards(STANDARD_FORMAT.trainerQuery);
+}
+
+function buildCorpus(pokemonCards: CardDefinition[], trainerCards: CardDefinition[]): StandardCorpus {
   const attackMap = new Map<string, EffectTextRecord>();
   const abilityMap = new Map<string, EffectTextRecord>();
+  const trainerMap = new Map<string, EffectTextRecord>();
   const cardIndex: StandardCardIndex[] = [];
 
-  for (const card of cards) {
+  for (const card of pokemonCards) {
     const entry: StandardCardIndex = {
       apiId: card.apiId,
       name: card.name,
       set: card.set.ptcgoCode ?? card.set.id,
       number: card.number,
       regulationMark: card.regulationMark,
+      supertype: card.supertype,
+      subtypes: card.subtypes,
       attacks: [],
       abilities: [],
     };
@@ -197,31 +219,82 @@ function buildCorpus(cards: CardDefinition[]): StandardCorpus {
     cardIndex.push(entry);
   }
 
+  for (const card of trainerCards) {
+    const parsed = parseTrainerText(card);
+    const effectText = parsed.text;
+    if (!effectText) continue;
+
+    const id = textId("trainer", effectText);
+    const entry: StandardCardIndex = {
+      apiId: card.apiId,
+      name: card.name,
+      set: card.set.ptcgoCode ?? card.set.id,
+      number: card.number,
+      regulationMark: card.regulationMark,
+      supertype: card.supertype,
+      subtypes: card.subtypes,
+      attacks: [],
+      abilities: [],
+      trainerRules: { text: effectText, textId: id },
+    };
+    cardIndex.push(entry);
+
+    const existing = trainerMap.get(id);
+    if (existing) {
+      existing.cardCount += 1;
+      if (existing.exampleCards.length < 3 && !existing.exampleCards.includes(card.name)) {
+        existing.exampleCards.push(card.name);
+      }
+    } else {
+      trainerMap.set(id, {
+        id,
+        kind: "trainer",
+        text: effectText,
+        coverage: parsed.parseCoverage,
+        parsedEffects: parsed.effects,
+        unknownClauses: parsed.unknownClauses,
+        implementationCoverage: parsed.implementationCoverage,
+        cardCount: 1,
+        exampleCards: [card.name],
+        trainerSubtype: card.subtypes[0],
+      });
+    }
+  }
+
   const attackTexts = [...attackMap.values()].sort((a, b) => b.cardCount - a.cardCount);
   const abilityTexts = [...abilityMap.values()].sort((a, b) => b.cardCount - a.cardCount);
+  const trainerTexts = [...trainerMap.values()].sort((a, b) => b.cardCount - a.cardCount);
 
   const manifest: StandardCorpusManifest = {
     generatedAt: new Date().toISOString(),
     format: STANDARD_FORMAT,
-    totalCards: cards.length,
-    cardsWithAttacks: cards.filter((c) => (c.attacks?.length ?? 0) > 0).length,
-    cardsWithAbilities: cards.filter((c) => (c.abilities?.length ?? 0) > 0).length,
+    totalPokemonCards: pokemonCards.length,
+    totalTrainerCards: trainerCards.length,
+    totalCards: pokemonCards.length,
+    cardsWithAttacks: pokemonCards.filter((c) => (c.attacks?.length ?? 0) > 0).length,
+    cardsWithAbilities: pokemonCards.filter((c) => (c.abilities?.length ?? 0) > 0).length,
+    cardsWithTrainerRules: trainerTexts.reduce((sum, entry) => sum + entry.cardCount, 0),
     uniqueAttackTexts: attackTexts.length,
     uniqueAbilityTexts: abilityTexts.length,
+    uniqueTrainerTexts: trainerTexts.length,
     attackCoverage: countCoverage(attackTexts),
     abilityCoverage: countCoverage(abilityTexts),
+    trainerCoverage: countCoverage(trainerTexts),
   };
 
   return {
     manifest,
-    effectTexts: [...attackTexts, ...abilityTexts],
+    effectTexts: [...attackTexts, ...abilityTexts, ...trainerTexts],
     cards: cardIndex,
   };
 }
 
 export async function prepareStandardCorpus(outputDir = "data/standard"): Promise<StandardCorpus> {
-  const cards = await fetchAllStandardPokemon();
-  const corpus = buildCorpus(cards);
+  const [pokemonCards, trainerCards] = await Promise.all([
+    fetchAllStandardPokemon(),
+    fetchAllStandardTrainers(),
+  ]);
+  const corpus = buildCorpus(pokemonCards, trainerCards);
 
   const resolvedDir = path.resolve(process.cwd(), outputDir);
   await mkdir(resolvedDir, { recursive: true });

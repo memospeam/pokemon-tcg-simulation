@@ -16,6 +16,18 @@ export interface TurnFlags {
   bonusAttackAvailable?: boolean;
   /** Results of coin flips during the current attack (heads = true). */
   lastCoinFlipResults?: boolean[];
+  /** Premium Power Pro: Fighting attacks +N to opponent Active. */
+  fightingActiveDamageBonus?: number;
+  /** Black Belt's Training: attacks +N vs opponent Active ex. */
+  activeExDamageBonus?: number;
+  /** Briar: Tera KO takes 1 extra Prize. */
+  briarExtraPrizeOnTeraKo?: boolean;
+  /** Played a Team Rocket Supporter from hand this turn. */
+  playedTeamRocketSupporter?: boolean;
+  /** Team Rocket's Factory optional draw available. */
+  trFactoryDrawAvailable?: boolean;
+  /** Lumiose City / similar once-per-turn stadium action used. */
+  stadiumOncePerTurnUsed?: boolean;
 }
 
 export interface PlayerState {
@@ -51,6 +63,10 @@ export interface EngineState {
   heldCard: CardInstance | null;
   /** Opponent cannot play Item cards from hand during their next turn (Itchy Pollen). */
   itemPlayBlockedForPlayerId: PlayerId | null;
+  /** Set when this player's Team Rocket Pokémon was Knocked Out; cleared when their turn ends. */
+  teamRocketKnockedOutSinceMyLastTurn: Record<PlayerId, boolean>;
+  /** Legacy Energy: prize reduction applied once per game per player. */
+  legacyEnergyPrizeReductionUsed: Record<PlayerId, boolean>;
 }
 
 export type GameAction =
@@ -61,6 +77,7 @@ export type GameAction =
   | { type: "PLAY_BASIC_TO_BENCH"; playerId: PlayerId; instanceId: string }
   | { type: "DRAW"; playerId: PlayerId }
   | { type: "ATTACH_ENERGY"; playerId: PlayerId; energyId: string; targetId: string }
+  | { type: "ATTACH_TOOL"; playerId: PlayerId; toolId: string; targetId: string }
   | { type: "PLAY_TRAINER"; playerId: PlayerId; instanceId: string }
   | { type: "EVOLVE"; playerId: PlayerId; evolutionId: string; targetId: string }
   | { type: "ATTACK"; playerId: PlayerId; attackName: string }
@@ -89,7 +106,33 @@ export type GameAction =
   | { type: "ASSIGN_BENCH_DAMAGE"; playerId: PlayerId; targetId: string }
   | { type: "CHOOSE_BENCH_DAMAGE_TARGET"; playerId: PlayerId; targetId: string }
   | { type: "MOVE_DAMAGE_SOURCE"; playerId: PlayerId; sourceId: string }
-  | { type: "MOVE_DAMAGE_TARGET"; playerId: PlayerId; targetId: string };
+  | { type: "MOVE_DAMAGE_TARGET"; playerId: PlayerId; targetId: string }
+  | { type: "SELECT_ENERGY_SWITCH_POKEMON"; playerId: PlayerId; pokemonId: string }
+  | { type: "SELECT_ENHANCED_HAMMER_POKEMON"; playerId: PlayerId; pokemonId: string }
+  | { type: "SELECT_WALLYS_POKEMON"; playerId: PlayerId; pokemonId: string }
+  | { type: "SELECT_CIPHERMANIAC_CARD"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_FIGHTING_GONG"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_GIOVANNI_BENCH"; playerId: PlayerId; benchInstanceId: string }
+  | { type: "SELECT_PRIME_CATCHER_BENCH"; playerId: PlayerId; benchInstanceId: string }
+  | { type: "SELECT_N_PP_UP_ENERGY"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_N_PP_UP_TARGET"; playerId: PlayerId; pokemonId: string }
+  | { type: "SELECT_TOOL_SCRAPPER"; playerId: PlayerId; toolInstanceId: string }
+  | { type: "SELECT_ROTO_STICK"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_MIRACLE_HEADSET"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_BUG_CATCHING"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_SECRET_BOX_DISCARD"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_SECRET_BOX_SEARCH"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_BROCK_MODE"; playerId: PlayerId; mode: "basic" | "evolution" }
+  | { type: "SELECT_SURFER_BENCH"; playerId: PlayerId; benchInstanceId: string }
+  | { type: "SELECT_ROSA_TARGET"; playerId: PlayerId; pokemonId: string }
+  | { type: "SELECT_ROSA_ENERGY"; playerId: PlayerId; instanceId: string }
+  | { type: "USE_LUMIOSE_CITY"; playerId: PlayerId; instanceId: string }
+  | { type: "USE_TR_FACTORY_DRAW"; playerId: PlayerId }
+  | { type: "USE_GRAND_TREE"; playerId: PlayerId }
+  | { type: "SELECT_GRAND_TREE_BASIC"; playerId: PlayerId; targetId: string }
+  | { type: "SELECT_GRAND_TREE_STAGE1"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_GRAND_TREE_STAGE2"; playerId: PlayerId; instanceId: string }
+  | { type: "SKIP_GRAND_TREE_STAGE2"; playerId: PlayerId };
 
 export type PendingAction =
   | { type: "BOSS_ORDERS"; playerId: PlayerId }
@@ -118,11 +161,111 @@ export type PendingAction =
   | {
       type: "SEARCH_DECK";
       playerId: PlayerId;
-      filter: "ANY_POKEMON" | "BASIC_POKEMON" | "BASIC_BENCH" | "BASIC_ENERGY_HAND" | "SUPPORTER_HAND" | "POKEMON_NO_RULE_BOX" | "POFFIN";
+      filter:
+        | "ANY_POKEMON"
+        | "BASIC_POKEMON"
+        | "BASIC_BENCH"
+        | "BASIC_PSYCHIC_BENCH"
+        | "BASIC_ENERGY_HAND"
+        | "SUPPORTER_HAND"
+        | "POKEMON_NO_RULE_BOX"
+        | "POFFIN"
+        | "STAGE1_POKEMON_HAND"
+        | "STAGE2_POKEMON_HAND"
+        | "POKEMON_EX_HAND"
+        | "TEAM_ROCKET_BASIC_HAND"
+        | "STADIUM_HAND"
+        | "ANY_ENERGY_HAND"
+        | "ANY_TRAINER_HAND"
+        | "FIGHTING_GONG"
+        | "TEAM_ROCKET_SUPPORTER_HAND"
+        | "BROCK_BASIC_HAND"
+        | "BROCK_EVOLUTION_HAND"
+        | "LUMIOSE_BASIC_BENCH"
+        | "TOOL_HAND"
+        | "TYPED_POKEMON_MAX_HP_HAND"
+        | "NAMED_POKEMON_BENCH";
       options: string[];
       slotsRemaining?: number;
+      searchMeta?: { typeFilter?: string; maxHp?: number; nameFilter?: string };
     }
-  | { type: "PICK_DISCARD"; playerId: PlayerId; options: string[] }
+  | { type: "PICK_DISCARD"; playerId: PlayerId; options: string[]; slotsRemaining?: number; shuffleToDeck?: boolean }
+  | {
+      type: "ENERGY_SWITCH";
+      playerId: PlayerId;
+      step: "SOURCE" | "TARGET";
+      sourceId?: string;
+      options: string[];
+    }
+  | {
+      type: "ENHANCED_HAMMER";
+      playerId: PlayerId;
+      step: "POKEMON" | "ENERGY";
+      pokemonId?: string;
+      discardRemaining: number;
+      options: { pokemonId: string; energyId: string }[];
+    }
+  | { type: "WALLYS_COMPASSION"; playerId: PlayerId; options: string[] }
+  | { type: "HILDA"; playerId: PlayerId; step: "EVOLUTION" | "ENERGY"; options: string[] }
+  | { type: "DAWN"; playerId: PlayerId; step: "BASIC" | "STAGE1" | "STAGE2"; options: string[] }
+  | { type: "COLRESS"; playerId: PlayerId; step: "STADIUM" | "ENERGY"; options: string[] }
+  | {
+      type: "GIOVANNI";
+      playerId: PlayerId;
+      step: "OWN_BENCH" | "OPPONENT_BENCH";
+      ownBenchId?: string;
+      options: string[];
+    }
+  | {
+      type: "PRIME_CATCHER";
+      playerId: PlayerId;
+      step: "OPPONENT_BENCH" | "OWN_BENCH";
+      opponentBenchId?: string;
+      options: string[];
+    }
+  | { type: "N_PP_UP"; playerId: PlayerId; step: "ENERGY" | "TARGET"; energyId?: string; options: string[] }
+  | { type: "TOOL_SCRAPPER"; playerId: PlayerId; discardRemaining: number; options: string[] }
+  | {
+      type: "ROTO_STICK";
+      playerId: PlayerId;
+      options: string[];
+      pickedIds: string[];
+    }
+  | {
+      type: "MIRACLE_HEADSET";
+      playerId: PlayerId;
+      options: string[];
+      pickedIds: string[];
+      maxPicks: number;
+    }
+  | {
+      type: "BUG_CATCHING_SET";
+      playerId: PlayerId;
+      options: string[];
+      pickedIds: string[];
+      maxPicks: number;
+    }
+  | {
+      type: "SECRET_BOX";
+      playerId: PlayerId;
+      step: "DISCARD" | "ITEM" | "TOOL" | "SUPPORTER" | "STADIUM";
+      options: string[];
+      discardIds?: string[];
+    }
+  | { type: "CIPHERMANIAC"; playerId: PlayerId; pickedIds: string[]; options: string[] }
+  | { type: "FIGHTING_GONG"; playerId: PlayerId; options: string[] }
+  | { type: "LANAS_AID"; playerId: PlayerId; pickedIds: string[]; options: string[] }
+  | { type: "BROCKS_SCOUTING"; playerId: PlayerId; step: "MODE" | "BASIC" | "EVOLUTION"; pickedIds?: string[]; options: string[] }
+  | { type: "ROSAS_ENCOURAGEMENT"; playerId: PlayerId; step: "TARGET" | "ENERGY"; targetId?: string; pickedEnergyIds?: string[]; options: string[] }
+  | { type: "SURFER"; playerId: PlayerId; options: string[] }
+  | {
+      type: "GRAND_TREE";
+      playerId: PlayerId;
+      step: "BASIC" | "STAGE1" | "STAGE2";
+      basicTargetId?: string;
+      stage1TargetId?: string;
+      options: string[];
+    }
   | { type: "RECON_DIRECTIVE"; playerId: PlayerId; options: string[] }
   | { type: "RARE_CANDY"; playerId: PlayerId }
   | { type: "CRUSHING_HAMMER"; playerId: PlayerId; options: { pokemonId: string; energyId: string }[] }
@@ -192,12 +335,18 @@ export function findInstance(state: EngineState, instanceId: string): CardInstan
         for (const energy of card.attachedEnergy) {
           if (energy.instanceId === instanceId) return energy;
         }
+        for (const tool of card.attachedTools ?? []) {
+          if (tool.instanceId === instanceId) return tool;
+        }
       }
     }
     if (player.active) {
       if (player.active.instanceId === instanceId) return player.active;
       for (const energy of player.active.attachedEnergy) {
         if (energy.instanceId === instanceId) return energy;
+      }
+      for (const tool of player.active.attachedTools ?? []) {
+        if (tool.instanceId === instanceId) return tool;
       }
     }
   }

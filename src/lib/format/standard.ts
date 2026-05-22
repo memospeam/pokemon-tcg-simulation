@@ -13,6 +13,9 @@ export const STANDARD_FORMAT = {
   /** Lucene query for pokemontcg.io — Pokémon only (attacks/abilities). */
   pokemonQuery:
     'supertype:Pokémon (regulationMark:H OR regulationMark:I OR regulationMark:J)',
+  /** Lucene query for pokemontcg.io — Trainers (effect text in rules[]). */
+  trainerQuery:
+    'supertype:Trainer (regulationMark:H OR regulationMark:I OR regulationMark:J)',
 } as const;
 
 export function isStandardRegulationMark(mark: string | undefined): mark is StandardRegulationMark {

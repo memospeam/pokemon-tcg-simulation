@@ -1,7 +1,8 @@
 import type { CardDefinition } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
-import { Zone } from "../../models/enums";
+import { PlayerId, Zone } from "../../models/enums";
 import { getDefinitionSafe } from "../rules";
+import { shouldBlockBenchEffectDamage } from "./stadiumEffects";
 import type { EngineState } from "../types";
 
 export function hasTeraBenchProtection(def: CardDefinition): boolean {
@@ -14,8 +15,16 @@ export function hasTeraBenchProtection(def: CardDefinition): boolean {
   );
 }
 
-export function canReceiveBenchAttackDamage(state: EngineState, pokemon: CardInstance): boolean {
+export function canReceiveBenchAttackDamage(
+  state: EngineState,
+  pokemon: CardInstance,
+  sourcePlayerId?: PlayerId,
+): boolean {
   if (pokemon.zone !== Zone.Bench) return true;
   const def = getDefinitionSafe(state, pokemon.definitionId);
-  return !hasTeraBenchProtection(def);
+  if (hasTeraBenchProtection(def)) return false;
+  if (sourcePlayerId !== undefined && shouldBlockBenchEffectDamage(state, pokemon, sourcePlayerId)) {
+    return false;
+  }
+  return true;
 }

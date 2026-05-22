@@ -5,6 +5,8 @@ import { getDefinitionSafe } from "../rules";
 import { allPokemonInPlay, getOpponentId, getPlayer, type EngineState } from "../types";
 import { parseAbilityText } from "./parseText";
 import { allOwnedPokemon } from "./modifiers";
+import { getStadiumHpModifier } from "./stadiumEffects";
+import { getToolHpBonus } from "./toolEffects";
 
 export function countPrizesTakenByPlayer(state: EngineState, playerId: PlayerId): number {
   const player = getPlayer(state, playerId);
@@ -256,7 +258,11 @@ export function getPassiveHpBonus(state: EngineState, pokemon: CardInstance): nu
 
 export function remainingHpWithPassives(state: EngineState, pokemon: CardInstance): number {
   const def = getDefinitionSafe(state, pokemon.definitionId);
-  const maxHp = (parseInt(def.hp ?? "0", 10) || 0) + getPassiveHpBonus(state, pokemon);
+  const maxHp =
+    (parseInt(def.hp ?? "0", 10) || 0) +
+    getPassiveHpBonus(state, pokemon) +
+    getStadiumHpModifier(state, pokemon) +
+    getToolHpBonus(state, pokemon);
   return Math.max(0, maxHp - pokemon.damageCounters);
 }
 

@@ -837,6 +837,14 @@ export function parseAttackText(text: string): ParsedEffect[] {
   return coalesceSplitEffects(clauses.flatMap(parseClause), normalized);
 }
 
+/** Parse generic effect clauses (shared by attacks, abilities, and trainer rules text). */
+export function parseEffectClauses(text: string): ParsedEffect[] {
+  if (!text.trim()) return [];
+  const normalized = normalize(text);
+  const clauses = splitClauses(text);
+  return coalesceSplitEffects(clauses.flatMap(parseClause), normalized);
+}
+
 function coalesceSplitEffects(effects: ParsedEffect[], normalized: string): ParsedEffect[] {
   const coinCountMatch = normalized.match(/flip (\d+) coins/);
   const coinCount = coinCountMatch ? parseInt(coinCountMatch[1]!, 10) : null;
@@ -903,7 +911,9 @@ export function parseAbilityText(ability: CardAbility): ParsedAbility {
   const conditions: AbilityCondition[] = [];
   let body = text;
 
-  if (/once during your turn/.test(body)) {
+  if (/once during your first turn,?\s*/.test(body)) {
+    body = body.replace(/once during your first turn,?\s*/, "");
+  } else if (/once during your turn/.test(body)) {
     body = body.replace(/once during your turn,?\s*/, "");
   }
   if (/as often as you like during your turn/.test(body)) {
@@ -928,7 +938,7 @@ export function parseAbilityText(ability: CardAbility): ParsedAbility {
     body = body.replace(/^you may /, "");
   }
 
-  const frequency: ParsedAbility["frequency"] = /once during your turn/.test(text)
+  const frequency: ParsedAbility["frequency"] = /once during your (?:first )?turn/.test(text)
     ? "once_per_turn"
     : /as often as you like during your turn/.test(text)
       ? "unlimited"
@@ -942,7 +952,12 @@ export function parseAbilityText(ability: CardAbility): ParsedAbility {
     name: ability.name,
     frequency,
     conditions,
-    effects: mergeAbilityEffects(splitClauses(body).flatMap(parseClause)),
+    effects: mergeAbilityEffects([
+      ...( /once during your first turn/i.test(text)
+        ? [{ kind: "once_during_first_turn" as const }]
+        : []),
+      ...splitClauses(body).flatMap(parseClause),
+    ]),
     rawText: ability.text,
   };
 }

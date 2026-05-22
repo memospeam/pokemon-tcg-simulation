@@ -11,6 +11,7 @@ import {
   hasBasicInHand,
   type EngineState,
 } from "./types";
+import { canEvolveSameTurnWithForestVitality } from "./effects/stadiumEffects";
 
 export interface CreateGameInput {
   player1Name: string;
@@ -113,6 +114,14 @@ export function createInitialGame(input: CreateGameInput): EngineState {
     pendingAction: null,
     heldCard: null,
     itemPlayBlockedForPlayerId: null,
+    teamRocketKnockedOutSinceMyLastTurn: {
+      [PlayerId.P1]: false,
+      [PlayerId.P2]: false,
+    },
+    legacyEnergyPrizeReductionUsed: {
+      [PlayerId.P1]: false,
+      [PlayerId.P2]: false,
+    },
   };
 }
 
@@ -250,6 +259,7 @@ export function canEvolvePokemonThisTurn(
   state: EngineState,
   pokemon: import("../models/instance").CardInstance,
 ): boolean {
+  if (canEvolveSameTurnWithForestVitality(state, pokemon)) return true;
   return pokemon.enteredPlayTurn !== state.turnNumber;
 }
 

@@ -1,6 +1,8 @@
 export type { AbilityCondition, AbilityFrequency, EffectContext, ParsedAbility, ParsedEffect } from "./types";
 export { countersToDamage, PRE_DAMAGE_ATTACK_EFFECT_KINDS } from "./types";
-export { parseAttackText, parseAbilityText, getAttackEffectSummary, summarizeEffects } from "./parseText";
+export { parseAttackText, parseAbilityText, parseEffectClauses, getAttackEffectSummary, summarizeEffects } from "./parseText";
+export { getTrainerEffectText, parseTrainerText } from "./trainerText";
+export { isTrainerKindImplemented } from "./trainerCoverage";
 export {
   executeEffects,
   assignBenchDamageCounter,

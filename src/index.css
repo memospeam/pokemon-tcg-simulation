@@ -1176,18 +1176,34 @@ button {
 
 .pending-panel {
   position: fixed;
-  left: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 5.5rem;
   z-index: 18;
-  width: min(360px, calc(100vw - 2rem));
+  width: min(920px, calc(100vw - 1.5rem));
+  max-height: min(70vh, 520px);
   padding: 0.85rem;
   border-radius: 1rem;
   border: 1px solid rgba(167, 139, 250, 0.35);
   background: rgba(2, 6, 23, 0.96);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.pending-panel--deck {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.pending-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .pending-panel h4 {
-  margin: 0 0 0.5rem;
+  margin: 0;
   font-size: 0.85rem;
   color: #c4b5fd;
 }
@@ -1196,6 +1212,15 @@ button {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.pending-panel__cards--scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: 0.25rem;
+  align-content: flex-start;
 }
 
 .pending-panel__pick {

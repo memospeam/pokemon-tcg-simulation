@@ -4,6 +4,7 @@ import { getDefinitionSafe } from "../rules";
 import { getPlayer, allPokemonInPlay, type EngineState } from "../types";
 import type { ParsedEffect } from "./types";
 import { countPrizesTakenByPlayer } from "./passiveRules";
+import { countToolsOnPlayerPokemon } from "./toolEffects";
 
 export function isBasicNonColorlessPokemon(def: ReturnType<typeof getDefinitionSafe>): boolean {
   if (!isBasicPokemon(def)) return false;
@@ -51,7 +52,7 @@ export function computePreDamageBonus(
     case "damage_per_energy_opponent_active":
       return (opponent.active?.attachedEnergy.length ?? 0) * effect.perEnergy;
     case "damage_per_tools_on_your_pokemon":
-      return 0;
+      return countToolsOnPlayerPokemon(state, playerId) * effect.perTool;
     case "damage_bonus_per_opponent_prize": {
       const taken = countPrizesTakenByPlayer(state, opponentId);
       return taken * effect.perPrize;

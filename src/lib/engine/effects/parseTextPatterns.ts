@@ -33,8 +33,6 @@ export const SKIP_UNKNOWN_CLAUSE_PATTERNS: RegExp[] = [
   /^if you do, heal all damage from that pok[ée]mon\.?$/,
   /^the effect of .+ doesn't stack\.?$/,
   /^put this pok[ée]mon into play only with the effect of .+\.?$/,
-  /^once during your first turn, you may search your deck for up to \d+ colorless pok[ée]mon with \d+ hp or less, reveal them, and put them into your hand\.?$/,
-  /^you can't use more than 1 .+ ability during your turn\.?$/,
   /^then, discard that stadium\.?$/,
   /^if you do, the new active pok[ée]mon is now poisoned\.?$/,
   /^if you attached energy to a pok[ée]mon in this way, this pok[ée]mon is now poisoned\.?$/,
@@ -304,9 +302,30 @@ export function matchBulkClause(clause: string): ParsedEffect[] | null {
     return [{ kind: "evolve_trigger_ability" }];
   }
 
-  match = clause.match(/^you can't use more than 1 (.+?) ability each turn\.?$/i);
+  match = clause.match(/^you can't use more than 1 (.+?) ability (?:each|during your) turn\.?$/i);
   if (match) {
     return [{ kind: "ability_use_limit_per_turn", namePattern: match[1]!.trim() }];
+  }
+
+  match = clause.match(
+    /^search your deck for up to (\d+) colorless pok[ée]mon with (\d+) hp or less, reveal them, and put them into your hand\.?$/i,
+  );
+  if (match) {
+    return [
+      {
+        kind: "search_typed_pokemon_max_hp_to_hand",
+        count: parseInt(match[1]!, 10),
+        typeFilter: "Colorless",
+        maxHp: parseInt(match[2]!, 10),
+      },
+    ];
+  }
+
+  match = clause.match(
+    /^search your deck for any number of pok[ée]mon that have "([^"]+)" in their name and put them onto your bench\.?$/i,
+  );
+  if (match) {
+    return [{ kind: "search_named_pokemon_to_bench", nameFilter: match[1]!.trim() }];
   }
 
   if (

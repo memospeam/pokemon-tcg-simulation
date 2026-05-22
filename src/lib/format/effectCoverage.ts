@@ -63,7 +63,7 @@ export function analyzeParsedEffects(effects: ParsedEffect[]): EffectAnalysis {
 
 export interface StubPatternRecord {
   id: string;
-  kind: "attack" | "ability";
+  kind: "attack" | "ability" | "trainer";
   text: string;
   parseCoverage: ParseCoverage;
   implementationCoverage: ImplementationCoverage;

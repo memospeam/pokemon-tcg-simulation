@@ -1,4 +1,4 @@
-import { isBasicEnergy, isBasicPokemon } from "../../models/definition";
+import { isBasicEnergy, isBasicPokemon, isNsPokemon } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import type { PlayerId } from "../../models/enums";
 import { PlayerId as PlayerIdEnum } from "../../models/enums";
@@ -9,6 +9,9 @@ import { attachEnergyToPokemon } from "../trainerEffects";
 import { executeEffects } from "./execute";
 import { parseAbilityText } from "./parseText";
 import { allOwnedPokemon } from "./modifiers";
+import { areStadiumAbilitiesDisabled, clearAllFestivalGroundsEligibleSpecialConditions, clearFestivalGroundsSpecialConditions, getStadiumKind, applySpecialCondition } from "./stadiumEffects";
+import { getToolPrizeReduction, onActiveDamagedByOpponentAttackTools } from "./toolEffects";
+import { getLegacyEnergyPrizeReduction } from "./specialEnergyEffects";
 import { countersToDamage } from "./types";
 import type { ParsedEffect } from "./types";
 
@@ -40,6 +43,8 @@ function forEachAbilityEffectAllPlayers(
 }
 
 export function runPokemonCheckup(state: EngineState): void {
+  clearAllFestivalGroundsEligibleSpecialConditions(state);
+
   forEachAbilityEffectAllPlayers(state, (pokemon, effect) => {
     if (effect.kind === "checkup_counters_on_opponent_basic") {
       const opponentId = getOpponentId(pokemon.ownerId);
@@ -114,19 +119,19 @@ export function onDefenderDamagedByAttack(
         );
       }
       if (effect.kind === "poison_attacker_when_damaged_from_opponent") {
-        if (!attacker.statusConditions.includes("Poisoned")) {
-          attacker.statusConditions.push("Poisoned");
+        if (applySpecialCondition(state, attacker, "Poisoned")) {
           logMessage(state, `${getDefinitionSafe(state, attacker.definitionId).name} is now Poisoned.`);
         }
       }
       if (effect.kind === "burn_attacker_when_damaged_from_opponent") {
-        if (!attacker.statusConditions.includes("Burned")) {
-          attacker.statusConditions.push("Burned");
+        if (applySpecialCondition(state, attacker, "Burned")) {
           logMessage(state, `${getDefinitionSafe(state, attacker.definitionId).name} is now Burned.`);
         }
       }
     }
   }
+
+  onActiveDamagedByOpponentAttackTools(state, defender, attacker, damageDealt);
 }
 
 export function onBenchPlay(state: EngineState, playerId: PlayerId, pokemon: CardInstance): void {
@@ -181,8 +186,7 @@ export function onRetreat(
   const opponentId = getOpponentId(playerId);
   forEachAbilityEffect(state, opponentId, (_pokemon, effect) => {
     if (effect.kind === "burn_on_opponent_switch") {
-      if (!outgoing.statusConditions.includes("Burned")) {
-        outgoing.statusConditions.push("Burned");
+      if (applySpecialCondition(state, outgoing, "Burned")) {
         logMessage(state, `${getDefinitionSafe(state, outgoing.definitionId).name} is now Burned.`);
       }
     }
@@ -224,12 +228,13 @@ export function onEnergyAttached(
   const def = getDefinitionSafe(state, pokemon.definitionId);
   for (const ability of def.abilities ?? []) {
     for (const effect of parseAbilityText(ability).effects) {
-      if (effect.kind === "poison_on_attach_energy" && !pokemon.statusConditions.includes("Poisoned")) {
-        pokemon.statusConditions.push("Poisoned");
+      if (effect.kind === "poison_on_attach_energy" && applySpecialCondition(state, pokemon, "Poisoned")) {
         logMessage(state, `${def.name} is now Poisoned.`);
       }
     }
   }
+
+  clearFestivalGroundsSpecialConditions(state, pokemon);
 }
 
 export function onKnockOut(
@@ -293,6 +298,9 @@ export function getModifiedPrizeCount(
     }
   });
 
+  prize = Math.max(0, prize - getToolPrizeReduction(state, knockedOut));
+  prize = Math.max(0, prize - getLegacyEnergyPrizeReduction(state, knockedOut));
+
   return Math.max(0, Math.min(6, prize));
 }
 
@@ -318,10 +326,15 @@ export function hasFreeRetreat(state: EngineState, pokemon: CardInstance): boole
       }
     }
   }
+  if (getStadiumKind(state) === "ns_castle" && isNsPokemon(def)) {
+    return true;
+  }
   return false;
 }
 
 export function isAbilityDisabledOnPokemon(state: EngineState, pokemon: CardInstance): boolean {
+  if (areStadiumAbilitiesDisabled(state, pokemon)) return true;
+
   const player = getPlayer(state, pokemon.ownerId);
   if (pokemon !== player.active) return false;
 

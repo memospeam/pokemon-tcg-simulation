@@ -23,9 +23,13 @@ import {
   shouldPreventDamageFromAttacker,
   shouldPreventDamageFromAbilityPokemon,
 } from "./damageBonus";
+import { transferPokemonStateOntoEvolution } from "./toolEffects";
 import { onDefenderDamagedByAttack } from "./abilityHooks";
 import { trySurviveKnockout } from "./koSurvival";
 import { applyDamageReduction, isProtectedFromAttackEffects } from "./modifiers";
+import { shouldNeutralizationZonePreventDamage } from "./stadiumEffects";
+import { isProtectedFromAttackEffectsByMistEnergy } from "../energy";
+import { isProtectedFromAttackEffectsByRockyFightingEnergy } from "./specialEnergyEffects";
 import {
   applyWeaknessAndResistanceForPokemon,
   attackerIgnoresOpponentActiveModifiers,
@@ -35,6 +39,8 @@ import {
   isKnockedOutWithPassives,
   remainingHpWithPassives,
 } from "./passiveRules";
+import { getTrainerTurnAttackBonus } from "./trainerTurnBonuses";
+import { discardToolsFromOpponentActive, getToolAttackBonus } from "./toolEffects";
 import type { ParsedEffect } from "./types";
 import { PRE_DAMAGE_ATTACK_EFFECT_KINDS } from "./types";
 
@@ -187,6 +193,8 @@ function applyAttackDamagePhaseWithDefinition(
   let bonusDamage = extraBonusDamage + getFuturePokemonDamageBonus(state, player.active, playerId);
   bonusDamage += getSelfPassiveAttackBonus(state, player.active, playerId);
   bonusDamage += getTeamPassiveAttackBonus(state, player.active, playerId);
+  bonusDamage += getTrainerTurnAttackBonus(state, player.active, opponent.active!);
+  bonusDamage += getToolAttackBonus(state, player.active, opponent.active!);
   for (const effect of preDamageEffects) {
     if (effect.kind === "coin_attack_fails_on_tails" && !flipCoin(state)) {
       logMessage(state, `${attack.name} failed — tails on the coin flip.`);
@@ -206,7 +214,10 @@ function applyAttackDamagePhaseWithDefinition(
       bonusDamage += heads * effect.perHeads;
     }
     if (effect.kind === "discard_opponent_tools") {
-      logMessage(state, "Discarded Pokémon Tools from opponent's Active (no Tool cards in sim).");
+      const discarded = discardToolsFromOpponentActive(state, getOpponentId(playerId), effect.max ?? 2);
+      if (discarded === 0) {
+        logMessage(state, "No Pokémon Tools to discard from opponent's Active Pokémon.");
+      }
     }
     bonusDamage += computePreDamageBonus(state, effect, playerId, player.active, getOpponentId(playerId));
   }
@@ -226,6 +237,9 @@ function applyAttackDamagePhaseWithDefinition(
     } else if (shouldPreventDamageFromAbilityPokemon(state, opponent.active, attackerDef)) {
       damage = 0;
       logMessage(state, `${defenderDef.name} prevented damage from ${attackerDef.name}'s Ability Pokémon.`);
+    } else if (shouldNeutralizationZonePreventDamage(state, opponent.active, player.active)) {
+      damage = 0;
+      logMessage(state, `${defenderDef.name} took no damage (Neutralization Zone).`);
     } else if (!ignoreModifiers) {
       damage = applyDamageReduction(state, damage, opponent.active, player.active);
     }
@@ -263,6 +277,32 @@ function applyPostAttackEffects(
 ): "complete" | "pending" {
   const player = getPlayer(state, playerId);
   if (!player.active) return "complete";
+
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  if (
+    opponent.active &&
+    isProtectedFromAttackEffectsByRockyFightingEnergy(state, opponent.active)
+  ) {
+    const defenderDef = getDefinitionSafe(state, opponent.active.definitionId);
+    logMessage(
+      state,
+      `${defenderDef.name} is protected from the effects of that attack (Rocky Fighting Energy).`,
+    );
+    applyFestivalGroundsBonusIfEligible(state, playerId, attackName);
+    return "complete";
+  }
+  if (
+    opponent.active &&
+    isProtectedFromAttackEffectsByMistEnergy(state, opponent.active, damageApplied)
+  ) {
+    const defenderDef = getDefinitionSafe(state, opponent.active.definitionId);
+    logMessage(
+      state,
+      `${defenderDef.name} is protected from the effects of that attack (Mist Energy).`,
+    );
+    applyFestivalGroundsBonusIfEligible(state, playerId, attackName);
+    return "complete";
+  }
 
   const ctx = {
     playerId,
@@ -374,11 +414,7 @@ export function evolvePokemonFromDeck(
     return false;
   }
 
-  evolution.attachedEnergy = [...target.attachedEnergy];
-  evolution.damageCounters = target.damageCounters;
-  evolution.enteredPlayTurn = target.enteredPlayTurn;
-  evolution.zone = target.zone;
-  evolution.ownerId = playerId;
+  transferPokemonStateOntoEvolution(target, evolution, playerId);
 
   if (player.active?.instanceId === targetId) {
     player.active = evolution;

@@ -104,6 +104,14 @@ function minimalState(activeIsP1 = true): EngineState {
     pendingAction: null,
     heldCard: null,
     itemPlayBlockedForPlayerId: null,
+    teamRocketKnockedOutSinceMyLastTurn: {
+      [PlayerId.P1]: false,
+      [PlayerId.P2]: false,
+    },
+    legacyEnergyPrizeReductionUsed: {
+      [PlayerId.P1]: false,
+      [PlayerId.P2]: false,
+    },
   };
 }
 

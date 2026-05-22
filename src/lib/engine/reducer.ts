@@ -1,4 +1,4 @@
-import { isBasicPokemon, isItemTrainer, isStadium, isSupporter } from "../models/definition";
+import { isBasicPokemon, isAceSpec, isItemTrainer, isStadium, isSupporter, isTeamRocketPokemon, isTool } from "../models/definition";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
 import {
   canAttackThisTurn,
@@ -30,6 +30,24 @@ import {
   selectMoveDamageSource,
   selectMoveDamageTarget,
 } from "./effects";
+import { transferPokemonStateOntoEvolution, canAttachToolToPokemon, attachToolToPokemon, discardPokemonAttachments } from "./effects/toolEffects";
+import {
+  canUseGrandTree,
+  resolveGrandTreeBasic,
+  resolveGrandTreeStage1,
+  resolveGrandTreeStage2,
+  skipGrandTreeStage2,
+  startGrandTreeFlow,
+} from "./effects/grandTreeEffects";
+import { logStadiumOnPlay, getMaxBenchSize, canUseLumioseCity, getLumioseDeckOptions } from "./effects/stadiumEffects";
+import {
+  canPlayToolFromHand,
+  canPlayTrainerCardFromHand,
+  getAceSpecPlayBlockReason,
+  getItemPlayBlockReason,
+  getToolPlayBlockReason,
+} from "./effects/playRestrictions";
+import { parseTrainerText } from "./effects/trainerText";
 import {
   activatePendingModifiersForTurnStart,
   canPokemonAttack,
@@ -70,12 +88,63 @@ import {
   applyRareCandy,
   applyRiskyRuinsDamage,
   applyTrainerEffect,
+  applyWallysCompassion,
   attachEnergyToPokemon,
+  canPlayTrainerEffect,
   completeUltraBallDiscard,
+  continueNightStretcherPick,
   discardAttachedEnergy,
   maybeCrispinOptionalDiscard,
   resolveDeckPick,
+  resolveEnergySwitchPokemon,
+  resolveEnhancedHammerEnergy,
+  resolveEnhancedHammerPokemon,
+  resolveHildaPick,
 } from "./trainerEffects";
+import {
+  resolveCiphermaniacPick,
+  resolveColressPick,
+  resolveDawnPick,
+  resolveFightingGongPick,
+  resolveGiovanniOpponentBench,
+  resolveGiovanniOwnBench,
+  resolveNsPpUpEnergy,
+  resolveNsPpUpTarget,
+  continueToolScrapperPick,
+} from "./effects/trainerMetaEffects";
+import {
+  applyLumioseCitySearch,
+  applyTrFactoryDraw,
+  continueSacredAshDiscardPick,
+  onTeamRocketSupporterPlayed,
+  resolveBrockMode,
+  resolveBrockPick,
+  resolveLanasAidPick,
+  resolveRosaEnergy,
+  resolveRosaTarget,
+  resolveSurferBench,
+} from "./effects/trainerBatch3Effects";
+import {
+  continueBugCatchingPick,
+  continueMiracleHeadsetPick,
+  continueRotoStickPick,
+  continueSecretBoxDiscard,
+  continueSecretBoxSearch,
+  finishBugCatchingSet,
+  finishMiracleHeadset,
+  finishRotoStick,
+} from "./effects/trainerBatch5Effects";
+import {
+  resolvePrimeCatcherOpponentBench,
+  resolvePrimeCatcherOwnBench,
+} from "./effects/trainerBatch7Effects";
+import {
+  canAttachSpecialEnergyToPokemon,
+  discardIgnitionEnergyAtEndOfTurn,
+  onSpecialEnergyAttachedFromHand,
+  purgeInvalidAttachedSpecialEnergy,
+} from "./effects/specialEnergyEffects";
+import { isTeraPokemon } from "../models/definition";
 import { canAffordAttack, canAffordRetreat, payRetreatCost } from "./energy";
 import { createRng } from "./rng";
 import {
@@ -209,7 +278,7 @@ function playBasicToBench(
   instanceId: string,
 ): EngineState {
   const player = getPlayer(state, playerId);
-  if (player.bench.length >= 5) return state;
+  if (player.bench.length >= getMaxBenchSize(state, playerId)) return state;
   const card = removeFromHand(player, instanceId);
   if (!card) return state;
   const def = getDefinitionSafe(state, card.definitionId);
@@ -286,52 +355,123 @@ function handleAttachEnergy(
       : player.bench.find((card) => card.instanceId === targetId);
   if (!target) return state;
 
+  const attachCheck = canAttachSpecialEnergyToPokemon(next, energyDef, target);
+  if (!attachCheck.ok) {
+    player.hand.push(energy);
+    energy.zone = Zone.Hand;
+    log(next, attachCheck.reason);
+    return next;
+  }
+
   energy.zone = Zone.Active;
   target.attachedEnergy.push(energy);
   next.turnFlags.energyAttached = true;
   log(next, `${player.name} attached ${energyDef.name} to ${getDefinitionSafe(next, target.definitionId).name}.`);
   onEnergyAttached(next, playerId, target);
+  onSpecialEnergyAttachedFromHand(next, playerId, energy, target);
   return next;
+}
+
+function handleAttachTool(
+  state: EngineState,
+  playerId: PlayerId,
+  toolId: string,
+  targetId: string,
+): EngineState {
+  if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
+  if (state.pendingAction) return state;
+  const toolBlockReason = getToolPlayBlockReason(state, playerId);
+  if (toolBlockReason) {
+    log(state, toolBlockReason);
+    return state;
+  }
+  const player = getPlayer(state, playerId);
+  const tool = removeFromHand(player, toolId);
+  if (!tool) return state;
+  const toolDef = getDefinitionSafe(state, tool.definitionId);
+  if (!isTool(toolDef)) {
+    player.hand.push(tool);
+    return state;
+  }
+
+  const target =
+    player.active?.instanceId === targetId
+      ? player.active
+      : player.bench.find((card) => card.instanceId === targetId);
+  if (!target || !canAttachToolToPokemon(state, playerId, toolDef, target)) {
+    player.hand.push(tool);
+    return state;
+  }
+
+  if (!attachToolToPokemon(state, playerId, tool, target)) {
+    player.hand.push(tool);
+    return state;
+  }
+  return state;
 }
 
 function handlePlayTrainer(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
   if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
   if (state.pendingAction) return state;
   const player = getPlayer(state, playerId);
-  const card = removeFromHand(player, instanceId);
+  const card = player.hand.find((entry) => entry.instanceId === instanceId);
   if (!card) return state;
   const def = getDefinitionSafe(state, card.definitionId);
   if (def.supertype !== "Trainer") return state;
   if (isSupporter(def) && state.turnFlags.supporterPlayed) {
-    player.hand.push(card);
     return state;
   }
-  if (isSupporter(def) && !canPlaySupporterThisTurn(state, playerId)) {
-    player.hand.push(card);
+  const parsedForPlay = parseTrainerText(def);
+  const isProton =
+    isSupporter(def) &&
+    parsedForPlay.effects.some((effect) => effect.kind === "trainer_proton");
+  if (isSupporter(def) && !canPlaySupporterThisTurn(state, playerId) && !isProton) {
     log(state, "The player who goes first cannot play Supporter cards on their first turn.");
     return state;
   }
-  if (isItemTrainer(def) && state.itemPlayBlockedForPlayerId === playerId) {
-    player.hand.push(card);
-    log(state, "Item cards can't be played this turn (Itchy Pollen).");
+  const itemBlockReason = getItemPlayBlockReason(state, playerId);
+  if (isItemTrainer(def) && itemBlockReason) {
+    log(state, itemBlockReason);
     return state;
   }
+  if (isItemTrainer(def) && isAceSpec(def)) {
+    const aceBlockReason = getAceSpecPlayBlockReason(state, playerId);
+    if (aceBlockReason) {
+      log(state, aceBlockReason);
+      return state;
+    }
+  }
+  if (isTool(def)) {
+    log(state, "Attach Tools using the Attach Tool action on a Pokémon in play.");
+    return state;
+  }
+
+  const playCheck = canPlayTrainerEffect(state, playerId, def);
+  if (!playCheck.ok) {
+    log(state, playCheck.reason);
+    return state;
+  }
+
+  const removed = removeFromHand(player, instanceId);
+  if (!removed) return state;
 
   if (isStadium(def)) {
     if (state.stadium) {
       moveToDiscard(getPlayer(state, state.stadiumOwnerId ?? playerId), state.stadium);
     }
-    state.stadium = card;
+    state.stadium = removed;
     state.stadiumOwnerId = playerId;
-    card.zone = Zone.Stadium;
+    removed.zone = Zone.Stadium;
     log(state, `${player.name} played Stadium ${def.name}.`);
+    logStadiumOnPlay(state, def);
   } else {
-    moveToDiscard(player, card);
+    moveToDiscard(player, removed);
     log(state, `${player.name} played ${def.name}.`);
     applyTrainerEffect(state, playerId, def);
   }
 
   if (isSupporter(def)) state.turnFlags.supporterPlayed = true;
+  if (isSupporter(def)) onTeamRocketSupporterPlayed(state, def);
   return state;
 }
 
@@ -352,16 +492,13 @@ function handleEvolve(
     if (!canEvolvePokemonThisTurn(state, target)) return false;
     const targetDef = getDefinitionSafe(state, target.definitionId);
     if (!canEvolveInto(targetDef, evoDef)) return false;
-    evolution.attachedEnergy = [...target.attachedEnergy];
-    evolution.damageCounters = target.damageCounters;
-    evolution.enteredPlayTurn = target.enteredPlayTurn;
-    evolution.zone = target.zone;
-    evolution.ownerId = playerId;
+    transferPokemonStateOntoEvolution(target, evolution, playerId);
     return true;
   };
 
   if (player.active && replaceOnTarget(player.active)) {
     player.active = evolution;
+    purgeInvalidAttachedSpecialEnergy(state, evolution);
     log(state, `${player.name} evolved to ${evoDef.name}.`);
     onEvolvedFromHand(state, playerId, evolution);
     onOpponentEvolve(state, playerId, evolution);
@@ -371,6 +508,7 @@ function handleEvolve(
   const benchIndex = player.bench.findIndex((card) => card.instanceId === targetId);
   if (benchIndex >= 0 && replaceOnTarget(player.bench[benchIndex])) {
     player.bench[benchIndex] = evolution;
+    purgeInvalidAttachedSpecialEnergy(state, evolution);
     log(state, `${player.name} evolved bench Pokémon to ${evoDef.name}.`);
     onEvolvedFromHand(state, playerId, evolution);
     onOpponentEvolve(state, playerId, evolution);
@@ -384,10 +522,14 @@ function handleEvolve(
 function finishAttackAfterDamagePhase(
   state: EngineState,
   playerId: PlayerId,
+  attackName: string,
   result: ReturnType<typeof applyAttackDamagePhase>,
 ): EngineState {
   if (result === "knockout") {
-    state.turnFlags.attacked = true;
+    applyFestivalGroundsBonusIfEligible(state, playerId, attackName);
+    if (!state.turnFlags.bonusAttackAvailable) {
+      state.turnFlags.attacked = true;
+    }
     return handleKnockout(state, getOpponentId(playerId));
   }
   if (result === "pending") return state;
@@ -417,7 +559,7 @@ function handleChooseBenchAttack(
     attackName,
     pending.wrapperAttackName,
   );
-  return finishAttackAfterDamagePhase(state, playerId, result);
+  return finishAttackAfterDamagePhase(state, playerId, pending.wrapperAttackName, result);
 }
 
 function handleResumeAttackDamage(
@@ -427,7 +569,7 @@ function handleResumeAttackDamage(
   extraBonusDamage: number,
 ): EngineState {
   const result = applyAttackDamagePhase(state, playerId, attackName, extraBonusDamage);
-  return finishAttackAfterDamagePhase(state, playerId, result);
+  return finishAttackAfterDamagePhase(state, playerId, attackName, result);
 }
 
 function handleDiscardOwnEnergyForAttack(
@@ -519,10 +661,23 @@ function handleKnockout(state: EngineState, defenderId: PlayerId): EngineState {
   if (!knockedOut) return state;
 
   const def = getDefinitionSafe(state, knockedOut.definitionId);
+  if (isTeamRocketPokemon(def)) {
+    state.teamRocketKnockedOutSinceMyLastTurn[defenderId] = true;
+  }
   const basePrize = countPrizeCards(def);
   const prizeCount = getModifiedPrizeCount(state, knockedOut, attackerId, basePrize);
+  let extraPrizes = 0;
+  if (
+    state.turnFlags.briarExtraPrizeOnTeraKo &&
+    state.turnFlags.attacked &&
+    attacker.active &&
+    isTeraPokemon(getDefinitionSafe(state, attacker.active.definitionId))
+  ) {
+    extraPrizes = 1;
+    log(state, "Briar: took 1 extra Prize card.");
+  }
   onKnockOut(state, knockedOut, attackerId);
-  for (let i = 0; i < prizeCount; i += 1) {
+  for (let i = 0; i < prizeCount + extraPrizes; i += 1) {
     const prize = attacker.prizes.shift();
     if (prize) {
       prize.zone = Zone.Hand;
@@ -530,13 +685,11 @@ function handleKnockout(state: EngineState, defenderId: PlayerId): EngineState {
     }
   }
 
-  for (const energy of knockedOut.attachedEnergy) {
-    moveToDiscard(defender, energy);
-  }
+  discardPokemonAttachments(state, defender, knockedOut);
   moveToDiscard(defender, knockedOut);
   defender.active = null;
 
-  log(state, `${def.name} was Knocked Out! ${attacker.name} took ${prizeCount} prize card(s).`);
+  log(state, `${def.name} was Knocked Out! ${attacker.name} took ${prizeCount + extraPrizes} prize card(s).`);
 
   if (defender.bench.length > 0) {
     state.pendingAction = { type: "PROMOTE", playerId: defenderId };
@@ -651,7 +804,7 @@ function handleAttack(state: EngineState, playerId: PlayerId, attackName: string
   }
 
   const result = applyAttackDamagePhase(state, playerId, attackName, 0);
-  return finishAttackAfterDamagePhase(state, playerId, result);
+  return finishAttackAfterDamagePhase(state, playerId, attackName, result);
 }
 
 function handleUseAbility(
@@ -786,12 +939,41 @@ function handlePickDeckCard(state: EngineState, playerId: PlayerId, instanceId: 
     if (resolveReconDirectivePick(state, playerId, instanceId) === "failed") return state;
     return state;
   }
+  if (pending?.type === "HILDA" && pending.playerId === playerId) {
+    if (!pending.options.includes(instanceId)) return state;
+    resolveHildaPick(state, playerId, instanceId);
+    return state;
+  }
+  if (pending?.type === "DAWN" && pending.playerId === playerId) {
+    if (!pending.options.includes(instanceId)) return state;
+    resolveDawnPick(state, playerId, instanceId);
+    return state;
+  }
+  if (pending?.type === "COLRESS" && pending.playerId === playerId) {
+    if (!pending.options.includes(instanceId)) return state;
+    resolveColressPick(state, playerId, instanceId);
+    return state;
+  }
+  if (pending?.type === "CIPHERMANIAC" && pending.playerId === playerId) {
+    if (!pending.options.includes(instanceId)) return state;
+    resolveCiphermaniacPick(state, playerId, instanceId);
+    return state;
+  }
+  if (pending?.type === "FIGHTING_GONG" && pending.playerId === playerId) {
+    if (!pending.options.includes(instanceId)) return state;
+    resolveFightingGongPick(state, playerId, instanceId);
+    return state;
+  }
+  if (pending?.type === "BROCKS_SCOUTING" && pending.playerId === playerId && pending.step !== "MODE") {
+    if (!pending.options.includes(instanceId)) return state;
+    resolveBrockPick(state, playerId, instanceId);
+    return state;
+  }
   if (pending?.type === "SEARCH_EVOLUTION" && pending.playerId === playerId) {
     const attackName = pending.attackName;
     if (resolveSearchEvolutionPick(state, playerId, instanceId) === "failed") return state;
     if (attackName) {
-      applyFestivalGroundsBonusIfEligible(state, playerId, attackName);
-      return finishAttackAfterDamagePhase(state, playerId, "complete");
+      return finishAttackAfterDamagePhase(state, playerId, attackName, "complete");
     }
     return state;
   }
@@ -806,17 +988,20 @@ function handlePickDeckCard(state: EngineState, playerId: PlayerId, instanceId: 
 
 function handlePickDiscardPokemon(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
   const pending = state.pendingAction;
+  if (pending?.type === "LANAS_AID" && pending.playerId === playerId) {
+    if (!pending.options.includes(instanceId)) return state;
+    resolveLanasAidPick(state, playerId, instanceId);
+    return state;
+  }
   if (pending?.type !== "PICK_DISCARD" || pending.playerId !== playerId) return state;
   if (!pending.options.includes(instanceId)) return state;
 
-  const player = getPlayer(state, playerId);
-  const index = player.discard.findIndex((card) => card.instanceId === instanceId);
-  if (index === -1) return state;
-  const card = player.discard.splice(index, 1)[0]!;
-  card.zone = Zone.Hand;
-  player.hand.push(card);
-  log(state, `${player.name} put ${getDefinitionSafe(state, card.definitionId).name} from discard into their hand.`);
-  state.pendingAction = null;
+  if (pending.shuffleToDeck) {
+    continueSacredAshDiscardPick(state, playerId, instanceId);
+    return state;
+  }
+
+  continueNightStretcherPick(state, playerId, instanceId);
   return state;
 }
 
@@ -864,12 +1049,29 @@ function handleCrispinOptionalDiscard(state: EngineState, playerId: PlayerId, in
 }
 
 function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState {
+  if (
+    !state.pendingAction &&
+    state.turnFlags.trFactoryDrawAvailable &&
+    state.currentPlayerId === playerId
+  ) {
+    state.turnFlags.trFactoryDrawAvailable = false;
+    log(state, "Skipped Team Rocket's Factory draw.");
+    return state;
+  }
+
   const pending = state.pendingAction;
   if (!pending || pending.playerId !== playerId) return state;
 
   if (pending.type === "CRISPIN_DISCARD") {
     state.pendingAction = null;
     log(state, "Optional effect skipped.");
+    return state;
+  }
+
+  if (pending.type === "PICK_DISCARD" && pending.shuffleToDeck) {
+    shufflePlayerDeck(state, playerId);
+    state.pendingAction = null;
+    log(state, "Sacred Ash: finished choosing Pokémon.");
     return state;
   }
 
@@ -882,10 +1084,43 @@ function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState
     return state;
   }
 
+  if (pending.type === "PICK_DISCARD" && pending.slotsRemaining !== undefined) {
+    state.pendingAction = null;
+    log(state, "Night Stretcher: finished choosing Pokémon.");
+    return state;
+  }
+
+  if (pending.type === "SEARCH_DECK" && pending.slotsRemaining !== undefined) {
+    shufflePlayerDeck(state, playerId);
+    state.pendingAction = null;
+    log(state, "Optional search skipped.");
+    return state;
+  }
+
   if (pending.type === "DISCARD_BASIC_ENERGY_FOR_DAMAGE") {
     const payload = finishDiscardEnergyForAttack(state, playerId);
     if (!payload) return state;
     return handleResumeAttackDamage(state, playerId, payload.attackName, payload.bonusDamage);
+  }
+
+  if (pending.type === "GRAND_TREE" && pending.step === "STAGE2") {
+    skipGrandTreeStage2(state, playerId);
+    return state;
+  }
+
+  if (pending.type === "ROTO_STICK") {
+    finishRotoStick(state, playerId);
+    return state;
+  }
+
+  if (pending.type === "MIRACLE_HEADSET") {
+    finishMiracleHeadset(state, playerId);
+    return state;
+  }
+
+  if (pending.type === "BUG_CATCHING_SET") {
+    finishBugCatchingSet(state, playerId);
+    return state;
   }
 
   return state;
@@ -898,12 +1133,44 @@ function handleDiscardOpponentEnergy(
   energyId: string,
 ): EngineState {
   const pending = state.pendingAction;
-  if (pending?.type !== "CRUSHING_HAMMER" || pending.playerId !== playerId) return state;
-  const match = pending.options.find(
-    (entry) => entry.pokemonId === pokemonId && entry.energyId === energyId,
-  );
-  if (!match) return state;
-  discardAttachedEnergy(state, getOpponentId(playerId), pokemonId, energyId);
+  if (pending?.type === "CRUSHING_HAMMER" && pending.playerId === playerId) {
+    const match = pending.options.find(
+      (entry) => entry.pokemonId === pokemonId && entry.energyId === energyId,
+    );
+    if (!match) return state;
+    discardAttachedEnergy(state, getOpponentId(playerId), pokemonId, energyId);
+    return state;
+  }
+  if (pending?.type === "ENHANCED_HAMMER" && pending.playerId === playerId && pending.step === "ENERGY") {
+    resolveEnhancedHammerEnergy(state, playerId, pokemonId, energyId);
+    return state;
+  }
+  return state;
+}
+
+function handleSelectEnhancedHammerPokemon(
+  state: EngineState,
+  playerId: PlayerId,
+  pokemonId: string,
+): EngineState {
+  resolveEnhancedHammerPokemon(state, playerId, pokemonId);
+  return state;
+}
+
+function handleSelectEnergySwitchPokemon(
+  state: EngineState,
+  playerId: PlayerId,
+  pokemonId: string,
+): EngineState {
+  resolveEnergySwitchPokemon(state, playerId, pokemonId);
+  return state;
+}
+
+function handleSelectWallysPokemon(state: EngineState, playerId: PlayerId, pokemonId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "WALLYS_COMPASSION" || pending.playerId !== playerId) return state;
+  if (!pending.options.includes(pokemonId)) return state;
+  applyWallysCompassion(state, playerId, pokemonId);
   return state;
 }
 
@@ -911,19 +1178,176 @@ function canPlayTrainerCard(state: EngineState, playerId: PlayerId, def: ReturnT
   if (isSupporter(def) && !canPlaySupporterThisTurn(state, playerId)) {
     return false;
   }
-  if (isItemTrainer(def) && state.itemPlayBlockedForPlayerId === playerId) {
+  if (!canPlayTrainerCardFromHand(state, playerId, def)) {
     return false;
   }
-  const name = def.name.toLowerCase();
-  if (name.includes("unfair stamp")) {
-    if (state.turnNumber <= 1) return false;
-    const opponent = getPlayer(state, getOpponentId(playerId));
-    if (opponent.prizes.length > 3) return false;
+  if (isTool(def)) {
+    return false;
   }
-  if (name.includes("ultra ball")) {
-    return getPlayer(state, playerId).hand.length >= 2;
+  return canPlayTrainerEffect(state, playerId, def).ok;
+}
+
+function handleSelectToolScrapper(
+  state: EngineState,
+  playerId: PlayerId,
+  toolInstanceId: string,
+): EngineState {
+  continueToolScrapperPick(state, playerId, toolInstanceId);
+  return state;
+}
+
+function handleUseGrandTree(state: EngineState, playerId: PlayerId): EngineState {
+  if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
+  if (state.pendingAction) return state;
+  if (!canUseGrandTree(state, playerId)) return state;
+  startGrandTreeFlow(state, playerId);
+  return state;
+}
+
+function handleSelectGrandTreeBasic(state: EngineState, playerId: PlayerId, targetId: string): EngineState {
+  resolveGrandTreeBasic(state, playerId, targetId);
+  return state;
+}
+
+function handleSelectGrandTreeStage1(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  resolveGrandTreeStage1(state, playerId, instanceId);
+  return state;
+}
+
+function handleSelectGrandTreeStage2(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  resolveGrandTreeStage2(state, playerId, instanceId);
+  return state;
+}
+
+function handleSelectRotoStick(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  continueRotoStickPick(state, playerId, instanceId);
+  return state;
+}
+
+function handleSelectMiracleHeadset(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  continueMiracleHeadsetPick(state, playerId, instanceId);
+  return state;
+}
+
+function handleSelectBugCatching(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  continueBugCatchingPick(state, playerId, instanceId);
+  return state;
+}
+
+function handleSelectSecretBoxDiscard(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  continueSecretBoxDiscard(state, playerId, instanceId);
+  return state;
+}
+
+function handleSelectSecretBoxSearch(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  continueSecretBoxSearch(state, playerId, instanceId);
+  return state;
+}
+
+function handleSkipGrandTreeStage2(state: EngineState, playerId: PlayerId): EngineState {
+  skipGrandTreeStage2(state, playerId);
+  return state;
+}
+
+function handleSelectPrimeCatcherBench(
+  state: EngineState,
+  playerId: PlayerId,
+  benchInstanceId: string,
+): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "PRIME_CATCHER" || pending.playerId !== playerId) return state;
+  if (!pending.options.includes(benchInstanceId)) return state;
+  if (pending.step === "OPPONENT_BENCH") {
+    resolvePrimeCatcherOpponentBench(state, playerId, benchInstanceId);
+  } else if (pending.step === "OWN_BENCH") {
+    resolvePrimeCatcherOwnBench(state, playerId, benchInstanceId);
   }
-  return true;
+  return state;
+}
+
+function handleSelectGiovanniBench(
+  state: EngineState,
+  playerId: PlayerId,
+  benchInstanceId: string,
+): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "GIOVANNI" || pending.playerId !== playerId) return state;
+  if (!pending.options.includes(benchInstanceId)) return state;
+  if (pending.step === "OWN_BENCH") {
+    resolveGiovanniOwnBench(state, playerId, benchInstanceId);
+  } else if (pending.step === "OPPONENT_BENCH") {
+    resolveGiovanniOpponentBench(state, playerId, benchInstanceId);
+  }
+  return state;
+}
+
+function handleSelectNsPpUpEnergy(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "N_PP_UP" || pending.playerId !== playerId || pending.step !== "ENERGY") return state;
+  if (!pending.options.includes(instanceId)) return state;
+  resolveNsPpUpEnergy(state, playerId, instanceId);
+  return state;
+}
+
+function handleSelectNsPpUpTarget(state: EngineState, playerId: PlayerId, pokemonId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "N_PP_UP" || pending.playerId !== playerId || pending.step !== "TARGET") return state;
+  if (!pending.options.includes(pokemonId)) return state;
+  resolveNsPpUpTarget(state, playerId, pokemonId);
+  return state;
+}
+
+function handleSelectBrockMode(
+  state: EngineState,
+  playerId: PlayerId,
+  mode: "basic" | "evolution",
+): EngineState {
+  resolveBrockMode(state, playerId, mode);
+  return state;
+}
+
+function handleSelectSurferBench(
+  state: EngineState,
+  playerId: PlayerId,
+  benchInstanceId: string,
+): EngineState {
+  resolveSurferBench(state, playerId, benchInstanceId);
+  return state;
+}
+
+function handleSelectRosaTarget(state: EngineState, playerId: PlayerId, pokemonId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "ROSAS_ENCOURAGEMENT" || pending.playerId !== playerId || pending.step !== "TARGET") {
+    return state;
+  }
+  if (!pending.options.includes(pokemonId)) return state;
+  resolveRosaTarget(state, playerId, pokemonId);
+  return state;
+}
+
+function handleSelectRosaEnergy(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "ROSAS_ENCOURAGEMENT" || pending.playerId !== playerId || pending.step !== "ENERGY") {
+    return state;
+  }
+  if (!pending.options.includes(instanceId)) return state;
+  resolveRosaEnergy(state, playerId, instanceId);
+  return state;
+}
+
+function handleUseLumioseCity(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
+  if (state.pendingAction) return state;
+  if (!canUseLumioseCity(state, playerId)) return state;
+  applyLumioseCitySearch(state, playerId, instanceId);
+  return handleEndTurn(state);
+}
+
+function handleUseTrFactoryDraw(state: EngineState, playerId: PlayerId): EngineState {
+  if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
+  if (state.pendingAction) return state;
+  applyTrFactoryDraw(state, playerId);
+  return state;
 }
 
 function handleEndTurn(state: EngineState): EngineState {
@@ -936,7 +1360,9 @@ function handleEndTurn(state: EngineState): EngineState {
   if (state.itemPlayBlockedForPlayerId === previous) {
     state.itemPlayBlockedForPlayerId = null;
   }
+  state.teamRocketKnockedOutSinceMyLastTurn[previous] = false;
   clearModifiersWhenTurnEnds(state, previous);
+  discardIgnitionEnergyAtEndOfTurn(state, previous);
   runPokemonCheckup(state);
   state.currentPlayerId = getOpponentId(previous);
   state.turnNumber += 1;
@@ -979,6 +1405,8 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleDraw(nextState, action.playerId);
     case "ATTACH_ENERGY":
       return handleAttachEnergy(nextState, action.playerId, action.energyId, action.targetId);
+    case "ATTACH_TOOL":
+      return handleAttachTool(nextState, action.playerId, action.toolId, action.targetId);
     case "PLAY_TRAINER":
       return handlePlayTrainer(nextState, action.playerId, action.instanceId);
     case "EVOLVE":
@@ -1009,6 +1437,58 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleSelectCrispinTarget(nextState, action.playerId, action.pokemonId);
     case "DISCARD_OPPONENT_ENERGY":
       return handleDiscardOpponentEnergy(nextState, action.playerId, action.pokemonId, action.energyId);
+    case "SELECT_ENHANCED_HAMMER_POKEMON":
+      return handleSelectEnhancedHammerPokemon(nextState, action.playerId, action.pokemonId);
+    case "SELECT_ENERGY_SWITCH_POKEMON":
+      return handleSelectEnergySwitchPokemon(nextState, action.playerId, action.pokemonId);
+    case "SELECT_WALLYS_POKEMON":
+      return handleSelectWallysPokemon(nextState, action.playerId, action.pokemonId);
+    case "SELECT_CIPHERMANIAC_CARD":
+      return handlePickDeckCard(nextState, action.playerId, action.instanceId);
+    case "SELECT_FIGHTING_GONG":
+      return handlePickDeckCard(nextState, action.playerId, action.instanceId);
+    case "SELECT_GIOVANNI_BENCH":
+      return handleSelectGiovanniBench(nextState, action.playerId, action.benchInstanceId);
+    case "SELECT_PRIME_CATCHER_BENCH":
+      return handleSelectPrimeCatcherBench(nextState, action.playerId, action.benchInstanceId);
+    case "SELECT_N_PP_UP_ENERGY":
+      return handleSelectNsPpUpEnergy(nextState, action.playerId, action.instanceId);
+    case "SELECT_N_PP_UP_TARGET":
+      return handleSelectNsPpUpTarget(nextState, action.playerId, action.pokemonId);
+    case "SELECT_TOOL_SCRAPPER":
+      return handleSelectToolScrapper(nextState, action.playerId, action.toolInstanceId);
+    case "SELECT_ROTO_STICK":
+      return handleSelectRotoStick(nextState, action.playerId, action.instanceId);
+    case "SELECT_MIRACLE_HEADSET":
+      return handleSelectMiracleHeadset(nextState, action.playerId, action.instanceId);
+    case "SELECT_BUG_CATCHING":
+      return handleSelectBugCatching(nextState, action.playerId, action.instanceId);
+    case "SELECT_SECRET_BOX_DISCARD":
+      return handleSelectSecretBoxDiscard(nextState, action.playerId, action.instanceId);
+    case "SELECT_SECRET_BOX_SEARCH":
+      return handleSelectSecretBoxSearch(nextState, action.playerId, action.instanceId);
+    case "SELECT_BROCK_MODE":
+      return handleSelectBrockMode(nextState, action.playerId, action.mode);
+    case "SELECT_SURFER_BENCH":
+      return handleSelectSurferBench(nextState, action.playerId, action.benchInstanceId);
+    case "SELECT_ROSA_TARGET":
+      return handleSelectRosaTarget(nextState, action.playerId, action.pokemonId);
+    case "SELECT_ROSA_ENERGY":
+      return handleSelectRosaEnergy(nextState, action.playerId, action.instanceId);
+    case "USE_LUMIOSE_CITY":
+      return handleUseLumioseCity(nextState, action.playerId, action.instanceId);
+    case "USE_TR_FACTORY_DRAW":
+      return handleUseTrFactoryDraw(nextState, action.playerId);
+    case "USE_GRAND_TREE":
+      return handleUseGrandTree(nextState, action.playerId);
+    case "SELECT_GRAND_TREE_BASIC":
+      return handleSelectGrandTreeBasic(nextState, action.playerId, action.targetId);
+    case "SELECT_GRAND_TREE_STAGE1":
+      return handleSelectGrandTreeStage1(nextState, action.playerId, action.instanceId);
+    case "SELECT_GRAND_TREE_STAGE2":
+      return handleSelectGrandTreeStage2(nextState, action.playerId, action.instanceId);
+    case "SKIP_GRAND_TREE_STAGE2":
+      return handleSkipGrandTreeStage2(nextState, action.playerId);
     case "CRISPIN_OPTIONAL_DISCARD":
       return handleCrispinOptionalDiscard(nextState, action.playerId, action.instanceId);
     case "SKIP_OPTIONAL":
@@ -1227,6 +1707,9 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       for (const instanceId of pending.options) {
         actions.push({ type: "PICK_DECK_CARD", playerId: current, instanceId });
       }
+      if (pending.slotsRemaining !== undefined && pending.slotsRemaining > 1) {
+        actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      }
       break;
     }
     case "RECON_DIRECTIVE": {
@@ -1240,6 +1723,221 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       if (pending.playerId !== current) break;
       for (const instanceId of pending.options) {
         actions.push({ type: "PICK_DISCARD_POKEMON", playerId: current, instanceId });
+      }
+      if (pending.slotsRemaining !== undefined && pending.slotsRemaining < 3) {
+        actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      }
+      break;
+    }
+    case "ENERGY_SWITCH": {
+      if (pending.playerId !== current) break;
+      for (const pokemonId of pending.options) {
+        actions.push({ type: "SELECT_ENERGY_SWITCH_POKEMON", playerId: current, pokemonId });
+      }
+      break;
+    }
+    case "ENHANCED_HAMMER": {
+      if (pending.playerId !== current) break;
+      if (pending.step === "POKEMON") {
+        const opponent = getPlayer(state, getOpponentId(current));
+        for (const pokemon of allPokemonInPlay(opponent)) {
+          if (pokemon.attachedEnergy.length > 0) {
+            actions.push({
+              type: "SELECT_ENHANCED_HAMMER_POKEMON",
+              playerId: current,
+              pokemonId: pokemon.instanceId,
+            });
+          }
+        }
+      } else {
+        for (const option of pending.options) {
+          actions.push({
+            type: "DISCARD_OPPONENT_ENERGY",
+            playerId: current,
+            pokemonId: option.pokemonId,
+            energyId: option.energyId,
+          });
+        }
+      }
+      break;
+    }
+    case "WALLYS_COMPASSION": {
+      if (pending.playerId !== current) break;
+      for (const pokemonId of pending.options) {
+        actions.push({ type: "SELECT_WALLYS_POKEMON", playerId: current, pokemonId });
+      }
+      break;
+    }
+    case "HILDA": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "PICK_DECK_CARD", playerId: current, instanceId });
+      }
+      break;
+    }
+    case "DAWN":
+    case "COLRESS": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "PICK_DECK_CARD", playerId: current, instanceId });
+      }
+      break;
+    }
+    case "CIPHERMANIAC": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_CIPHERMANIAC_CARD", playerId: current, instanceId });
+      }
+      break;
+    }
+    case "FIGHTING_GONG": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_FIGHTING_GONG", playerId: current, instanceId });
+      }
+      break;
+    }
+    case "GIOVANNI": {
+      if (pending.playerId !== current) break;
+      for (const benchInstanceId of pending.options) {
+        actions.push({ type: "SELECT_GIOVANNI_BENCH", playerId: current, benchInstanceId });
+      }
+      break;
+    }
+    case "PRIME_CATCHER": {
+      if (pending.playerId !== current) break;
+      for (const benchInstanceId of pending.options) {
+        actions.push({ type: "SELECT_PRIME_CATCHER_BENCH", playerId: current, benchInstanceId });
+      }
+      break;
+    }
+    case "N_PP_UP": {
+      if (pending.playerId !== current) break;
+      if (pending.step === "ENERGY") {
+        for (const instanceId of pending.options) {
+          actions.push({ type: "SELECT_N_PP_UP_ENERGY", playerId: current, instanceId });
+        }
+      } else {
+        for (const pokemonId of pending.options) {
+          actions.push({ type: "SELECT_N_PP_UP_TARGET", playerId: current, pokemonId });
+        }
+      }
+      break;
+    }
+    case "LANAS_AID": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "PICK_DISCARD_POKEMON", playerId: current, instanceId });
+      }
+      if (pending.pickedIds.length < 3) {
+        actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      }
+      break;
+    }
+    case "BROCKS_SCOUTING": {
+      if (pending.playerId !== current) break;
+      if (pending.step === "MODE") {
+        actions.push({ type: "SELECT_BROCK_MODE", playerId: current, mode: "basic" });
+        actions.push({ type: "SELECT_BROCK_MODE", playerId: current, mode: "evolution" });
+      } else {
+        for (const instanceId of pending.options) {
+          actions.push({ type: "PICK_DECK_CARD", playerId: current, instanceId });
+        }
+        if (pending.step === "BASIC" && (pending.pickedIds?.length ?? 0) < 2) {
+          actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+        }
+      }
+      break;
+    }
+    case "ROSAS_ENCOURAGEMENT": {
+      if (pending.playerId !== current) break;
+      if (pending.step === "TARGET") {
+        for (const pokemonId of pending.options) {
+          actions.push({ type: "SELECT_ROSA_TARGET", playerId: current, pokemonId });
+        }
+      } else {
+        for (const instanceId of pending.options) {
+          actions.push({ type: "SELECT_ROSA_ENERGY", playerId: current, instanceId });
+        }
+        if ((pending.pickedEnergyIds?.length ?? 0) < 2) {
+          actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+        }
+      }
+      break;
+    }
+    case "SURFER": {
+      if (pending.playerId !== current) break;
+      for (const benchInstanceId of pending.options) {
+        actions.push({ type: "SELECT_SURFER_BENCH", playerId: current, benchInstanceId });
+      }
+      break;
+    }
+    case "TOOL_SCRAPPER": {
+      if (pending.playerId !== current) break;
+      for (const toolInstanceId of pending.options) {
+        actions.push({ type: "SELECT_TOOL_SCRAPPER", playerId: current, toolInstanceId });
+      }
+      if (pending.discardRemaining > 1) {
+        actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      }
+      break;
+    }
+    case "GRAND_TREE": {
+      if (pending.playerId !== current) break;
+      if (pending.step === "BASIC") {
+        for (const targetId of pending.options) {
+          actions.push({ type: "SELECT_GRAND_TREE_BASIC", playerId: current, targetId });
+        }
+      } else if (pending.step === "STAGE1") {
+        for (const instanceId of pending.options) {
+          actions.push({ type: "SELECT_GRAND_TREE_STAGE1", playerId: current, instanceId });
+        }
+      } else {
+        for (const instanceId of pending.options) {
+          actions.push({ type: "SELECT_GRAND_TREE_STAGE2", playerId: current, instanceId });
+        }
+        actions.push({ type: "SKIP_GRAND_TREE_STAGE2", playerId: current });
+      }
+      break;
+    }
+    case "ROTO_STICK": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_ROTO_STICK", playerId: current, instanceId });
+      }
+      actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      break;
+    }
+    case "MIRACLE_HEADSET": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_MIRACLE_HEADSET", playerId: current, instanceId });
+      }
+      if (pending.pickedIds.length < pending.maxPicks) {
+        actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      }
+      break;
+    }
+    case "BUG_CATCHING_SET": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_BUG_CATCHING", playerId: current, instanceId });
+      }
+      if (pending.pickedIds.length < pending.maxPicks) {
+        actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      }
+      break;
+    }
+    case "SECRET_BOX": {
+      if (pending.playerId !== current) break;
+      if (pending.step === "DISCARD") {
+        for (const instanceId of pending.options) {
+          actions.push({ type: "SELECT_SECRET_BOX_DISCARD", playerId: current, instanceId });
+        }
+      } else {
+        for (const instanceId of pending.options) {
+          actions.push({ type: "SELECT_SECRET_BOX_SEARCH", playerId: current, instanceId });
+        }
       }
       break;
     }
@@ -1401,7 +2099,7 @@ function appendActiveTurnActions(
     }
   }
 
-  if (player.bench.length < 5) {
+  if (player.bench.length < getMaxBenchSize(state, current)) {
     for (const card of player.hand) {
       const def = getDefinition(state, card.definitionId);
       if (def && isBasicPokemon(def)) {
@@ -1438,6 +2136,21 @@ function appendActiveTurnActions(
       if (!isSupporter(def) || !state.turnFlags.supporterPlayed) {
         actions.push({ type: "PLAY_TRAINER", playerId: current, instanceId: card.instanceId });
       }
+    }
+  }
+
+  for (const card of player.hand) {
+    const def = getDefinition(state, card.definitionId);
+    if (!def || !isTool(def)) continue;
+    if (!canPlayToolFromHand(state, current)) continue;
+    for (const target of allPokemonInPlay(player)) {
+      if (!canAttachToolToPokemon(state, current, def, target)) continue;
+      actions.push({
+        type: "ATTACH_TOOL",
+        playerId: current,
+        toolId: card.instanceId,
+        targetId: target.instanceId,
+      });
     }
   }
 
@@ -1480,6 +2193,21 @@ function appendActiveTurnActions(
     for (const bench of player.bench) {
       actions.push({ type: "RETREAT", playerId: current, benchInstanceId: bench.instanceId });
     }
+  }
+
+  if (canUseLumioseCity(state, current)) {
+    for (const card of getLumioseDeckOptions(state, current)) {
+      actions.push({ type: "USE_LUMIOSE_CITY", playerId: current, instanceId: card.instanceId });
+    }
+  }
+
+  if (canUseGrandTree(state, current)) {
+    actions.push({ type: "USE_GRAND_TREE", playerId: current });
+  }
+
+  if (state.turnFlags.trFactoryDrawAvailable) {
+    actions.push({ type: "USE_TR_FACTORY_DRAW", playerId: current });
+    actions.push({ type: "SKIP_OPTIONAL", playerId: current });
   }
 
   if (!player.active || state.pendingAction?.type === "PROMOTE") {

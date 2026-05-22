@@ -1,6 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseAbilityText, parseAttackText } from "../engine/effects/parseText";
+import { parseTrainerText } from "../engine/effects/trainerText";
+import type { CardDefinition } from "../models/definition";
 import {
   analyzeParsedEffects,
   countImplementationStats,
@@ -22,17 +24,33 @@ async function runReport(): Promise<void> {
   let abilityPartial = 0;
   let abilityNone = 0;
   let abilityEmpty = 0;
+  let trainerFull = 0;
+  let trainerPartial = 0;
+  let trainerNone = 0;
+  let trainerEmpty = 0;
 
   const unknownPatterns: StubPatternRecord[] = [];
   const stubPatterns: StubPatternRecord[] = [];
   const attackImpl: StubPatternRecord[] = [];
   const abilityImpl: StubPatternRecord[] = [];
+  const trainerImpl: StubPatternRecord[] = [];
 
   for (const record of records) {
     const effects =
       record.kind === "attack"
         ? parseAttackText(record.text)
-        : parseAbilityText({ name: "x", type: "Ability", text: record.text }).effects;
+        : record.kind === "ability"
+          ? parseAbilityText({ name: "x", type: "Ability", text: record.text }).effects
+          : parseTrainerText({
+              apiId: record.id,
+              name: record.exampleCards[0] ?? "Trainer",
+              supertype: "Trainer",
+              subtypes: record.trainerSubtype ? [record.trainerSubtype] : ["Item"],
+              rules: [record.text],
+              set: { id: "x", name: "x" },
+              number: "1",
+              images: { small: "", large: "" },
+            } satisfies CardDefinition).effects;
     const analysis = analyzeParsedEffects(effects);
 
     if (record.kind === "attack") {
@@ -50,7 +68,7 @@ async function runReport(): Promise<void> {
         cardCount: record.cardCount,
         exampleCards: record.exampleCards,
       });
-    } else {
+    } else if (record.kind === "ability") {
       if (analysis.parseCoverage === "full") abilityFull += 1;
       else if (analysis.parseCoverage === "partial") abilityPartial += 1;
       else if (analysis.parseCoverage === "none") abilityNone += 1;
@@ -61,6 +79,21 @@ async function runReport(): Promise<void> {
         text: record.text,
         parseCoverage: analysis.parseCoverage,
         implementationCoverage: analysis.implementationCoverage,
+        stubClauses: analysis.stubClauses,
+        cardCount: record.cardCount,
+        exampleCards: record.exampleCards,
+      });
+    } else {
+      if (analysis.parseCoverage === "full") trainerFull += 1;
+      else if (analysis.parseCoverage === "partial") trainerPartial += 1;
+      else if (analysis.parseCoverage === "none") trainerNone += 1;
+      else trainerEmpty += 1;
+      trainerImpl.push({
+        id: record.id,
+        kind: record.kind,
+        text: record.text,
+        parseCoverage: analysis.parseCoverage,
+        implementationCoverage: record.implementationCoverage ?? analysis.implementationCoverage,
         stubClauses: analysis.stubClauses,
         cardCount: record.cardCount,
         exampleCards: record.exampleCards,
@@ -99,12 +132,15 @@ async function runReport(): Promise<void> {
 
   const attackImplementation = countImplementationStats(attackImpl);
   const abilityImplementation = countImplementationStats(abilityImpl);
+  const trainerImplementation = countImplementationStats(trainerImpl);
 
   console.log("Parse coverage — Attack:", { full: attackFull, partial: attackPartial, none: attackNone, empty: attackEmpty });
   console.log("Parse coverage — Ability:", { full: abilityFull, partial: abilityPartial, none: abilityNone, empty: abilityEmpty });
+  console.log("Parse coverage — Trainer:", { full: trainerFull, partial: trainerPartial, none: trainerNone, empty: trainerEmpty });
   console.log(`Unknown patterns: ${unknownPatterns.length}`);
   console.log("Implementation coverage — Attack:", attackImplementation);
   console.log("Implementation coverage — Ability:", abilityImplementation);
+  console.log("Implementation coverage — Trainer:", trainerImplementation);
   console.log(`Stub patterns (effect texts with ≥1 stub clause): ${stubPatterns.length}`);
 
   const stubClauseCounts = new Map<string, number>();

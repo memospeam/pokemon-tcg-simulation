@@ -96,6 +96,10 @@ export function canUseAbilityNow(
     if (isPlayersFirstTurn(state, pokemon.ownerId)) return false;
   }
 
+  if (parsed.effects.some((effect) => effect.kind === "once_during_first_turn")) {
+    if (!isPlayersFirstTurn(state, pokemon.ownerId)) return false;
+  }
+
   for (const effect of parsed.effects) {
     if (effect.kind === "ability_use_limit_per_turn") {
       const pattern = effect.namePattern.toLowerCase();

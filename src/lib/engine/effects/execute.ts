@@ -1,5 +1,6 @@
 import type { CardInstance } from "../../models/instance";
-import { isBasicEnergy, isBasicPokemon, isStadium, isSupporter } from "../../models/definition";
+import { isBasicEnergy, isBasicPokemon, isColorlessPokemon, isStadium, isSupporter } from "../../models/definition";
+import { getHp } from "../../models/definition";
 import { PlayerId, Zone } from "../../models/enums";
 import { applyWeaknessAndResistance, canEvolveInto, countPrizeCards, drawCards, getDefinitionSafe } from "../rules";
 import { canReceiveBenchAttackDamage } from "./pokemonRules";
@@ -15,7 +16,9 @@ import {
   type EngineState,
 } from "../types";
 import { discardAttachedEnergy, attachEnergyToPokemon } from "../trainerEffects";
+import { discardPokemonAttachments } from "./toolEffects";
 import { pokemonMatchesNameFilter, evolvePokemonFromDeck } from "./attackFlow";
+import { applySpecialCondition } from "./stadiumEffects";
 import type { EffectContext, ParsedEffect } from "./types";
 import { countersToDamage } from "./types";
 import { executeBulk8Effect } from "./executeBulk8";
@@ -86,7 +89,7 @@ function executeSingleEffect(
       }
       if (effect.target === "opponent_bench_each") {
         for (const bench of opponent.bench) {
-          if (!canReceiveBenchAttackDamage(state, bench)) continue;
+          if (!canReceiveBenchAttackDamage(state, bench, ctx.playerId)) continue;
           bench.damageCounters += effect.amount;
         }
         logMessage(state, `${effect.amount} damage to each Benched Pokémon.`);
@@ -107,7 +110,7 @@ function executeSingleEffect(
           playerId: ctx.playerId,
           amount: effect.amount,
           options: opponent.bench
-            .filter((b) => canReceiveBenchAttackDamage(state, b))
+            .filter((b) => canReceiveBenchAttackDamage(state, b, ctx.playerId))
             .map((b) => b.instanceId),
         };
         logMessage(state, "Choose a Benched Pokémon to damage.");
@@ -118,7 +121,7 @@ function executeSingleEffect(
 
     case "distribute_bench_counters": {
       const opponent = opponentPlayer(state, ctx);
-      const eligible = opponent.bench.filter((b) => canReceiveBenchAttackDamage(state, b));
+      const eligible = opponent.bench.filter((b) => canReceiveBenchAttackDamage(state, b, ctx.playerId));
       if (eligible.length === 0 || effect.counters <= 0) return "complete";
       state.pendingAction = {
         type: "DISTRIBUTE_BENCH_DAMAGE",
@@ -141,10 +144,7 @@ function executeSingleEffect(
       const opponent = opponentPlayer(state, ctx);
       const target =
         effect.target === "opponent_active" ? opponent.active : ctx.sourcePokemon;
-      if (target) {
-        if (!target.statusConditions.includes(effect.status)) {
-          target.statusConditions.push(effect.status);
-        }
+      if (target && applySpecialCondition(state, target, effect.status)) {
         logMessage(state, `${effect.target === "self_active" ? "This" : "Opponent's Active"} Pokémon is now ${effect.status}.`);
       }
       return "complete";
@@ -457,6 +457,70 @@ function executeSingleEffect(
       return "pending";
     }
 
+    case "search_typed_pokemon_max_hp_to_hand": {
+      const player = selfPlayer(state, ctx);
+      const typeFilter = effect.typeFilter;
+      const matches = player.deck.filter((card) => {
+        const def = getDefinition(state, card.definitionId);
+        if (def?.supertype !== "Pokémon") return false;
+        if (typeFilter === "Colorless" && !isColorlessPokemon(def)) return false;
+        else if (!(def.types?.some((t) => t.toLowerCase() === typeFilter.toLowerCase()) ?? false)) return false;
+        return getHp(def) <= effect.maxHp;
+      });
+      if (matches.length === 0) {
+        logMessage(state, `No ${typeFilter} Pokémon with ${effect.maxHp} HP or less found in deck.`);
+        shufflePlayerDeck(state, ctx.playerId);
+        return "complete";
+      }
+      const slots = Math.min(effect.count, matches.length);
+      state.pendingAction = {
+        type: "SEARCH_DECK",
+        playerId: ctx.playerId,
+        filter: "TYPED_POKEMON_MAX_HP_HAND",
+        options: matches.map((entry) => entry.instanceId),
+        slotsRemaining: slots,
+        searchMeta: { typeFilter, maxHp: effect.maxHp },
+      };
+      logMessage(
+        state,
+        `Search your deck for up to ${slots} ${typeFilter} Pokémon with ${effect.maxHp} HP or less.`,
+      );
+      return "pending";
+    }
+
+    case "search_named_pokemon_to_bench": {
+      const player = selfPlayer(state, ctx);
+      const filter = effect.nameFilter.toLowerCase();
+      const matches = player.deck.filter((card) => {
+        const def = getDefinition(state, card.definitionId);
+        return def?.supertype === "Pokémon" && def.name.toLowerCase().includes(filter);
+      });
+      if (matches.length === 0) {
+        logMessage(state, `No Pokémon with "${effect.nameFilter}" in their name found in deck.`);
+        shufflePlayerDeck(state, ctx.playerId);
+        return "complete";
+      }
+      if (player.bench.length >= 5) {
+        logMessage(state, "Bench is full.");
+        shufflePlayerDeck(state, ctx.playerId);
+        return "complete";
+      }
+      const slots = Math.min(matches.length, 5 - player.bench.length);
+      state.pendingAction = {
+        type: "SEARCH_DECK",
+        playerId: ctx.playerId,
+        filter: "NAMED_POKEMON_BENCH",
+        options: matches.map((entry) => entry.instanceId),
+        slotsRemaining: slots,
+        searchMeta: { nameFilter: effect.nameFilter },
+      };
+      logMessage(
+        state,
+        `Search your deck for Pokémon with "${effect.nameFilter}" in their name (up to ${slots} for Bench).`,
+      );
+      return "pending";
+    }
+
     case "discard_stadium": {
       if (state.stadium) {
         const owner = getPlayer(state, state.stadiumOwnerId ?? ctx.playerId);
@@ -638,10 +702,7 @@ function executeSingleEffect(
       const results = state.turnFlags.lastCoinFlipResults;
       if (results && results.length > 0 && results.every((heads) => !heads)) {
         const opponent = opponentPlayer(state, ctx);
-        if (opponent.active) {
-          if (!opponent.active.statusConditions.includes(effect.status)) {
-            opponent.active.statusConditions.push(effect.status);
-          }
+        if (opponent.active && applySpecialCondition(state, opponent.active, effect.status)) {
           logMessage(state, `${getDefinitionSafe(state, opponent.active.definitionId).name} is now ${effect.status}.`);
         }
       }
@@ -1118,7 +1179,6 @@ function executeSingleEffect(
       return "complete";
 
     case "damage_per_tools_on_your_pokemon":
-      logMessage(state, "No Pokémon Tools in sim — no bonus damage from Tools.");
       return "complete";
 
     case "attach_basic_energy_from_hand": {
@@ -1394,7 +1454,7 @@ export function assignBenchDamageCounter(
 
   const opponent = getPlayer(state, getOpponentId(playerId));
   const target = opponent.bench.find((b) => b.instanceId === targetId);
-  if (!target || !canReceiveBenchAttackDamage(state, target)) return "failed";
+  if (!target || !canReceiveBenchAttackDamage(state, target, playerId)) return "failed";
 
   target.damageCounters += 10;
   pending.countersRemaining -= 1;
@@ -1518,6 +1578,7 @@ export function resolveBenchKnockouts(state: EngineState): void {
       for (const energy of benchMon.attachedEnergy) {
         moveToDiscard(player, energy);
       }
+      discardPokemonAttachments(state, player, benchMon);
       moveToDiscard(player, benchMon);
       player.bench.splice(i, 1);
       logMessage(state, `${def.name} on the Bench was Knocked Out! ${attacker.name} took ${prizeCount} Prize card(s).`);

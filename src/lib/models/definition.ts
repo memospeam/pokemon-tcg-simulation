@@ -58,6 +58,14 @@ export function isStage2(def: CardDefinition): boolean {
   return def.supertype === "Pokémon" && def.subtypes.includes("Stage 2");
 }
 
+export function isEvolutionPokemon(def: CardDefinition): boolean {
+  return def.supertype === "Pokémon" && (isStage1(def) || isStage2(def));
+}
+
+export function isEnergyCard(def: CardDefinition): boolean {
+  return def.supertype === "Energy";
+}
+
 export function isSupporter(def: CardDefinition): boolean {
   return def.supertype === "Trainer" && def.subtypes.includes("Supporter");
 }
@@ -68,6 +76,50 @@ export function isStadium(def: CardDefinition): boolean {
 
 export function isItemTrainer(def: CardDefinition): boolean {
   return def.supertype === "Trainer" && def.subtypes.includes("Item");
+}
+
+export function isTool(def: CardDefinition): boolean {
+  return def.supertype === "Trainer" && def.subtypes.includes("Tool");
+}
+
+export function isTeamRocketPokemon(def: CardDefinition): boolean {
+  return def.supertype === "Pokémon" && def.name.toLowerCase().includes("team rocket's");
+}
+
+export function isCynthiasPokemon(def: CardDefinition): boolean {
+  return def.supertype === "Pokémon" && def.name.toLowerCase().startsWith("cynthia's ");
+}
+
+export function isLilliesPokemon(def: CardDefinition): boolean {
+  return def.supertype === "Pokémon" && def.name.toLowerCase().startsWith("lillie's ");
+}
+
+export function isNsPokemon(def: CardDefinition): boolean {
+  return def.supertype === "Pokémon" && /^n's /i.test(def.name);
+}
+
+export function isPokemonEx(def: CardDefinition): boolean {
+  return def.supertype === "Pokémon" && (hasRuleBox(def) || def.subtypes.includes("ex"));
+}
+
+export function isPokemonExOrV(def: CardDefinition): boolean {
+  if (def.supertype !== "Pokémon") return false;
+  const exOrVSubtypes = ["ex", "EX", "V", "VMAX", "VSTAR", "V-UNION"];
+  if (def.subtypes.some((subtype) => exOrVSubtypes.includes(subtype))) return true;
+  if (/\sex$/i.test(def.name.trim())) return true;
+  return false;
+}
+
+export function isTeamRocketSupporter(def: CardDefinition): boolean {
+  return isSupporter(def) && def.name.toLowerCase().includes("team rocket");
+}
+
+export function isTeraPokemon(def: CardDefinition): boolean {
+  return def.supertype === "Pokémon" && def.subtypes.includes("Tera");
+}
+
+export function isColorlessPokemon(def: CardDefinition): boolean {
+  return def.supertype === "Pokémon" && (def.types?.includes("Colorless") ?? false);
 }
 
 export function isBasicEnergy(def: CardDefinition): boolean {

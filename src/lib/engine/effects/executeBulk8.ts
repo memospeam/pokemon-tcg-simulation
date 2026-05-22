@@ -12,6 +12,7 @@ import {
   type EngineState,
 } from "../types";
 import { discardAttachedEnergy, attachEnergyToPokemon } from "../trainerEffects";
+import { applySpecialCondition, canReturnCardFromDiscardToHandOrDeck } from "./stadiumEffects";
 import type { EffectContext, ParsedEffect } from "./types";
 import { countersToDamage } from "./types";
 
@@ -110,7 +111,7 @@ export function executeBulk8Effect(
         ...opponent.bench,
       ].slice(0, effect.count);
       for (const target of targets) {
-        if (target === opponent.active || canReceiveBenchAttackDamage(state, target)) {
+        if (target === opponent.active || canReceiveBenchAttackDamage(state, target, ctx.playerId)) {
           applyDamageAmount(state, target, effect.amount, attackerTypes, target !== opponent.active);
         }
       }
@@ -158,8 +159,7 @@ export function executeBulk8Effect(
       const player = selfPlayer(state, ctx);
       if (player.prizes.length !== effect.prizes) return "complete";
       const opponent = opponentPlayer(state, ctx);
-      if (opponent.active && !opponent.active.statusConditions.includes(effect.status)) {
-        opponent.active.statusConditions.push(effect.status);
+      if (opponent.active && applySpecialCondition(state, opponent.active, effect.status)) {
         logMessage(state, `Opponent's Active is now ${effect.status}.`);
       }
       return "complete";
@@ -197,7 +197,12 @@ export function executeBulk8Effect(
         return def.supertype === "Trainer";
       });
       if (matchIndex === -1) return "complete";
-      const card = player.discard.splice(matchIndex, 1)[0]!;
+      const card = player.discard[matchIndex]!;
+      if (!canReturnCardFromDiscardToHandOrDeck(state, card)) {
+        logMessage(state, "That Stadium can't be returned from the discard pile.");
+        return "complete";
+      }
+      player.discard.splice(matchIndex, 1);
       card.zone = Zone.Hand;
       player.hand.push(card);
       logMessage(state, `Put ${getDefinitionSafe(state, card.definitionId).name} into hand from discard.`);
@@ -257,8 +262,7 @@ export function executeBulk8Effect(
       const heads = results.filter(Boolean).length;
       if (heads >= effect.minHeads) {
         const opponent = opponentPlayer(state, ctx);
-        if (opponent.active && !opponent.active.statusConditions.includes(effect.status)) {
-          opponent.active.statusConditions.push(effect.status);
+        if (opponent.active && applySpecialCondition(state, opponent.active, effect.status)) {
           logMessage(state, `Opponent's Active is now ${effect.status}.`);
         }
       }
@@ -267,8 +271,7 @@ export function executeBulk8Effect(
 
     case "status_if_discarded_tool": {
       const opponent = opponentPlayer(state, ctx);
-      if (opponent.active && !opponent.active.statusConditions.includes(effect.status)) {
-        opponent.active.statusConditions.push(effect.status);
+      if (opponent.active && applySpecialCondition(state, opponent.active, effect.status)) {
         logMessage(state, `Opponent's Active is now ${effect.status}.`);
       }
       return "complete";
@@ -316,9 +319,7 @@ export function executeBulk8Effect(
       const player = selfPlayer(state, ctx);
       const opponent = opponentPlayer(state, ctx);
       for (const target of [player.active, opponent.active]) {
-        if (target && !target.statusConditions.includes(effect.status)) {
-          target.statusConditions.push(effect.status);
-        }
+        if (target) applySpecialCondition(state, target, effect.status);
       }
       logMessage(state, `Both Active Pokémon are now ${effect.status}.`);
       return "complete";

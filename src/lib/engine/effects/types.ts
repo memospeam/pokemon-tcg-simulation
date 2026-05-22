@@ -113,6 +113,9 @@ export type ParsedEffect =
   | { kind: "ability_only_while_active" }
   | { kind: "evolve_trigger_ability" }
   | { kind: "ability_use_limit_per_turn"; namePattern: string }
+  | { kind: "once_during_first_turn" }
+  | { kind: "search_typed_pokemon_max_hp_to_hand"; count: number; typeFilter: string; maxHp: number }
+  | { kind: "search_named_pokemon_to_bench"; nameFilter: string }
   | { kind: "poison_attacker_when_damaged_from_opponent" }
   | { kind: "prevent_damage_from_ability_pokemon" }
   | {
@@ -230,6 +233,7 @@ export type ParsedEffect =
   | { kind: "prevent_damage_from_ex_on_self" }
   | { kind: "team_damage_bonus_to_opponent_active"; amount: number }
   | { kind: "block_opponent_items_and_tools_while_active" }
+  | { kind: "block_opponent_ace_spec_when_tool_attached" }
   | { kind: "bonus_prize_on_ko_basic" }
   | { kind: "search_evolution_typed_to_hand"; count: number; typeFilter: string }
   | { kind: "move_typed_energy_between_yours"; energyType: string }
@@ -422,6 +426,64 @@ export type ParsedEffect =
   | { kind: "mill_when_discarded_from_deck"; count: number }
   | { kind: "coin_on_opponent_retreat" }
   | { kind: "cant_move_counters" }
+  | { kind: "trainer_shuffle_hand_draw"; baseDraw: number; sixPrizeDraw?: number }
+  | { kind: "trainer_discard_hand_draw"; drawCount: number }
+  | { kind: "trainer_judge" }
+  | { kind: "trainer_boss_orders" }
+  | { kind: "trainer_ultra_ball" }
+  | { kind: "trainer_search_no_rule_box" }
+  | { kind: "trainer_poffin"; maxHp: number; count: number }
+  | { kind: "trainer_night_stretcher"; count: number }
+  | { kind: "trainer_crushing_hammer" }
+  | { kind: "trainer_enhanced_hammer" }
+  | { kind: "trainer_rare_candy" }
+  | { kind: "trainer_unfair_stamp" }
+  | { kind: "trainer_crispin" }
+  | { kind: "trainer_hilda" }
+  | { kind: "trainer_pokegear" }
+  | { kind: "trainer_wallys_compassion" }
+  | { kind: "trainer_energy_switch" }
+  | { kind: "trainer_switch_active_bench" }
+  | { kind: "trainer_dawn" }
+  | { kind: "trainer_ariana" }
+  | { kind: "trainer_archer" }
+  | { kind: "trainer_giovanni" }
+  | { kind: "trainer_proton"; count: number }
+  | { kind: "trainer_petrel" }
+  | { kind: "trainer_cyrano"; count: number }
+  | { kind: "trainer_ciphermaniac"; count: number }
+  | { kind: "trainer_fighting_gong" }
+  | { kind: "trainer_colress_tenacity" }
+  | { kind: "trainer_ns_pp_up" }
+  | { kind: "trainer_tool_scrapper"; count: number }
+  | { kind: "trainer_premium_power_pro"; amount: number }
+  | { kind: "trainer_black_belt_training"; amount: number }
+  | { kind: "trainer_lanas_aid"; count: number }
+  | { kind: "trainer_brocks_scouting" }
+  | { kind: "trainer_rosas_encouragement"; count: number }
+  | { kind: "trainer_briar" }
+  | { kind: "trainer_surfer" }
+  | { kind: "trainer_sacred_ash"; count: number }
+  | { kind: "trainer_team_rocket_transceiver" }
+  | { kind: "trainer_roto_stick" }
+  | { kind: "trainer_miracle_headset"; count: number }
+  | { kind: "trainer_secret_box" }
+  | { kind: "trainer_bug_catching_set"; count: number }
+  | { kind: "trainer_prime_catcher" }
+  | { kind: "trainer_master_ball" }
+  | { kind: "trainer_treasure_tracker"; count: number }
+  | { kind: "stadium_battle_cage" }
+  | { kind: "stadium_risky_ruins" }
+  | { kind: "stadium_watchtower" }
+  | { kind: "stadium_forest_vitality" }
+  | { kind: "stadium_area_zero" }
+  | { kind: "stadium_gravity_mountain"; hpReduction: number }
+  | { kind: "stadium_grand_tree" }
+  | { kind: "stadium_lumiose_city" }
+  | { kind: "stadium_team_rocket_factory" }
+  | { kind: "stadium_ns_castle" }
+  | { kind: "stadium_festival_grounds" }
+  | { kind: "stadium_neutralization_zone" }
   | { kind: "generic_effect_stub"; text: string }
   | { kind: "unknown"; text: string };
 

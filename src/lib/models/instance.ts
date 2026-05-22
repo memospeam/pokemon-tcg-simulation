@@ -6,6 +6,7 @@ export interface CardInstance {
   ownerId: PlayerId;
   zone: Zone;
   attachedEnergy: CardInstance[];
+  attachedTools: CardInstance[];
   damageCounters: number;
   statusConditions: string[];
   /** Turn number when this Pokémon entered play (for evolve / Rare Candy rules). */
@@ -38,6 +39,7 @@ export function createCardInstance(
     ownerId,
     zone,
     attachedEnergy: [],
+    attachedTools: [],
     damageCounters: 0,
     statusConditions: [],
   };

@@ -232,6 +232,11 @@ const BULK4_RULES: Rule[] = [
   },
   {
     pattern:
+      /^if this pok[ée]mon has a pok[ée]mon tool attached, your opponent can't play any ace spec cards from their hand\.?$/i,
+    build: () => ({ kind: "block_opponent_ace_spec_when_tool_attached" }),
+  },
+  {
+    pattern:
       /^if your opponent's basic pok[ée]mon is knocked out by damage from an attack used by this pok[ée]mon, take 1 more prize card\.?$/i,
     build: () => ({ kind: "bonus_prize_on_ko_basic" }),
   },
