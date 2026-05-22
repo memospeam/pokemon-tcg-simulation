@@ -1,0 +1,262 @@
+:root {
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at top, rgba(251, 191, 36, 0.18), transparent 32%),
+    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.16), transparent 24%),
+    #0f172a;
+  font-family: "Outfit", system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app {
+  width: min(1120px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2.5rem 0 4rem;
+}
+
+.hero {
+  margin-bottom: 2rem;
+}
+
+.hero__eyebrow {
+  margin: 0 0 0.5rem;
+  color: #fbbf24;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 0;
+  max-width: 14ch;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.05;
+}
+
+.hero__subtitle {
+  margin: 1rem 0 0;
+  max-width: 60ch;
+  color: #cbd5e1;
+}
+
+.tabs {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.tabs__button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.65rem 1.1rem;
+  background: transparent;
+  color: #cbd5e1;
+}
+
+.tabs__button--active {
+  background: linear-gradient(135deg, #fbbf24, #f97316);
+  color: #111827;
+  font-weight: 700;
+}
+
+.panel {
+  padding: 1.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 1.25rem;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(12px);
+}
+
+.panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  justify-content: space-between;
+  align-items: end;
+  margin-bottom: 1.25rem;
+}
+
+.panel__header h2,
+.player-hand h3 {
+  margin: 0;
+}
+
+.panel__header p,
+.panel__meta,
+.stat-card span:last-child,
+.event-log {
+  color: #94a3b8;
+}
+
+.panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field span {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.field input {
+  min-width: 9rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(2, 6, 23, 0.65);
+  color: inherit;
+}
+
+.panel__actions button {
+  border: 0;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1rem;
+  background: linear-gradient(135deg, #38bdf8, #6366f1);
+  color: white;
+  font-weight: 700;
+}
+
+.panel__meta {
+  margin: 0 0 1rem;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.85rem;
+}
+
+.card-grid--compact {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.card-tile {
+  display: grid;
+  gap: 0.35rem;
+  min-height: 120px;
+  padding: 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(2, 6, 23, 0.55);
+}
+
+.card-tile[data-compact="true"] {
+  min-height: 96px;
+}
+
+.card-tile--pokemon {
+  background: linear-gradient(160deg, rgba(239, 68, 68, 0.28), rgba(2, 6, 23, 0.7));
+}
+
+.card-tile--trainer {
+  background: linear-gradient(160deg, rgba(59, 130, 246, 0.28), rgba(2, 6, 23, 0.7));
+}
+
+.card-tile--energy {
+  background: linear-gradient(160deg, rgba(34, 197, 94, 0.28), rgba(2, 6, 23, 0.7));
+}
+
+.card-tile__type {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fde68a;
+}
+
+.card-tile__name {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.card-tile__detail {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.match-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  display: grid;
+  gap: 0.2rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: rgba(2, 6, 23, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.stat-card strong {
+  font-size: 1.5rem;
+}
+
+.stat-card--accent {
+  background: linear-gradient(160deg, rgba(251, 191, 36, 0.18), rgba(2, 6, 23, 0.7));
+}
+
+.stat-card__label {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+}
+
+.player-hands {
+  display: grid;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.event-log {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+@media (max-width: 720px) {
+  .match-summary {
+    grid-template-columns: 1fr;
+  }
+}
