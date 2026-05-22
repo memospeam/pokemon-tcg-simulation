@@ -1,4 +1,5 @@
 import type { CardAttack } from "../../models/definition";
+import { isSupporter } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import { PlayerId } from "../../models/enums";
 import {
@@ -368,6 +369,32 @@ export function startAttackIfDiscardPending(
     return true;
   }
 
+  const discardSupporters = textEffects.find(
+    (
+      effect,
+    ): effect is Extract<ParsedEffect, { kind: "discard_named_supporters_from_hand_optional" }> =>
+      effect.kind === "discard_named_supporters_from_hand_optional",
+  );
+  const perDiscardedHand = textEffects.find(
+    (effect): effect is Extract<ParsedEffect, { kind: "damage_per_discarded_hand_cards" }> =>
+      effect.kind === "damage_per_discarded_hand_cards",
+  );
+  if (discardSupporters && perDiscardedHand) {
+    state.pendingAction = {
+      type: "DISCARD_NAMED_SUPPORTERS_FOR_DAMAGE",
+      playerId,
+      attackName,
+      nameFilter: discardSupporters.nameFilter,
+      perCard: perDiscardedHand.perCard,
+      discardedCount: 0,
+    };
+    logMessage(
+      state,
+      `Discard Team Rocket Supporters from your hand (optional, +${perDiscardedHand.perCard} damage each).`,
+    );
+    return true;
+  }
+
   return false;
 }
 
@@ -497,6 +524,68 @@ export function finishDiscardEnergyForAttack(
   return payload;
 }
 
+export function listDiscardableNamedSupporters(
+  state: EngineState,
+  playerId: PlayerId,
+  nameFilter: string,
+): CardInstance[] {
+  const player = getPlayer(state, playerId);
+  const filter = nameFilter.toLowerCase();
+  return player.hand.filter((card) => {
+    const def = getDefinition(state, card.definitionId);
+    return def && isSupporter(def) && def.name.toLowerCase().includes(filter);
+  });
+}
+
+export function resolveDiscardHandSupporterForAttack(
+  state: EngineState,
+  playerId: PlayerId,
+  instanceId: string,
+): "failed" | "pending" {
+  const pending = state.pendingAction;
+  if (pending?.type !== "DISCARD_NAMED_SUPPORTERS_FOR_DAMAGE" || pending.playerId !== playerId) {
+    return "failed";
+  }
+  const player = getPlayer(state, playerId);
+  const index = player.hand.findIndex((card) => card.instanceId === instanceId);
+  if (index === -1) return "failed";
+  const card = player.hand[index]!;
+  const def = getDefinition(state, card.definitionId);
+  if (!def || !isSupporter(def) || !def.name.toLowerCase().includes(pending.nameFilter.toLowerCase())) {
+    return "failed";
+  }
+  player.hand.splice(index, 1);
+  moveToDiscard(player, card);
+  pending.discardedCount += 1;
+  logMessage(
+    state,
+    `Discarded ${def.name} (${pending.discardedCount} Supporter(s) total).`,
+  );
+  return "pending";
+}
+
+export function finishDiscardSupportersForAttack(
+  state: EngineState,
+  playerId: PlayerId,
+): { attackName: string; bonusDamage: number } | null {
+  const pending = state.pendingAction;
+  if (pending?.type !== "DISCARD_NAMED_SUPPORTERS_FOR_DAMAGE" || pending.playerId !== playerId) {
+    return null;
+  }
+  const payload = {
+    attackName: pending.attackName,
+    bonusDamage: pending.discardedCount * pending.perCard,
+  };
+  state.pendingAction = null;
+  return payload;
+}
+
+export function isAttackBlockedThisTurn(pokemon: CardInstance, attackName: string): boolean {
+  const blocked = pokemon.blockedAttackNextOpponentTurn;
+  if (!blocked || blocked.phase !== "active") return false;
+  return blocked.name.toLowerCase() === attackName.toLowerCase();
+}
+
 export function applyFestivalGroundsBonusIfEligible(
   state: EngineState,
   playerId: PlayerId,
@@ -531,6 +620,7 @@ export function canStartAttack(
     (entry) => entry.name === attackName,
   );
   if (!attack) return false;
+  if (isAttackBlockedThisTurn(player.active, attackName)) return false;
   const textEffects = parseAttackText(attack.text);
   if (isSecondPlayerFirstTurnBlocked(state, playerId, textEffects)) return false;
   return true;

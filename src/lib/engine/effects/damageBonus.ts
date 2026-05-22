@@ -220,7 +220,7 @@ export function computePreDamageBonus(
     case "damage_bonus_if_more_prizes":
       return player.prizes.length > opponent.prizes.length ? effect.amount : 0;
     case "damage_bonus_if_ko_last_turn":
-      return effect.amount;
+      return state.ownPokemonKnockedOutOpponentLastTurn[playerId] ? effect.amount : 0;
     case "damage_per_opponent_status_count":
       return opponent.active && hasSpecialCondition(opponent.active)
         ? opponent.active.statusConditions.length * effect.perStatus

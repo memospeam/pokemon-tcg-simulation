@@ -9,19 +9,13 @@ import type { CardDefinition } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import { PlayerId, Zone } from "../../models/enums";
 import { getDefinitionSafe } from "../rules";
-import { logMessage } from "../helpers";
-import { createRng } from "../rng";
+import { logMessage, shufflePlayerDeck } from "../helpers";
 import { getDefinition, getPlayer, moveToDiscard, type EngineState } from "../types";
 import type { ParsedEffect } from "./types";
+import { finishDeckSearchShuffle } from "./trainerDeckHelpers";
+import type { TrainerPlayCheck } from "./trainerPlayCheck";
 
-export type TrainerPlayCheck = { ok: true } | { ok: false; reason: string };
-
-function shuffleDeck(state: EngineState, playerId: PlayerId): void {
-  const player = getPlayer(state, playerId);
-  state.rngSeed += 1;
-  const rng = createRng(state.rngSeed + player.deck.length);
-  player.deck = rng.shuffle(player.deck);
-}
+export type { TrainerPlayCheck } from "./trainerPlayCheck";
 
 function deckTopCards(state: EngineState, playerId: PlayerId, count: number): CardInstance[] {
   const player = getPlayer(state, playerId);
@@ -54,23 +48,17 @@ function bugCatchingEligible(def: CardDefinition): boolean {
   return isGrassPokemon(def) || isBasicGrassEnergy(def);
 }
 
-function finishDeckSearchShuffle(state: EngineState, playerId: PlayerId, label: string): void {
-  shuffleDeck(state, playerId);
-  state.pendingAction = null;
-  logMessage(state, `${label}: shuffled deck.`);
-}
-
 export function applyRotoStick(state: EngineState, playerId: PlayerId): void {
   const top = deckTopCards(state, playerId, 4);
   const supporters = top.filter((card) => isSupporter(getDefinitionSafe(state, card.definitionId)));
   if (supporters.length === 0) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Roto-Stick: no Supporters in the top 4 cards — shuffled deck.");
     return;
   }
   if (supporters.length === 1) {
     moveDeckCardToHand(state, playerId, supporters[0]!.instanceId);
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Roto-Stick: put 1 Supporter into hand and shuffled deck.");
     return;
   }
@@ -170,13 +158,13 @@ export function applyBugCatchingSet(state: EngineState, playerId: PlayerId, maxP
   const top = deckTopCards(state, playerId, 7);
   const eligible = top.filter((card) => bugCatchingEligible(getDefinitionSafe(state, card.definitionId)));
   if (eligible.length === 0) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Bug Catching Set: no [G] Pokémon or Basic [G] Energy in the top 7 cards.");
     return;
   }
   if (eligible.length === 1) {
     moveDeckCardToHand(state, playerId, eligible[0]!.instanceId);
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Bug Catching Set: put 1 card into hand and shuffled deck.");
     return;
   }

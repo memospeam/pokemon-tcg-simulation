@@ -14,11 +14,9 @@ import {
   getHp,
 } from "../../models/definition";
 import type { CardDefinition } from "../../models/definition";
-import type { CardInstance } from "../../models/instance";
 import { PlayerId, Zone } from "../../models/enums";
 import { drawCards, getDefinitionSafe } from "../rules";
-import { logMessage } from "../helpers";
-import { createRng } from "../rng";
+import { logMessage, shufflePlayerDeck } from "../helpers";
 import {
   allPokemonInPlay,
   getDefinition,
@@ -30,37 +28,10 @@ import {
 import type { ParsedEffect } from "./types";
 import { attachEnergyToPokemon } from "../trainerEffects";
 import { discardAttachedTool, listAllAttachedTools } from "./toolEffects";
+import { addFromDeckToHand, deckMatching } from "./trainerDeckHelpers";
+import type { TrainerPlayCheck } from "./trainerPlayCheck";
 
-export type TrainerPlayCheck = { ok: true } | { ok: false; reason: string };
-
-function shuffleDeck(state: EngineState, playerId: PlayerId): void {
-  const player = getPlayer(state, playerId);
-  state.rngSeed += 1;
-  const rng = createRng(state.rngSeed + player.deck.length);
-  player.deck = rng.shuffle(player.deck);
-}
-
-function deckMatching(
-  state: EngineState,
-  playerId: PlayerId,
-  predicate: (def: CardDefinition) => boolean,
-): CardInstance[] {
-  const player = getPlayer(state, playerId);
-  return player.deck.filter((card) => {
-    const def = getDefinition(state, card.definitionId);
-    return def && predicate(def);
-  });
-}
-
-function addFromDeckToHand(state: EngineState, playerId: PlayerId, instanceId: string, label: string): void {
-  const player = getPlayer(state, playerId);
-  const index = player.deck.findIndex((card) => card.instanceId === instanceId);
-  if (index === -1) return;
-  const card = player.deck.splice(index, 1)[0]!;
-  card.zone = Zone.Hand;
-  player.hand.push(card);
-  logMessage(state, `${player.name} revealed ${getDefinitionSafe(state, card.definitionId).name} (${label}).`);
-}
+export type { TrainerPlayCheck } from "./trainerPlayCheck";
 
 function drawUntilHand(state: EngineState, playerId: PlayerId, target: number): void {
   const player = getPlayer(state, playerId);
@@ -90,18 +61,18 @@ function shuffleHandIntoDeck(state: EngineState, playerId: PlayerId): void {
     card.zone = Zone.Deck;
     player.deck.push(card);
   }
-  shuffleDeck(state, playerId);
+  shufflePlayerDeck(state, playerId);
 }
 
 export function applyDawn(state: EngineState, playerId: PlayerId): void {
   const basic = deckMatching(state, playerId, isBasicPokemon);
   if (basic.length === 0) {
     logMessage(state, "Dawn: no Basic Pokémon found in deck.");
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     return;
   }
   if (basic.length === 1) {
-    addFromDeckToHand(state, playerId, basic[0]!.instanceId, "Dawn");
+    addFromDeckToHand(state, playerId, basic[0]!.instanceId, "Dawn", "revealed");
     continueDawnAfterBasic(state, playerId);
     return;
   }
@@ -121,7 +92,7 @@ function continueDawnAfterBasic(state: EngineState, playerId: PlayerId): void {
     return;
   }
   if (stage1.length === 1) {
-    addFromDeckToHand(state, playerId, stage1[0]!.instanceId, "Dawn");
+    addFromDeckToHand(state, playerId, stage1[0]!.instanceId, "Dawn", "revealed");
     continueDawnAfterStage1(state, playerId);
     return;
   }
@@ -141,7 +112,7 @@ function continueDawnAfterStage1(state: EngineState, playerId: PlayerId): void {
     return;
   }
   if (stage2.length === 1) {
-    addFromDeckToHand(state, playerId, stage2[0]!.instanceId, "Dawn");
+    addFromDeckToHand(state, playerId, stage2[0]!.instanceId, "Dawn", "revealed");
     finishDawn(state, playerId);
     return;
   }
@@ -155,7 +126,7 @@ function continueDawnAfterStage1(state: EngineState, playerId: PlayerId): void {
 }
 
 function finishDawn(state: EngineState, playerId: PlayerId): void {
-  shuffleDeck(state, playerId);
+  shufflePlayerDeck(state, playerId);
   state.pendingAction = null;
   logMessage(state, "Dawn: shuffled deck.");
 }
@@ -164,7 +135,7 @@ export function resolveDawnPick(state: EngineState, playerId: PlayerId, instance
   const pending = state.pendingAction;
   if (pending?.type !== "DAWN" || pending.playerId !== playerId) return;
   if (!pending.options.includes(instanceId)) return;
-  addFromDeckToHand(state, playerId, instanceId, "Dawn");
+  addFromDeckToHand(state, playerId, instanceId, "Dawn", "revealed");
   if (pending.step === "BASIC") continueDawnAfterBasic(state, playerId);
   else if (pending.step === "STAGE1") continueDawnAfterStage1(state, playerId);
   else finishDawn(state, playerId);
@@ -192,13 +163,13 @@ export function applyProton(state: EngineState, playerId: PlayerId, count: numbe
     (def) => isBasicPokemon(def) && isTeamRocketPokemon(def),
   );
   if (matches.length === 0) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Team Rocket's Proton: no Basic Team Rocket's Pokémon in deck.");
     return;
   }
   if (matches.length <= count) {
-    for (const card of matches) addFromDeckToHand(state, playerId, card.instanceId, "Proton");
-    shuffleDeck(state, playerId);
+    for (const card of matches) addFromDeckToHand(state, playerId, card.instanceId, "Proton", "revealed");
+    shufflePlayerDeck(state, playerId);
     return;
   }
   state.pendingAction = {
@@ -214,13 +185,13 @@ export function applyProton(state: EngineState, playerId: PlayerId, count: numbe
 export function applyPetrel(state: EngineState, playerId: PlayerId): void {
   const matches = deckMatching(state, playerId, (def) => def.supertype === "Trainer");
   if (matches.length === 0) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Team Rocket's Petrel: no Trainer cards in deck.");
     return;
   }
   if (matches.length === 1) {
-    addFromDeckToHand(state, playerId, matches[0]!.instanceId, "Petrel");
-    shuffleDeck(state, playerId);
+    addFromDeckToHand(state, playerId, matches[0]!.instanceId, "Petrel", "revealed");
+    shufflePlayerDeck(state, playerId);
     return;
   }
   state.pendingAction = {
@@ -235,13 +206,13 @@ export function applyPetrel(state: EngineState, playerId: PlayerId): void {
 export function applyCyrano(state: EngineState, playerId: PlayerId, count: number): void {
   const matches = deckMatching(state, playerId, isPokemonEx);
   if (matches.length === 0) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Cyrano: no Pokémon ex in deck.");
     return;
   }
   if (matches.length <= count) {
-    for (const card of matches) addFromDeckToHand(state, playerId, card.instanceId, "Cyrano");
-    shuffleDeck(state, playerId);
+    for (const card of matches) addFromDeckToHand(state, playerId, card.instanceId, "Cyrano", "revealed");
+    shufflePlayerDeck(state, playerId);
     return;
   }
   state.pendingAction = {
@@ -264,7 +235,7 @@ export function applyCiphermaniac(state: EngineState, playerId: PlayerId, count:
       card.zone = Zone.Deck;
       player.deck.unshift(card);
     }
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Ciphermaniac's Codebreaking: put searched cards on top of the deck.");
     return;
   }
@@ -296,7 +267,7 @@ export function resolveCiphermaniacPick(state: EngineState, playerId: PlayerId, 
     logMessage(state, "Ciphermaniac's Codebreaking: choose another card.");
     return;
   }
-  shuffleDeck(state, playerId);
+  shufflePlayerDeck(state, playerId);
   state.pendingAction = null;
   logMessage(state, "Ciphermaniac's Codebreaking: shuffled deck and placed cards on top.");
 }
@@ -311,13 +282,13 @@ function matchesFightingGong(def: CardDefinition): boolean {
 export function applyFightingGong(state: EngineState, playerId: PlayerId): void {
   const matches = deckMatching(state, playerId, matchesFightingGong);
   if (matches.length === 0) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Fighting Gong: no matching cards in deck.");
     return;
   }
   if (matches.length === 1) {
-    addFromDeckToHand(state, playerId, matches[0]!.instanceId, "Fighting Gong");
-    shuffleDeck(state, playerId);
+    addFromDeckToHand(state, playerId, matches[0]!.instanceId, "Fighting Gong", "revealed");
+    shufflePlayerDeck(state, playerId);
     return;
   }
   state.pendingAction = {
@@ -332,17 +303,17 @@ export function applyColressTenacity(state: EngineState, playerId: PlayerId): vo
   const stadiums = deckMatching(state, playerId, isStadium);
   const energies = deckMatching(state, playerId, isEnergyCard);
   if (stadiums.length === 0 && energies.length === 0) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Colress's Tenacity: no Stadium or Energy in deck.");
     return;
   }
   if (stadiums.length === 0) {
-    addFromDeckToHand(state, playerId, energies[0]!.instanceId, "Colress's Tenacity");
-    shuffleDeck(state, playerId);
+    addFromDeckToHand(state, playerId, energies[0]!.instanceId, "Colress's Tenacity", "revealed");
+    shufflePlayerDeck(state, playerId);
     return;
   }
   if (stadiums.length === 1) {
-    addFromDeckToHand(state, playerId, stadiums[0]!.instanceId, "Colress's Tenacity");
+    addFromDeckToHand(state, playerId, stadiums[0]!.instanceId, "Colress's Tenacity", "revealed");
     startColressEnergyStep(state, playerId);
     return;
   }
@@ -358,13 +329,13 @@ export function applyColressTenacity(state: EngineState, playerId: PlayerId): vo
 function startColressEnergyStep(state: EngineState, playerId: PlayerId): void {
   const energies = deckMatching(state, playerId, isEnergyCard);
   if (energies.length === 0) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     state.pendingAction = null;
     return;
   }
   if (energies.length === 1) {
-    addFromDeckToHand(state, playerId, energies[0]!.instanceId, "Colress's Tenacity");
-    shuffleDeck(state, playerId);
+    addFromDeckToHand(state, playerId, energies[0]!.instanceId, "Colress's Tenacity", "revealed");
+    shufflePlayerDeck(state, playerId);
     state.pendingAction = null;
     return;
   }
@@ -381,10 +352,10 @@ export function resolveColressPick(state: EngineState, playerId: PlayerId, insta
   const pending = state.pendingAction;
   if (pending?.type !== "COLRESS" || pending.playerId !== playerId) return;
   if (!pending.options.includes(instanceId)) return;
-  addFromDeckToHand(state, playerId, instanceId, "Colress's Tenacity");
+  addFromDeckToHand(state, playerId, instanceId, "Colress's Tenacity", "revealed");
   if (pending.step === "STADIUM") startColressEnergyStep(state, playerId);
   else {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     state.pendingAction = null;
   }
 }
@@ -772,7 +743,7 @@ export function continueMultiPickDeckToHand(
       return;
     }
   }
-  shuffleDeck(state, playerId);
+  shufflePlayerDeck(state, playerId);
   state.pendingAction = null;
 }
 
@@ -798,7 +769,7 @@ export function resolveFightingGongPick(state: EngineState, playerId: PlayerId, 
   const pending = state.pendingAction;
   if (pending?.type !== "FIGHTING_GONG" || pending.playerId !== playerId) return;
   if (!pending.options.includes(instanceId)) return;
-  addFromDeckToHand(state, playerId, instanceId, "Fighting Gong");
-  shuffleDeck(state, playerId);
+  addFromDeckToHand(state, playerId, instanceId, "Fighting Gong", "revealed");
+  shufflePlayerDeck(state, playerId);
   state.pendingAction = null;
 }

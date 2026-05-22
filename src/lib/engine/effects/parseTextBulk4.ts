@@ -277,7 +277,7 @@ const BULK4_RULES: Rule[] = [
   },
   {
     pattern: /^when you play this pok[ée]mon from your hand onto your bench, you may use this ability\.?$/i,
-    build: () => ({ kind: "evolve_trigger_ability" }),
+    build: () => ({ kind: "on_bench_play_trigger" }),
   },
   {
     pattern: /^you can't use more than 1 ability that has "(.+?)" in its name each turn\.?$/i,

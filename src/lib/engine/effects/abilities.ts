@@ -69,6 +69,11 @@ export function meetsAbilityConditions(
         return def && energyMatchesType(def, condition.energyType);
       });
       if (!hasType) return false;
+      continue;
+    }
+    if (condition.type === "own_ko_opponent_last_turn") {
+      if (!state.ownPokemonKnockedOutOpponentLastTurn[pokemon.ownerId]) return false;
+      continue;
     }
   }
   return true;

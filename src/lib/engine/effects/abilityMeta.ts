@@ -19,6 +19,7 @@ export const ABILITY_CONDITION_KINDS = new Set<ParsedEffect["kind"]>([
 /** Effects handled by lifecycle hooks (bench play, evolve, checkup, damage, etc.). */
 export const ABILITY_TRIGGER_KINDS = new Set<ParsedEffect["kind"]>([
   "on_bench_play_switch_and_move_energy",
+  "on_bench_play_trigger",
   "counter_on_opponent_switch",
   "counter_on_opponent_evolve",
   "burn_on_opponent_switch",

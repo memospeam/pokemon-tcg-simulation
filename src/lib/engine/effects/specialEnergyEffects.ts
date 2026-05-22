@@ -7,8 +7,7 @@ import {
 import type { CardInstance } from "../../models/instance";
 import { PlayerId, Zone } from "../../models/enums";
 import { drawCards, getDefinitionSafe } from "../rules";
-import { logMessage } from "../helpers";
-import { createRng } from "../rng";
+import { logMessage, shufflePlayerDeck } from "../helpers";
 import { applyRiskyRuinsOnBenchPlay } from "./stadiumEffects";
 import {
   getDefinition,
@@ -64,12 +63,6 @@ export function canAttachSpecialEnergyToPokemon(
   return { ok: true };
 }
 
-function shuffleDeck(state: EngineState, playerId: PlayerId): void {
-  const player = getPlayer(state, playerId);
-  state.rngSeed += 1;
-  const rng = createRng(state.rngSeed + player.deck.length);
-  player.deck = rng.shuffle(player.deck);
-}
 
 function deckBasicPsychic(state: EngineState, playerId: PlayerId): CardInstance[] {
   const player = getPlayer(state, playerId);
@@ -134,7 +127,7 @@ function applyTelepathicPsychicBenchSearch(state: EngineState, playerId: PlayerI
   }
   if (matches.length === 1) {
     placeBasicPsychicFromDeck(state, playerId, matches[0]!.instanceId, 2);
-    if (!state.pendingAction) shuffleDeck(state, playerId);
+    if (!state.pendingAction) shufflePlayerDeck(state, playerId);
     return;
   }
   state.pendingAction = {
@@ -161,7 +154,7 @@ function placeBasicPsychicFromDeck(
   const def = getDefinitionSafe(state, card.definitionId);
   if (player.bench.length >= 5) {
     player.deck.unshift(card);
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Bench is full — cannot place more Pokémon.");
     return;
   }
@@ -188,7 +181,7 @@ function placeBasicPsychicFromDeck(
     }
   }
 
-  shuffleDeck(state, playerId);
+  shufflePlayerDeck(state, playerId);
 }
 
 export function resolveBasicPsychicBenchPick(
@@ -204,7 +197,7 @@ export function resolveBasicPsychicBenchPick(
   placeBasicPsychicFromDeck(state, playerId, instanceId, slotsRemaining);
   if (state.pendingAction === pending) {
     state.pendingAction = null;
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
   }
 }
 

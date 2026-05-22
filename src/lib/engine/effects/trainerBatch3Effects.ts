@@ -11,8 +11,7 @@ import type { CardDefinition } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import { PlayerId, Zone } from "../../models/enums";
 import { drawCards, getDefinitionSafe } from "../rules";
-import { logMessage } from "../helpers";
-import { createRng } from "../rng";
+import { logMessage, shufflePlayerDeck } from "../helpers";
 import {
   allPokemonInPlay,
   getDefinition,
@@ -23,27 +22,14 @@ import {
 import type { ParsedEffect } from "./types";
 import { attachEnergyToPokemon } from "../trainerEffects";
 import { applyRiskyRuinsOnBenchPlay, getMaxBenchSize, getStadiumKind } from "./stadiumEffects";
+import {
+  addFromDeckToHand,
+  deckMatching,
+  switchActiveWithBench,
+} from "./trainerDeckHelpers";
+import type { TrainerPlayCheck } from "./trainerPlayCheck";
 
-export type TrainerPlayCheck = { ok: true } | { ok: false; reason: string };
-
-function shuffleDeck(state: EngineState, playerId: PlayerId): void {
-  const player = getPlayer(state, playerId);
-  state.rngSeed += 1;
-  const rng = createRng(state.rngSeed + player.deck.length);
-  player.deck = rng.shuffle(player.deck);
-}
-
-function deckMatching(
-  state: EngineState,
-  playerId: PlayerId,
-  predicate: (def: CardDefinition) => boolean,
-): CardInstance[] {
-  const player = getPlayer(state, playerId);
-  return player.deck.filter((card) => {
-    const def = getDefinition(state, card.definitionId);
-    return def && predicate(def);
-  });
-}
+export type { TrainerPlayCheck } from "./trainerPlayCheck";
 
 function discardPokemonMatching(state: EngineState, playerId: PlayerId): CardInstance[] {
   const player = getPlayer(state, playerId);
@@ -71,33 +57,6 @@ function drawUntilHand(state: EngineState, playerId: PlayerId, target: number): 
     player.hand.push(card);
   }
   logMessage(state, `${player.name} drew until they had ${player.hand.length} cards in hand.`);
-}
-
-function switchActiveWithBench(state: EngineState, playerId: PlayerId, benchId: string): boolean {
-  const player = getPlayer(state, playerId);
-  const benchIndex = player.bench.findIndex((entry) => entry.instanceId === benchId);
-  if (benchIndex === -1 || !player.active) return false;
-  const incoming = player.bench.splice(benchIndex, 1)[0]!;
-  const outgoing = player.active;
-  outgoing.zone = Zone.Bench;
-  player.bench.push(outgoing);
-  incoming.zone = Zone.Active;
-  player.active = incoming;
-  logMessage(
-    state,
-    `${player.name} switched ${getDefinitionSafe(state, outgoing.definitionId).name} with ${getDefinitionSafe(state, incoming.definitionId).name}.`,
-  );
-  return true;
-}
-
-function addFromDeckToHand(state: EngineState, playerId: PlayerId, instanceId: string, label: string): void {
-  const player = getPlayer(state, playerId);
-  const index = player.deck.findIndex((card) => card.instanceId === instanceId);
-  if (index === -1) return;
-  const card = player.deck.splice(index, 1)[0]!;
-  card.zone = Zone.Hand;
-  player.hand.push(card);
-  logMessage(state, `${player.name} added ${getDefinitionSafe(state, card.definitionId).name} to hand (${label}).`);
 }
 
 export function applyPremiumPowerPro(state: EngineState, amount: number): void {
@@ -169,7 +128,7 @@ export function applyBrocksScouting(state: EngineState, playerId: PlayerId): voi
   const basics = deckMatching(state, playerId, isBasicPokemon);
   const evolutions = deckMatching(state, playerId, isEvolutionPokemon);
   if (basics.length === 0 && evolutions.length === 0) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Brock's Scouting: no matching Pokémon in deck.");
     return;
   }
@@ -188,7 +147,7 @@ export function applyBrocksScouting(state: EngineState, playerId: PlayerId): voi
 function startBrockBasicPick(state: EngineState, playerId: PlayerId, basics: CardInstance[]): void {
   if (basics.length <= 2) {
     for (const card of basics) addFromDeckToHand(state, playerId, card.instanceId, "Brock's Scouting");
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     return;
   }
   state.pendingAction = {
@@ -204,7 +163,7 @@ function startBrockBasicPick(state: EngineState, playerId: PlayerId, basics: Car
 function startBrockEvolutionPick(state: EngineState, playerId: PlayerId, evolutions: CardInstance[]): void {
   if (evolutions.length === 1) {
     addFromDeckToHand(state, playerId, evolutions[0]!.instanceId, "Brock's Scouting");
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     return;
   }
   state.pendingAction = {
@@ -229,7 +188,7 @@ export function resolveBrockPick(state: EngineState, playerId: PlayerId, instanc
   if (pending.step === "EVOLUTION") {
     if (!pending.options.includes(instanceId)) return;
     addFromDeckToHand(state, playerId, instanceId, "Brock's Scouting");
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     state.pendingAction = null;
     return;
   }
@@ -249,7 +208,7 @@ export function resolveBrockPick(state: EngineState, playerId: PlayerId, instanc
     logMessage(state, "Brock's Scouting: choose another Basic Pokémon (optional).");
     return;
   }
-  shuffleDeck(state, playerId);
+  shufflePlayerDeck(state, playerId);
   state.pendingAction = null;
 }
 
@@ -403,7 +362,7 @@ function shufflePokemonFromDiscardToDeck(
     card.damageCounters = 0;
     player.deck.push(card);
   }
-  shuffleDeck(state, playerId);
+  shufflePlayerDeck(state, playerId);
   logMessage(state, `Sacred Ash: shuffled ${cards.length} Pokémon into the deck.`);
 }
 
@@ -414,13 +373,13 @@ export function applyTeamRocketTransceiver(state: EngineState, playerId: PlayerI
     (def) => isSupporter(def) && def.name.toLowerCase().includes("team rocket"),
   );
   if (matches.length === 0) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Team Rocket's Transceiver: no Team Rocket Supporter in deck.");
     return;
   }
   if (matches.length === 1) {
     addFromDeckToHand(state, playerId, matches[0]!.instanceId, "Transceiver");
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     return;
   }
   state.pendingAction = {
@@ -449,7 +408,7 @@ export function applyLumioseCitySearch(state: EngineState, playerId: PlayerId, i
   card.enteredPlayTurn = state.turnNumber;
   player.bench.push(card);
   applyRiskyRuinsOnBenchPlay(state, card, playerId);
-  shuffleDeck(state, playerId);
+  shufflePlayerDeck(state, playerId);
   state.turnFlags.stadiumOncePerTurnUsed = true;
   state.pendingAction = null;
   logMessage(state, `${player.name} placed ${def.name} on Bench with Lumiose City — turn ends.`);
@@ -593,7 +552,7 @@ export function continueSacredAshDiscardPick(
     logMessage(state, "Sacred Ash: choose another Pokémon.");
     return;
   }
-  shuffleDeck(state, playerId);
+  shufflePlayerDeck(state, playerId);
   state.pendingAction = null;
   logMessage(state, "Sacred Ash: shuffled chosen Pokémon into the deck.");
 }

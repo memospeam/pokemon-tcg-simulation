@@ -449,6 +449,15 @@ function parseClause(clause: string): ParsedEffect[] {
     return effects;
   }
 
+  match = clause.match(
+    /^you may discard any number of supporter cards that have "(.+?)" in their name from your hand, and this attack does (\d+) damage for each card you discarded in this way\.?$/i,
+  );
+  if (match) {
+    effects.push({ kind: "discard_named_supporters_from_hand_optional", nameFilter: match[1]!.trim() });
+    effects.push({ kind: "damage_per_discarded_hand_cards", perCard: parseInt(match[2]!, 10) });
+    return effects;
+  }
+
   match = clause.match(/^you may discard up to (\d+) energy from your benched pok[ée]mon\.?$/);
   if (match) {
     effects.push({ kind: "discard_bench_energy_optional", max: parseInt(match[1]!, 10) });
@@ -923,6 +932,14 @@ export function parseAbilityText(ability: CardAbility): ParsedAbility {
   if (/you must discard a card from your hand in order to use this ability/.test(body)) {
     conditions.push({ type: "discard_from_hand_to_use" });
     body = body.replace(/you must discard a card from your hand in order to use this ability\.?\s*/, "");
+  }
+
+  if (/if any of your pok[ée]mon were knocked out during your opponent's last turn/i.test(body)) {
+    conditions.push({ type: "own_ko_opponent_last_turn" });
+    body = body.replace(
+      /if any of your pok[ée]mon were knocked out during your opponent's last turn,?\s*(?:you may\s*)?/i,
+      "",
+    );
   }
 
   const energyMatch = body.match(

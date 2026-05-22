@@ -50,6 +50,12 @@ export function activatePendingModifiersForTurnStart(state: EngineState, current
       ) {
         pokemon.preventDamageFromBasicNonColorless = "active";
       }
+      if (pokemon.blockedAttackNextOpponentTurn?.phase === "pending" && playerId === currentPlayerId) {
+        pokemon.blockedAttackNextOpponentTurn = {
+          ...pokemon.blockedAttackNextOpponentTurn,
+          phase: "active",
+        };
+      }
     }
   }
 }
@@ -81,6 +87,9 @@ export function clearModifiersWhenTurnEnds(state: EngineState, playerIdWhoEndedT
         pokemon.preventDamageFromBasicNonColorless === "active"
       ) {
         pokemon.preventDamageFromBasicNonColorless = undefined;
+      }
+      if (playerId === playerIdWhoEndedTurn && pokemon.blockedAttackNextOpponentTurn?.phase === "active") {
+        pokemon.blockedAttackNextOpponentTurn = undefined;
       }
     }
   }

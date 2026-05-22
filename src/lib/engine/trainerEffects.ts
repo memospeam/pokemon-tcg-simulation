@@ -18,8 +18,7 @@ import {
   drawCards,
   getDefinitionSafe,
 } from "./rules";
-import { flipCoin, logMessage } from "./helpers";
-import { createRng } from "./rng";
+import { flipCoin, logMessage, shufflePlayerDeck } from "./helpers";
 import {
   allPokemonInPlay,
   getDefinition,
@@ -56,8 +55,9 @@ import {
 import { resolveBasicPsychicBenchPick } from "./effects/specialEnergyEffects";
 import { isTrainerKindImplemented } from "./effects/trainerCoverage";
 import { parseTrainerText } from "./effects/trainerText";
+import type { TrainerPlayCheck } from "./effects/trainerPlayCheck";
 
-export type TrainerPlayCheck = { ok: true } | { ok: false; reason: string };
+export type { TrainerPlayCheck } from "./effects/trainerPlayCheck";
 
 function normalizeName(name: string): string {
   return name.toLowerCase().trim();
@@ -74,13 +74,6 @@ function isEnergySwitch(def: CardDefinition): boolean {
 
 function isSwitchItem(def: CardDefinition): boolean {
   return matchesTrainer(def, "switch") && !isEnergySwitch(def);
-}
-
-function shuffleDeck(state: EngineState, playerId: PlayerId): void {
-  const player = getPlayer(state, playerId);
-  state.rngSeed += 1;
-  const rng = createRng(state.rngSeed + player.deck.length);
-  player.deck = rng.shuffle(player.deck);
 }
 
 function deckPokemonMatching(
@@ -138,7 +131,7 @@ function addSearchedCardToHand(
 }
 
 function finishHildaSearch(state: EngineState, playerId: PlayerId): void {
-  shuffleDeck(state, playerId);
+  shufflePlayerDeck(state, playerId);
   state.pendingAction = null;
   logMessage(state, "Hilda: shuffled deck.");
 }
@@ -386,7 +379,7 @@ function applyTrainerByKind(state: EngineState, playerId: PlayerId, effect: Pars
         card.zone = Zone.Deck;
         player.deck.push(card);
       }
-      shuffleDeck(state, playerId);
+      shufflePlayerDeck(state, playerId);
       const drawCount =
         effect.sixPrizeDraw !== undefined && player.prizes.length === 6
           ? effect.sixPrizeDraw
@@ -405,7 +398,7 @@ function applyTrainerByKind(state: EngineState, playerId: PlayerId, effect: Pars
         card.zone = Zone.Deck;
         player.deck.push(card);
       }
-      shuffleDeck(state, playerId);
+      shufflePlayerDeck(state, playerId);
       drawCards(state, playerId, effect.drawCount);
       logMessage(
         state,
@@ -553,7 +546,7 @@ function applyUnfairStamp(state: EngineState, playerId: PlayerId): void {
     card.zone = Zone.Deck;
     opponent.deck.push(card);
   }
-  shuffleDeck(state, getOpponentId(playerId));
+  shufflePlayerDeck(state, getOpponentId(playerId));
   drawCards(state, getOpponentId(playerId), 4);
   logMessage(
     state,
@@ -743,7 +736,7 @@ export function resolveDeckPick(
     if (player.bench.length >= 5) {
       player.deck.unshift(card);
       logMessage(state, "Bench is full — cannot place more Pokémon from Buddy-Buddy Poffin.");
-      shuffleDeck(state, playerId);
+      shufflePlayerDeck(state, playerId);
       state.pendingAction = null;
       return;
     }
@@ -773,7 +766,7 @@ export function resolveDeckPick(
         return;
       }
     }
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     state.pendingAction = null;
     return;
   }
@@ -782,7 +775,7 @@ export function resolveDeckPick(
     if (player.bench.length >= 5) {
       player.deck.unshift(card);
       logMessage(state, "Bench is full — cannot place more Pokémon.");
-      shuffleDeck(state, playerId);
+      shufflePlayerDeck(state, playerId);
       state.pendingAction = null;
       return;
     }
@@ -812,7 +805,7 @@ export function resolveDeckPick(
         return;
       }
     }
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     state.pendingAction = null;
     return;
   }
@@ -852,7 +845,7 @@ export function resolveDeckPick(
         return;
       }
     }
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     state.pendingAction = null;
     return;
   }
@@ -881,7 +874,7 @@ export function resolveDeckPick(
         return;
       }
     }
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     state.pendingAction = null;
     return;
   }
@@ -905,7 +898,7 @@ export function resolveDeckPick(
     if (player.bench.length >= 5) {
       player.deck.unshift(card);
       logMessage(state, "Bench is full — cannot place more Pokémon.");
-      shuffleDeck(state, playerId);
+      shufflePlayerDeck(state, playerId);
       state.pendingAction = null;
       return;
     }
@@ -944,14 +937,14 @@ export function resolveDeckPick(
         return;
       }
     }
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     state.pendingAction = null;
     return;
   }
 
   card.zone = Zone.Hand;
   player.hand.push(card);
-  shuffleDeck(state, playerId);
+  shufflePlayerDeck(state, playerId);
   logMessage(state, `${player.name} added ${def.name} to their hand.`);
   state.pendingAction = null;
 }
@@ -985,7 +978,7 @@ function applyLegacyTrainerEffect(
       card.zone = Zone.Deck;
       player.deck.push(card);
     }
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     const drawCount = player.prizes.length === 6 ? 8 : 6;
     drawCards(state, playerId, drawCount);
     logMessage(
@@ -1104,7 +1097,7 @@ function applyLegacyTrainerEffect(
       card.zone = Zone.Deck;
       opponent.deck.push(card);
     }
-    shuffleDeck(state, getOpponentId(playerId));
+    shufflePlayerDeck(state, getOpponentId(playerId));
     drawCards(state, getOpponentId(playerId), 4);
     logMessage(state, `${opponent.name}'s hand was shuffled into their deck and they drew 4 cards (Unfair Stamp).`);
     return;
@@ -1122,7 +1115,7 @@ function applyLegacyTrainerEffect(
       card.zone = Zone.Deck;
       player.deck.push(card);
     }
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     drawCards(state, playerId, 7);
     logMessage(state, `${player.name} discarded their hand and drew 7 cards (Professor's Research).`);
     return;
@@ -1451,7 +1444,7 @@ export function applyWallysCompassion(state: EngineState, playerId: PlayerId, po
   pokemon.damageCounters = 0;
   pokemon.enteredPlayTurn = undefined;
   player.deck.push(pokemon);
-  shuffleDeck(state, playerId);
+  shufflePlayerDeck(state, playerId);
   state.pendingAction = null;
   logMessage(state, `${def.name} and its attached cards were shuffled into ${player.name}'s deck.`);
 }
@@ -1464,7 +1457,7 @@ function applyCrispin(state: EngineState, playerId: PlayerId): void {
   });
 
   if (energyIndex === -1) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Crispin: no Basic Energy found in deck.");
     maybeCrispinOptionalDiscard(state, playerId);
     return;
@@ -1478,7 +1471,7 @@ function applyCrispin(state: EngineState, playerId: PlayerId): void {
   if (basics.length === 0) {
     energy.zone = Zone.Deck;
     player.deck.push(energy);
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Crispin: no Basic Pokémon in play to attach Energy.");
     maybeCrispinOptionalDiscard(state, playerId);
     return;
@@ -1486,7 +1479,7 @@ function applyCrispin(state: EngineState, playerId: PlayerId): void {
 
   if (basics.length === 1) {
     attachEnergyToPokemon(state, playerId, energy, basics[0]!);
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     maybeCrispinOptionalDiscard(state, playerId);
     return;
   }
@@ -1568,7 +1561,7 @@ export function completeUltraBallDiscard(state: EngineState, playerId: PlayerId)
   });
 
   if (matches.length === 0) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Ultra Ball: no Pokémon found in deck.");
     state.pendingAction = null;
     return;

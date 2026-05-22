@@ -1,28 +1,14 @@
 import type { CardInstance } from "../../models/instance";
 import { PlayerId, Zone } from "../../models/enums";
 import { getDefinitionSafe } from "../rules";
-import { logMessage } from "../helpers";
-import { createRng } from "../rng";
+import { logMessage, shufflePlayerDeck } from "../helpers";
 import { resolveDeckPick } from "../trainerEffects";
-import { getDefinition, getOpponentId, getPlayer, type EngineState } from "../types";
+import { getOpponentId, getPlayer, type EngineState } from "../types";
 import type { ParsedEffect } from "./types";
+import { deckMatching, switchActiveWithBench } from "./trainerDeckHelpers";
+import type { TrainerPlayCheck } from "./trainerPlayCheck";
 
-export type TrainerPlayCheck = { ok: true } | { ok: false; reason: string };
-
-function shuffleDeck(state: EngineState, playerId: PlayerId): void {
-  const player = getPlayer(state, playerId);
-  state.rngSeed += 1;
-  const rng = createRng(state.rngSeed + player.deck.length);
-  player.deck = rng.shuffle(player.deck);
-}
-
-function deckPokemon(state: EngineState, playerId: PlayerId): CardInstance[] {
-  const player = getPlayer(state, playerId);
-  return player.deck.filter((card) => {
-    const def = getDefinition(state, card.definitionId);
-    return def?.supertype === "Pokémon";
-  });
-}
+export type { TrainerPlayCheck } from "./trainerPlayCheck";
 
 function switchOpponentBenchToActive(
   state: EngineState,
@@ -45,21 +31,8 @@ function switchOpponentBenchToActive(
   return true;
 }
 
-function switchOwnActiveWithBench(state: EngineState, playerId: PlayerId, benchId: string): boolean {
-  const player = getPlayer(state, playerId);
-  const benchIndex = player.bench.findIndex((entry) => entry.instanceId === benchId);
-  if (benchIndex === -1 || !player.active) return false;
-  const incoming = player.bench.splice(benchIndex, 1)[0]!;
-  const outgoing = player.active;
-  outgoing.zone = Zone.Bench;
-  player.bench.push(outgoing);
-  incoming.zone = Zone.Active;
-  player.active = incoming;
-  logMessage(
-    state,
-    `${player.name} switched ${getDefinitionSafe(state, outgoing.definitionId).name} with ${getDefinitionSafe(state, incoming.definitionId).name}.`,
-  );
-  return true;
+function deckPokemon(state: EngineState, playerId: PlayerId): CardInstance[] {
+  return deckMatching(state, playerId, (def) => def.supertype === "Pokémon");
 }
 
 export function applyPrimeCatcher(state: EngineState, playerId: PlayerId): void {
@@ -121,7 +94,7 @@ export function resolvePrimeCatcherOwnBench(
   playerId: PlayerId,
   benchId: string,
 ): void {
-  if (!switchOwnActiveWithBench(state, playerId, benchId)) return;
+  if (!switchActiveWithBench(state, playerId, benchId)) return;
   state.pendingAction = null;
   logMessage(state, "Prime Catcher: both Active Pokémon were switched.");
 }
@@ -129,7 +102,7 @@ export function resolvePrimeCatcherOwnBench(
 export function applyMasterBall(state: EngineState, playerId: PlayerId): void {
   const matches = deckPokemon(state, playerId);
   if (matches.length === 0) {
-    shuffleDeck(state, playerId);
+    shufflePlayerDeck(state, playerId);
     logMessage(state, "Master Ball: no Pokémon found in deck.");
     return;
   }

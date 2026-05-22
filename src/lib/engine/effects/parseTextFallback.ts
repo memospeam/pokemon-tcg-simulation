@@ -32,6 +32,9 @@ export function matchFallbackClause(clause: string): ParsedEffect[] | null {
   }
 
   if (/^when you play this pok[ée]mon from your hand onto your bench/i.test(clause)) {
+    if (/search your deck for a supporter/i.test(clause) || /you may use this ability/i.test(clause)) {
+      return [{ kind: "on_bench_play_trigger" }];
+    }
     return [{ kind: "on_bench_play_switch_and_move_energy" }];
   }
 

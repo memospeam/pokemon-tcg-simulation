@@ -15,6 +15,7 @@ export {
   resolveChooseOpponentDamage,
   resolveAttachHandEnergyToPokemon,
   resolveSearchEvolutionPick,
+  resolveChooseBlockedAttack,
   resolveBenchKnockouts,
 } from "./execute";
 export {
@@ -23,8 +24,12 @@ export {
   applyCopiedBenchAttack,
   canStartAttack,
   finishDiscardEnergyForAttack,
+  finishDiscardSupportersForAttack,
+  isAttackBlockedThisTurn,
   listCopyableBenchAttacks,
   listDiscardableEnergy,
+  listDiscardableNamedSupporters,
+  resolveDiscardHandSupporterForAttack,
   resolveDiscardOwnEnergyForAttack,
   startAttackIfCopyPending,
   startAttackIfDiscardPending,

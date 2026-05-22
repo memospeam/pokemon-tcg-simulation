@@ -3,6 +3,9 @@ import { Zone } from "../../models/enums";
 import { applyWeaknessAndResistance, drawCards, getDefinitionSafe } from "../rules";
 import { canReceiveBenchAttackDamage } from "./pokemonRules";
 import { logMessage, shufflePlayerDeck } from "../helpers";
+import {
+  shufflePokemonAndAttachmentsToDeck,
+} from "./pokemonZoneHelpers";
 import { createRng } from "../rng";
 import {
   allPokemonInPlay,
@@ -132,16 +135,7 @@ export function executeBulk8Effect(
       return "complete";
 
     case "shuffle_self_to_deck": {
-      const player = selfPlayer(state, ctx);
-      const pokemon = ctx.sourcePokemon;
-      pokemon.zone = Zone.Deck;
-      player.deck.push(pokemon);
-      if (player.active?.instanceId === pokemon.instanceId) player.active = null;
-      else {
-        const idx = player.bench.findIndex((entry) => entry.instanceId === pokemon.instanceId);
-        if (idx >= 0) player.bench.splice(idx, 1);
-      }
-      shufflePlayerDeck(state, ctx.playerId);
+      shufflePokemonAndAttachmentsToDeck(state, ctx.playerId, ctx.sourcePokemon);
       logMessage(state, "Shuffled this Pokémon into your deck.");
       return "complete";
     }

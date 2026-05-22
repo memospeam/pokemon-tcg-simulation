@@ -22,6 +22,8 @@ export interface CardInstance {
   preventDamageEffectsNextOpponentTurn?: "pending" | "active";
   /** Prevents damage from Basic non-Colorless attackers during opponent's next turn. */
   preventDamageFromBasicNonColorless?: "pending" | "active";
+  /** Opponent chose an attack this Pokémon can't use during the owner's next turn. */
+  blockedAttackNextOpponentTurn?: { name: string; phase: "pending" | "active" };
 }
 
 export function createInstanceId(): string {

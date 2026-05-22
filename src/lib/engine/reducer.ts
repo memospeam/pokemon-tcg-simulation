@@ -27,6 +27,7 @@ import {
   resolveAttachHandEnergyToPokemon,
   resolveSearchEvolutionPick,
   resolveBenchKnockouts,
+  resolveChooseBlockedAttack,
   selectMoveDamageSource,
   selectMoveDamageTarget,
 } from "./effects";
@@ -60,7 +61,11 @@ import {
   applyCopiedBenchAttack,
   applyFestivalGroundsBonusIfEligible,
   finishDiscardEnergyForAttack,
+  finishDiscardSupportersForAttack,
+  isAttackBlockedThisTurn,
   listDiscardableEnergy,
+  listDiscardableNamedSupporters,
+  resolveDiscardHandSupporterForAttack,
   resolveDiscardOwnEnergyForAttack,
   startAttackIfCopyPending,
   startAttackIfDiscardPending,
@@ -584,6 +589,28 @@ function handleDiscardOwnEnergyForAttack(
   return state;
 }
 
+function handleDiscardHandSupporterForAttack(
+  state: EngineState,
+  playerId: PlayerId,
+  instanceId: string,
+): EngineState {
+  if (resolveDiscardHandSupporterForAttack(state, playerId, instanceId) === "failed") {
+    return state;
+  }
+  return state;
+}
+
+function handleChooseBlockedAttack(
+  state: EngineState,
+  playerId: PlayerId,
+  attackName: string,
+): EngineState {
+  if (resolveChooseBlockedAttack(state, playerId, attackName) === "failed") {
+    return state;
+  }
+  return finishAttackAndEffects(state, playerId);
+}
+
 function handleAttachHandEnergyToPokemon(
   state: EngineState,
   playerId: PlayerId,
@@ -664,6 +691,7 @@ function handleKnockout(state: EngineState, defenderId: PlayerId): EngineState {
   if (isTeamRocketPokemon(def)) {
     state.teamRocketKnockedOutSinceMyLastTurn[defenderId] = true;
   }
+  state.ownPokemonKnockedOutOpponentLastTurn[defenderId] = true;
   const basePrize = countPrizeCards(def);
   const prizeCount = getModifiedPrizeCount(state, knockedOut, attackerId, basePrize);
   let extraPrizes = 0;
@@ -787,7 +815,12 @@ function handleAttack(state: EngineState, playerId: PlayerId, attackName: string
     return state;
   }
   if (!canStartAttack(state, playerId, attackName)) {
-    log(state, "Can't use this attack during your first turn when going second.");
+    const active = player.active;
+    if (active && isAttackBlockedThisTurn(active, attackName)) {
+      log(state, `${attackName} can't be used this turn.`);
+    } else {
+      log(state, "Can't use this attack during your first turn when going second.");
+    }
     return state;
   }
 
@@ -1103,6 +1136,12 @@ function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState
     return handleResumeAttackDamage(state, playerId, payload.attackName, payload.bonusDamage);
   }
 
+  if (pending.type === "DISCARD_NAMED_SUPPORTERS_FOR_DAMAGE") {
+    const payload = finishDiscardSupportersForAttack(state, playerId);
+    if (!payload) return state;
+    return handleResumeAttackDamage(state, playerId, payload.attackName, payload.bonusDamage);
+  }
+
   if (pending.type === "GRAND_TREE" && pending.step === "STAGE2") {
     skipGrandTreeStage2(state, playerId);
     return state;
@@ -1361,6 +1400,7 @@ function handleEndTurn(state: EngineState): EngineState {
     state.itemPlayBlockedForPlayerId = null;
   }
   state.teamRocketKnockedOutSinceMyLastTurn[previous] = false;
+  state.ownPokemonKnockedOutOpponentLastTurn[previous] = false;
   clearModifiersWhenTurnEnds(state, previous);
   discardIgnitionEnergyAtEndOfTurn(state, previous);
   runPokemonCheckup(state);
@@ -1510,6 +1550,10 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
         action.pokemonId,
         action.energyId,
       );
+    case "DISCARD_HAND_SUPPORTER_FOR_ATTACK":
+      return handleDiscardHandSupporterForAttack(nextState, action.playerId, action.instanceId);
+    case "CHOOSE_BLOCKED_ATTACK":
+      return handleChooseBlockedAttack(nextState, action.playerId, action.attackName);
     case "ATTACH_HAND_ENERGY_TO_POKEMON":
       return handleAttachHandEnergyToPokemon(
         nextState,
@@ -2024,6 +2068,25 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
         });
       }
       actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      break;
+    }
+    case "DISCARD_NAMED_SUPPORTERS_FOR_DAMAGE": {
+      if (pending.playerId !== current) break;
+      for (const card of listDiscardableNamedSupporters(state, current, pending.nameFilter)) {
+        actions.push({
+          type: "DISCARD_HAND_SUPPORTER_FOR_ATTACK",
+          playerId: current,
+          instanceId: card.instanceId,
+        });
+      }
+      actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      break;
+    }
+    case "CHOOSE_BLOCKED_ATTACK": {
+      if (pending.playerId !== current) break;
+      for (const attackName of pending.options) {
+        actions.push({ type: "CHOOSE_BLOCKED_ATTACK", playerId: current, attackName });
+      }
       break;
     }
     case "SEARCH_EVOLUTION": {

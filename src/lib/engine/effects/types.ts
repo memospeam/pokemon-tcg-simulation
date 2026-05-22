@@ -73,6 +73,8 @@ export type ParsedEffect =
   | { kind: "discard_basic_energy_optional" }
   | { kind: "discard_bench_energy_optional"; max: number }
   | { kind: "damage_per_discarded_basic_energy"; perCard: number }
+  | { kind: "discard_named_supporters_from_hand_optional"; nameFilter: string }
+  | { kind: "damage_per_discarded_hand_cards"; perCard: number }
   | { kind: "shuffle_random_opponent_hand_to_deck" }
   | { kind: "search_evolution_from_deck" }
   | { kind: "search_supporter_to_hand" }
@@ -108,6 +110,7 @@ export type ParsedEffect =
   | { kind: "disable_opponent_attack_next_turn" }
   | { kind: "opponent_discard_from_hand"; count?: number }
   | { kind: "on_bench_play_switch_and_move_energy" }
+  | { kind: "on_bench_play_trigger" }
   | { kind: "allow_attack_first_turn_if_go_first" }
   | { kind: "knock_out_self_on_ability_use" }
   | { kind: "ability_only_while_active" }
@@ -577,7 +580,8 @@ export type AbilityFrequency = "once_per_turn" | "passive" | "unlimited";
 export type AbilityCondition =
   | { type: "has_energy_type"; energyType: string }
   | { type: "has_any_energy" }
-  | { type: "discard_from_hand_to_use" };
+  | { type: "discard_from_hand_to_use" }
+  | { type: "own_ko_opponent_last_turn" };
 
 export interface ParsedAbility {
   name: string;
@@ -593,4 +597,6 @@ export interface EffectContext {
   opponentId: PlayerId;
   lastDamageToOpponentActive?: number;
   attackName?: string;
+  /** Cards drawn during the current executeEffects sequence (for conditional shuffle effects). */
+  cardsDrawnThisSequence?: number;
 }

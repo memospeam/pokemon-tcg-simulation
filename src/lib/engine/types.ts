@@ -67,6 +67,8 @@ export interface EngineState {
   teamRocketKnockedOutSinceMyLastTurn: Record<PlayerId, boolean>;
   /** Legacy Energy: prize reduction applied once per game per player. */
   legacyEnergyPrizeReductionUsed: Record<PlayerId, boolean>;
+  /** Any of this player's Pokémon were KO'd during the opponent's previous turn (Fezandipiti, etc.). */
+  ownPokemonKnockedOutOpponentLastTurn: Record<PlayerId, boolean>;
 }
 
 export type GameAction =
@@ -90,6 +92,8 @@ export type GameAction =
   | { type: "MOVE_ENERGY_TO_BENCH"; playerId: PlayerId; benchInstanceId: string }
   | { type: "CHOOSE_OPPONENT_DAMAGE"; playerId: PlayerId; targetId: string }
   | { type: "DISCARD_OWN_ENERGY_FOR_ATTACK"; playerId: PlayerId; pokemonId: string; energyId: string }
+  | { type: "DISCARD_HAND_SUPPORTER_FOR_ATTACK"; playerId: PlayerId; instanceId: string }
+  | { type: "CHOOSE_BLOCKED_ATTACK"; playerId: PlayerId; attackName: string }
   | { type: "ATTACH_HAND_ENERGY_TO_POKEMON"; playerId: PlayerId; pokemonId: string; energyId: string }
   | { type: "RESUME_ATTACK"; playerId: PlayerId; attackName: string; extraBonusDamage: number }
   | { type: "CHOOSE_BENCH_ATTACK"; playerId: PlayerId; benchPokemonId: string; attackName: string }
@@ -297,6 +301,20 @@ export type PendingAction =
       playerId: PlayerId;
       pokemonId: string;
       abilityName: string;
+    }
+  | {
+      type: "DISCARD_NAMED_SUPPORTERS_FOR_DAMAGE";
+      playerId: PlayerId;
+      attackName: string;
+      nameFilter: string;
+      perCard: number;
+      discardedCount: number;
+    }
+  | {
+      type: "CHOOSE_BLOCKED_ATTACK";
+      playerId: PlayerId;
+      targetPokemonId: string;
+      options: string[];
     }
   | null;
 

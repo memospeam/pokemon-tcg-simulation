@@ -17,6 +17,10 @@ import {
 } from "../types";
 import { discardAttachedEnergy, attachEnergyToPokemon } from "../trainerEffects";
 import { discardPokemonAttachments } from "./toolEffects";
+import {
+  returnPokemonToHand,
+  shufflePokemonAndAttachmentsToDeck,
+} from "./pokemonZoneHelpers";
 import { pokemonMatchesNameFilter, evolvePokemonFromDeck } from "./attackFlow";
 import { applySpecialCondition } from "./stadiumEffects";
 import type { EffectContext, ParsedEffect } from "./types";
@@ -136,7 +140,8 @@ function executeSingleEffect(
     }
 
     case "draw": {
-      drawCards(state, ctx.playerId, effect.count);
+      const drawn = drawCards(state, ctx.playerId, effect.count);
+      ctx.cardsDrawnThisSequence = (ctx.cardsDrawnThisSequence ?? 0) + drawn;
       return "complete";
     }
 
@@ -839,10 +844,9 @@ function executeSingleEffect(
     case "bonus_prize_on_defender_ko_next_turn":
     case "move_energy_to_new_bench_after_search":
     case "self_hand_equal_damage_bonus":
-    case "disable_opponent_attack_next_turn":
     case "copy_opponent_active_attack":
-    case "return_self_to_hand":
     case "on_bench_play_switch_and_move_energy":
+    case "on_bench_play_trigger":
     case "allow_attack_first_turn_if_go_first":
     case "knock_out_self_on_ability_use":
     case "ability_only_while_active":
@@ -1016,7 +1020,6 @@ function executeSingleEffect(
     case "attack_cost_reduction_per_opponent_bench":
     case "evolved_can_use_previous_attacks":
     case "counter_on_opponent_energy_attach":
-    case "shuffle_self_to_deck_if_drew":
     case "move_counters_between_yours":
     case "can_evolve_if_name_in_play":
     case "hp_bonus_per_typed_energy":
@@ -1028,6 +1031,46 @@ function executeSingleEffect(
     case "generic_effect_stub":
       logMessage(state, `Effect applied: ${effect.kind.replace(/_/g, " ")}.`);
       return "complete";
+
+    case "return_self_to_hand": {
+      returnPokemonToHand(state, ctx.playerId, ctx.sourcePokemon);
+      logMessage(state, "Returned this Pokémon to hand.");
+      return "complete";
+    }
+
+    case "shuffle_self_to_deck_if_drew": {
+      if ((ctx.cardsDrawnThisSequence ?? 0) > 0) {
+        shufflePokemonAndAttachmentsToDeck(state, ctx.playerId, ctx.sourcePokemon);
+        logMessage(state, "Shuffled this Pokémon and all attached cards into your deck.");
+      }
+      return "complete";
+    }
+
+    case "disable_opponent_attack_next_turn": {
+      const opponent = opponentPlayer(state, ctx);
+      if (!opponent.active) return "complete";
+      const attacks = getDefinitionSafe(state, opponent.active.definitionId).attacks ?? [];
+      if (attacks.length === 0) return "complete";
+      if (attacks.length === 1) {
+        opponent.active.blockedAttackNextOpponentTurn = {
+          name: attacks[0]!.name,
+          phase: "pending",
+        };
+        logMessage(
+          state,
+          `${getDefinitionSafe(state, opponent.active.definitionId).name} can't use ${attacks[0]!.name} during its next turn.`,
+        );
+        return "complete";
+      }
+      state.pendingAction = {
+        type: "CHOOSE_BLOCKED_ATTACK",
+        playerId: ctx.playerId,
+        targetPokemonId: opponent.active.instanceId,
+        options: attacks.map((entry) => entry.name),
+      };
+      logMessage(state, "Choose 1 of your opponent's Active Pokémon's attacks to block next turn.");
+      return "pending";
+    }
 
     case "reveal_opponent_hand": {
       const opponent = opponentPlayer(state, ctx);
@@ -1551,6 +1594,31 @@ export function selectMoveDamageTarget(
   logMessage(
     state,
     `Moved ${moved} damage from ${getDefinitionSafe(state, source.definitionId).name} to ${getDefinitionSafe(state, target.definitionId).name}.`,
+  );
+  state.pendingAction = null;
+  return "complete";
+}
+
+export function resolveChooseBlockedAttack(
+  state: EngineState,
+  playerId: PlayerId,
+  attackName: string,
+): ExecuteResult {
+  const pending = state.pendingAction;
+  if (pending?.type !== "CHOOSE_BLOCKED_ATTACK" || pending.playerId !== playerId) return "failed";
+  if (!pending.options.some((name) => name.toLowerCase() === attackName.toLowerCase())) return "failed";
+
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  const target =
+    opponent.active?.instanceId === pending.targetPokemonId
+      ? opponent.active
+      : [...opponent.bench].find((entry) => entry.instanceId === pending.targetPokemonId);
+  if (!target) return "failed";
+
+  target.blockedAttackNextOpponentTurn = { name: attackName, phase: "pending" };
+  logMessage(
+    state,
+    `${getDefinitionSafe(state, target.definitionId).name} can't use ${attackName} during its next turn.`,
   );
   state.pendingAction = null;
   return "complete";

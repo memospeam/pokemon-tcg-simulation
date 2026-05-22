@@ -6,6 +6,8 @@ import { drawCards, getDefinitionSafe } from "../rules";
 import { flipCoin, logMessage } from "../helpers";
 import { allPokemonInPlay, getOpponentId, getPlayer, type EngineState } from "../types";
 import { attachEnergyToPokemon } from "../trainerEffects";
+import { getExecutableAbilityEffects } from "./abilityMeta";
+import { canUseAbilityNow, markAbilityUsed } from "./abilities";
 import { executeEffects } from "./execute";
 import { parseAbilityText } from "./parseText";
 import { allOwnedPokemon } from "./modifiers";
@@ -138,18 +140,34 @@ export function onBenchPlay(state: EngineState, playerId: PlayerId, pokemon: Car
   const def = getDefinitionSafe(state, pokemon.definitionId);
   for (const ability of def.abilities ?? []) {
     const parsed = parseAbilityText(ability);
-    if (!parsed.effects.some((effect) => effect.kind === "on_bench_play_switch_and_move_energy")) continue;
+    const hasSwitchTrigger = parsed.effects.some(
+      (effect) => effect.kind === "on_bench_play_switch_and_move_energy",
+    );
+    const hasBenchTrigger = parsed.effects.some((effect) => effect.kind === "on_bench_play_trigger");
+    if (!hasSwitchTrigger && !hasBenchTrigger) continue;
+
     const player = getPlayer(state, playerId);
-    if (!player.active || !player.bench.includes(pokemon)) continue;
+    if (!player.bench.includes(pokemon)) continue;
+    if (!canUseAbilityNow(state, pokemon, parsed)) continue;
+
+    markAbilityUsed(state, pokemon, ability.name, parsed);
+    logMessage(state, `${def.name}'s ${ability.name} triggered.`);
+
     const ctx = {
       playerId,
       sourcePokemon: pokemon,
       opponentId: getOpponentId(playerId),
     };
-    executeEffects(state, ctx, [
-      { kind: "optional_switch_with_bench" },
-      { kind: "move_energy_to_bench" },
-    ]);
+
+    if (hasSwitchTrigger) {
+      executeEffects(state, ctx, [
+        { kind: "optional_switch_with_bench" },
+        { kind: "move_energy_to_bench" },
+      ]);
+      continue;
+    }
+
+    executeEffects(state, ctx, getExecutableAbilityEffects(parsed.effects));
   }
 }
 

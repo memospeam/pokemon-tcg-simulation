@@ -122,6 +122,10 @@ export function createInitialGame(input: CreateGameInput): EngineState {
       [PlayerId.P1]: false,
       [PlayerId.P2]: false,
     },
+    ownPokemonKnockedOutOpponentLastTurn: {
+      [PlayerId.P1]: false,
+      [PlayerId.P2]: false,
+    },
   };
 }
 
