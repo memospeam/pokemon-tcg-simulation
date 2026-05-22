@@ -1,0 +1,136 @@
+{
+  "tournamentId": 535,
+  "name": "Regional Utrecht",
+  "date": "2026-05-16",
+  "sourceUrl": "https://limitlesstcg.com/tournaments/535",
+  "decks": [
+    {
+      "placement": 1,
+      "player": "Miloslav Posledni",
+      "deckName": "Lopunny Dudunsparce",
+      "text": "Pokémon : 16\n3 Buneary PFL 83\n3 Mega Lopunny ex PFL 84\n2 Dunsparce TEF 128\n2 Dunsparce JTG 120\n3 Dudunsparce TEF 129\n1 Fan Rotom SCR 118\n1 Abra TWM 80\n1 Moltres PFL 14\n\nTrainer : 36\n4 Hilda WHT 84\n4 Wally's Compassion MEG 132\n4 Boss's Orders MEG 114\n3 Lillie's Determination MEG 119\n4 Pokégear 3.0 SVI 186\n4 Ultra Ball MEG 131\n4 Poké Pad POR 81\n3 Buddy-Buddy Poffin TEF 144\n3 Air Balloon ASC 181\n3 Battle Cage PFL 85\n\nEnergy : 8\n4 Mist Energy TEF 161\n3 Fire Energy MEE 2\n1 Enriching Energy SSP 191",
+      "id": "utrecht-1-miloslav-posledni",
+      "label": "#1 Miloslav Posledni — Lopunny Dudunsparce"
+    },
+    {
+      "placement": 2,
+      "player": "Hasan Kunukcu",
+      "deckName": "Dragapult",
+      "text": "Pokémon : 18\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Munkidori TWM 95\n1 Dunsparce JTG 120\n1 Dudunsparce TEF 129\n1 Meowth ex POR 62\n1 Fezandipiti ex ASC 142\n1 Budew ASC 16\n\nTrainer : 32\n4 Lillie's Determination MEG 119\n3 Crispin SCR 133\n3 Boss's Orders MEG 114\n1 Judge POR 76\n4 Poké Pad POR 81\n4 Buddy-Buddy Poffin TEF 144\n4 Ultra Ball MEG 131\n4 Crushing Hammer POR 71\n2 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n2 Risky Ruins MEG 127\n\nEnergy : 10\n4 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n3 Darkness Energy MEE 7",
+      "id": "utrecht-2-hasan-kunukcu",
+      "label": "#2 Hasan Kunukcu — Dragapult"
+    },
+    {
+      "placement": 3,
+      "player": "Kim Pobega",
+      "deckName": "Dragapult",
+      "text": "Pokémon : 17\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Munkidori TWM 95\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n1 Yveltal MEG 88\n1 Budew ASC 16\n\nTrainer : 34\n4 Lillie's Determination MEG 119\n4 Boss's Orders MEG 114\n3 Crispin SCR 133\n2 Judge POR 76\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n4 Crushing Hammer POR 71\n3 Ultra Ball MEG 131\n3 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n2 Team Rocket's Watchtower DRI 180\n\nEnergy : 9\n3 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n3 Darkness Energy MEE 7",
+      "id": "utrecht-3-kim-pobega",
+      "label": "#3 Kim Pobega — Dragapult"
+    },
+    {
+      "placement": 4,
+      "player": "Joshua Vanoverschelde",
+      "deckName": "Rocket's Honchkrow",
+      "text": "Pokémon : 12\n4 Team Rocket's Murkrow DRI 127\n3 Team Rocket's Honchkrow ASC 127\n2 Team Rocket's Porygon DRI 153\n1 Team Rocket's Porygon2 DRI 154\n2 Team Rocket's Articuno DRI 51\n\nTrainer : 40\n4 Team Rocket's Ariana DRI 171\n4 Team Rocket's Archer DRI 170\n4 Team Rocket's Giovanni DRI 174\n4 Team Rocket's Proton DRI 177\n4 Team Rocket's Petrel DRI 176\n4 Poké Pad POR 81\n4 Team Rocket's Transceiver DRI 178\n4 Roto-Stick PRE 127\n3 Night Stretcher ASC 196\n1 Ultra Ball MEG 131\n1 Miracle Headset SSP 183\n3 Team Rocket's Factory DRI 173\n\nEnergy : 8\n4 Team Rocket's Energy DRI 182\n4 Ignition Energy WHT 86",
+      "id": "utrecht-4-joshua-vanoverschelde",
+      "label": "#4 Joshua Vanoverschelde — Rocket's Honchkrow"
+    },
+    {
+      "placement": 5,
+      "player": "Edwyn Mesman",
+      "deckName": "Dragapult",
+      "text": "Pokémon : 20\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Munkidori TWM 95\n2 Meowth ex POR 62\n1 Budew ASC 16\n1 Fezandipiti ex ASC 142\n1 Bloodmoon Ursaluna ex TWM 141\n1 Latias ex SSP 76\n1 Chien-Pao SSP 56\n\nTrainer : 31\n4 Lillie's Determination MEG 119\n4 Boss's Orders MEG 114\n3 Crispin SCR 133\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n4 Ultra Ball MEG 131\n3 Rare Candy MEG 125\n2 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n2 Area Zero Underdepths SCR 131\n\nEnergy : 9\n4 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n2 Darkness Energy MEE 7",
+      "id": "utrecht-5-edwyn-mesman",
+      "label": "#5 Edwyn Mesman — Dragapult"
+    },
+    {
+      "placement": 6,
+      "player": "Jari Bonsee",
+      "deckName": "Dragapult",
+      "text": "Pokémon : 19\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Munkidori TWM 95\n1 Dunsparce JTG 120\n1 Dudunsparce TEF 129\n1 Meowth ex POR 62\n1 Fezandipiti ex ASC 142\n1 Budew ASC 16\n1 Yveltal MEG 88\n\nTrainer : 32\n4 Lillie's Determination MEG 119\n3 Crispin SCR 133\n3 Boss's Orders MEG 114\n1 Judge POR 76\n4 Poké Pad POR 81\n4 Buddy-Buddy Poffin TEF 144\n4 Ultra Ball MEG 131\n4 Crushing Hammer POR 71\n2 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n2 Risky Ruins MEG 127\n\nEnergy : 9\n3 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n3 Darkness Energy MEE 7",
+      "id": "utrecht-6-jari-bonsee",
+      "label": "#6 Jari Bonsee — Dragapult"
+    },
+    {
+      "placement": 7,
+      "player": "Luke Burke",
+      "deckName": "Dragapult Dusknoir",
+      "text": "Pokémon : 21\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Duskull PRE 35\n1 Dusclops PRE 36\n1 Dusknoir PRE 37\n2 Budew ASC 16\n2 Munkidori TWM 95\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n\nTrainer : 30\n4 Lillie's Determination MEG 119\n3 Boss's Orders MEG 114\n2 Crispin SCR 133\n1 Judge POR 76\n1 Rosa's Encouragement POR 84\n4 Buddy-Buddy Poffin TEF 144\n4 Ultra Ball MEG 131\n4 Poké Pad POR 81\n2 Night Stretcher ASC 196\n2 Rare Candy MEG 125\n1 Unfair Stamp TWM 165\n2 Team Rocket's Watchtower DRI 180\n\nEnergy : 9\n4 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n2 Darkness Energy MEE 7",
+      "id": "utrecht-7-luke-burke",
+      "label": "#7 Luke Burke — Dragapult Dusknoir"
+    },
+    {
+      "placement": 8,
+      "player": "Fabio Battistella",
+      "deckName": "Ogerpon Box",
+      "text": "Pokémon : 18\n3 Meowth ex POR 62\n2 Mega Kangaskhan ex MEG 104\n2 Teal Mask Ogerpon ex TWM 25\n2 Wellspring Mask Ogerpon ex TWM 64\n2 Lillie's Clefairy ex JTG 56\n2 Latias ex SSP 76\n1 Fezandipiti ex ASC 142\n1 Iron Leaves ex TEF 25\n1 Passimian SSP 111\n1 Moltres PFL 14\n1 Chien-Pao SSP 56\n\nTrainer : 30\n4 Crispin SCR 133\n3 Cyrano SSP 170\n3 Boss's Orders MEG 114\n2 Ciphermaniac's Codebreaking TEF 145\n1 Brock's Scouting JTG 146\n4 Energy Switch MEG 115\n4 Ultra Ball MEG 131\n2 Night Stretcher ASC 196\n1 Tool Scrapper ASC 212\n1 Unfair Stamp TWM 165\n2 Lillie's Pearl JTG 151\n3 Area Zero Underdepths SCR 131\n\nEnergy : 12\n5 Grass Energy MEE 1\n3 Prism Energy ASC 216\n2 Psychic Energy MEE 5\n1 Water Energy MEE 3\n1 Fighting Energy MEE 6",
+      "id": "utrecht-8-fabio-battistella",
+      "label": "#8 Fabio Battistella — Ogerpon Box"
+    },
+    {
+      "placement": 9,
+      "player": "Ted Tobyn",
+      "deckName": "Dragapult",
+      "text": "Pokémon : 19\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Munkidori TWM 95\n1 Dunsparce JTG 120\n1 Dudunsparce TEF 129\n1 Meowth ex POR 62\n1 Moltres PFL 14\n1 Budew ASC 16\n1 Fezandipiti ex ASC 142\n\nTrainer : 32\n4 Lillie's Determination MEG 119\n3 Crispin SCR 133\n3 Boss's Orders MEG 114\n1 Judge POR 76\n4 Ultra Ball MEG 131\n4 Buddy-Buddy Poffin TEF 144\n4 Crushing Hammer POR 71\n4 Poké Pad POR 81\n2 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n2 Risky Ruins MEG 127\n\nEnergy : 9\n4 Fire Energy MEE 2\n3 Psychic Energy MEE 5\n2 Darkness Energy MEE 7",
+      "id": "utrecht-9-ted-tobyn",
+      "label": "#9 Ted Tobyn — Dragapult"
+    },
+    {
+      "placement": 10,
+      "player": "Maciej Chojnacki",
+      "deckName": "Dragapult",
+      "text": "Pokémon : 24\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Budew ASC 16\n2 Munkidori TWM 95\n1 Snorunt ASC 46\n1 Froslass TWM 53\n1 Paldean Tauros SSP 18\n1 Moltres PFL 14\n1 Lillie's Clefairy ex JTG 56\n1 Latias ex SSP 76\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n1 Bloodmoon Ursaluna ex TWM 141\n\nTrainer : 27\n4 Lillie's Determination MEG 119\n3 Boss's Orders MEG 114\n2 Crispin SCR 133\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n4 Ultra Ball MEG 131\n2 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n3 Risky Ruins MEG 127\n\nEnergy : 9\n3 Darkness Energy MEE 7\n3 Fire Energy MEE 2\n3 Psychic Energy MEE 5",
+      "id": "utrecht-10-maciej-chojnacki",
+      "label": "#10 Maciej Chojnacki — Dragapult"
+    },
+    {
+      "placement": 11,
+      "player": "Hermanni Hietalahti",
+      "deckName": "N's Zoroark",
+      "text": "Pokémon : 17\n4 N's Zorua JTG 97\n4 N's Zoroark ex JTG 98\n2 N's Zekrom ASC 155\n2 Pecharunt ex SFA 39\n1 N's Darumaka JTG 26\n1 N's Darmanitan JTG 27\n1 Yveltal MEG 88\n1 Munkidori TWM 95\n1 Fezandipiti ex ASC 142\n\nTrainer : 35\n4 Lillie's Determination MEG 119\n4 Boss's Orders MEG 114\n3 Cyrano SSP 170\n2 Black Belt's Training JTG 143\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n4 N's PP Up JTG 153\n2 Ultra Ball MEG 131\n2 Night Stretcher ASC 196\n1 Tool Scrapper ASC 212\n1 Secret Box TWM 163\n2 Binding Mochi PRE 95\n1 Lumiose City POR 77\n1 N's Castle JTG 152\n\nEnergy : 8\n8 Darkness Energy MEE 7",
+      "id": "utrecht-11-hermanni-hietalahti",
+      "label": "#11 Hermanni Hietalahti — N's Zoroark"
+    },
+    {
+      "placement": 12,
+      "player": "Joris van Dijk",
+      "deckName": "Alakazam Dudunsparce",
+      "text": "Pokémon : 21\n4 Abra MEG 54\n4 Kadabra MEG 55\n3 Alakazam MEG 56\n2 Dunsparce JTG 120\n1 Dunsparce TEF 128\n3 Dudunsparce TEF 129\n1 Shaymin DRI 10\n1 Dedenne SSP 87\n1 Genesect SFA 40\n1 Fezandipiti ex ASC 142\n\nTrainer : 33\n4 Dawn PFL 87\n4 Hilda WHT 84\n3 Boss's Orders MEG 114\n1 Lana's Aid TWM 155\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n3 Rare Candy MEG 125\n2 Enhanced Hammer TWM 148\n1 Night Stretcher ASC 196\n1 Sacred Ash DRI 168\n2 Handheld Fan TWM 150\n1 Lucky Helmet TWM 158\n3 Battle Cage PFL 85\n\nEnergy : 6\n4 Telepathic Psychic Energy POR 88\n1 Psychic Energy MEE 5\n1 Enriching Energy SSP 191",
+      "id": "utrecht-12-joris-van-dijk",
+      "label": "#12 Joris van Dijk — Alakazam Dudunsparce"
+    },
+    {
+      "placement": 13,
+      "player": "Constantin Geisbüsch",
+      "deckName": "Cynthia's Garchomp",
+      "text": "Pokémon : 19\n4 Cynthia's Roselia DRI 7\n3 Cynthia's Roserade DRI 8\n4 Cynthia's Gible DRI 102\n4 Cynthia's Gabite DRI 103\n3 Cynthia's Garchomp ex DRI 104\n1 Cynthia's Spiritomb DRI 129\n\nTrainer : 33\n4 Lillie's Determination MEG 119\n4 Boss's Orders MEG 114\n2 Team Rocket's Petrel DRI 176\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n3 Fighting Gong MEG 116\n2 Pokégear 3.0 SVI 186\n2 Premium Power Pro MEG 124\n1 Rare Candy MEG 125\n1 Unfair Stamp TWM 165\n1 Night Stretcher ASC 196\n1 Switch MEG 130\n4 Cynthia's Power Weight DRI 162\n\nEnergy : 8\n4 Rocky Fighting Energy POR 87\n4 Fighting Energy MEE 6",
+      "id": "utrecht-13-constantin-geisb-sch",
+      "label": "#13 Constantin Geisbüsch — Cynthia's Garchomp"
+    },
+    {
+      "placement": 14,
+      "player": "Niklas Leitz",
+      "deckName": "Greninja",
+      "text": "Pokémon : 22\n3 Froakie TWM 56\n2 Frogadier TWM 57\n2 Greninja ex TWM 106\n2 Duskull PRE 35\n2 Dusclops PRE 36\n2 Dusknoir PRE 37\n2 Snorunt ASC 46\n1 Mega Froslass ex ASC 47\n1 Glalie TWM 52\n2 Meowth ex POR 62\n1 Fezandipiti ex ASC 142\n1 Latias ex SSP 76\n1 Budew ASC 16\n\nTrainer : 29\n4 Lillie's Determination MEG 119\n2 Hilda WHT 84\n2 Colress's Tenacity SFA 57\n2 Boss's Orders MEG 114\n1 Surfer SSP 187\n1 Judge POR 76\n4 Buddy-Buddy Poffin TEF 144\n4 Ultra Ball MEG 131\n3 Poké Pad POR 81\n3 Rare Candy MEG 125\n1 Night Stretcher ASC 196\n1 Gravity Mountain SSP 177\n1 Grand Tree SCR 136\n\nEnergy : 9\n6 Water Energy MEE 3\n3 Ignition Energy WHT 86",
+      "id": "utrecht-14-niklas-leitz",
+      "label": "#14 Niklas Leitz — Greninja"
+    },
+    {
+      "placement": 15,
+      "player": "Oscar Madsen",
+      "deckName": "Dragapult Dudunsparce",
+      "text": "Pokémon : 22\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Dunsparce JTG 120\n2 Dudunsparce TEF 129\n1 Dudunsparce ex JTG 121\n2 Munkidori TWM 95\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n1 Budew ASC 16\n1 Moltres PFL 14\n\nTrainer : 28\n4 Lillie's Determination MEG 119\n3 Boss's Orders MEG 114\n3 Crispin SCR 133\n1 Judge POR 76\n4 Poké Pad POR 81\n4 Buddy-Buddy Poffin TEF 144\n4 Ultra Ball MEG 131\n2 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n2 Risky Ruins MEG 127\n\nEnergy : 10\n4 Fire Energy MEE 2\n3 Darkness Energy MEE 7\n3 Psychic Energy MEE 5",
+      "id": "utrecht-15-oscar-madsen",
+      "label": "#15 Oscar Madsen — Dragapult Dudunsparce"
+    },
+    {
+      "placement": 16,
+      "player": "Fabian Kern",
+      "deckName": "Hydrapple",
+      "text": "Pokémon : 20\n4 Teal Mask Ogerpon ex TWM 25\n2 Applin TWM 17\n2 Dipplin TWM 18\n2 Hydrapple ex SCR 14\n2 Chikorita MEG 8\n2 Bayleef MEG 9\n2 Meganium MEG 10\n1 Celebi MEG 12\n1 Meowth ex POR 62\n1 Tapu Bulu SFA 6\n1 Fezandipiti ex ASC 142\n\nTrainer : 26\n4 Lillie's Determination MEG 119\n2 Dawn PFL 87\n2 Boss's Orders MEG 114\n1 Briar SCR 132\n1 Lana's Aid TWM 155\n4 Bug Catching Set TWM 143\n4 Ultra Ball MEG 131\n2 Poké Pad POR 81\n1 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n4 Forest of Vitality MEG 117\n\nEnergy : 14\n14 Grass Energy MEE 1",
+      "id": "utrecht-16-fabian-kern",
+      "label": "#16 Fabian Kern — Hydrapple"
+    }
+  ]
+}

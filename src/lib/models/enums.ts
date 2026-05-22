@@ -33,6 +33,27 @@ export enum EnergyType {
 
 export enum GamePhase {
   Setup = "setup",
+  Mulligan = "mulligan",
+  PlaceActive = "placeActive",
+  PlaceBench = "placeBench",
   Active = "active",
   Finished = "finished",
 }
+
+export enum Zone {
+  Deck = "deck",
+  Hand = "hand",
+  Active = "active",
+  Bench = "bench",
+  Prizes = "prizes",
+  Discard = "discard",
+  LostZone = "lostZone",
+  Stadium = "stadium",
+}
+
+export enum PlayerId {
+  P1 = "p1",
+  P2 = "p2",
+}
+
+export type Supertype = "Pokémon" | "Trainer" | "Energy";

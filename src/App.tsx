@@ -1,24 +1,71 @@
-import { useState } from "react";
-import { GameSetup } from "./components/GameSetup";
+import { useEffect, useState } from "react";
+import { DeckBuilder } from "./components/DeckBuilder/DeckBuilder";
+import { GameBoard } from "./components/GameBoard/GameBoard";
+import { Lobby } from "./components/Lobby/Lobby";
 import { PackOpener } from "./components/PackOpener";
+import { useDeckStore } from "@/stores/deckStore";
+import { useGameStore } from "@/stores/gameStore";
 
-type Tab = "pack" | "game";
+type Tab = "lobby" | "play" | "builder" | "pack";
 
 export function App() {
-  const [tab, setTab] = useState<Tab>("pack");
+  const [tab, setTab] = useState<Tab>("lobby");
+  const { player1Deck, player2Deck } = useDeckStore();
+  const { startMatch, loadSaved, engineState } = useGameStore();
+
+  useEffect(() => {
+    if (loadSaved()) {
+      setTab("play");
+    }
+  }, [loadSaved]);
+
+  function handlePlay(player1Name: string, player2Name: string) {
+    if (!player1Deck || !player2Deck) return;
+    startMatch({
+      player1Name,
+      player2Name,
+      player1Deck,
+      player2Deck,
+    });
+    setTab("play");
+  }
 
   return (
-    <div className="app">
-      <header className="hero">
-        <p className="hero__eyebrow">Pokémon TCG Simulation</p>
-        <h1>Practice packs and match setup in the browser</h1>
-        <p className="hero__subtitle">
-          TypeScript simulation engine with a lightweight React UI for booster openings and
-          two-player game setup.
-        </p>
-      </header>
+    <div className={`app${tab === "play" ? " app--play" : ""}`}>
+      {tab !== "play" && (
+        <header className="hero">
+          <p className="hero__eyebrow">Pokémon TCG Simulation</p>
+          <h1>Import decks and practice full matches solo</h1>
+          <p className="hero__subtitle">
+            Import Limitless decklists, resolve real cards via pokemontcg.io, and play both sides like
+            tcgmasters.net.
+          </p>
+        </header>
+      )}
 
       <nav className="tabs" aria-label="Simulation modes">
+        <button
+          type="button"
+          className={tab === "lobby" ? "tabs__button tabs__button--active" : "tabs__button"}
+          onClick={() => setTab("lobby")}
+        >
+          Lobby
+        </button>
+        <button
+          type="button"
+          className={tab === "play" ? "tabs__button tabs__button--active" : "tabs__button"}
+          onClick={() => setTab("play")}
+          disabled={!engineState}
+        >
+          Play
+        </button>
+        <button
+          type="button"
+          className={tab === "builder" ? "tabs__button tabs__button--active" : "tabs__button"}
+          onClick={() => setTab("builder")}
+        >
+          Deck Builder
+        </button>
         <button
           type="button"
           className={tab === "pack" ? "tabs__button tabs__button--active" : "tabs__button"}
@@ -26,16 +73,14 @@ export function App() {
         >
           Open Pack
         </button>
-        <button
-          type="button"
-          className={tab === "game" ? "tabs__button tabs__button--active" : "tabs__button"}
-          onClick={() => setTab("game")}
-        >
-          Setup Game
-        </button>
       </nav>
 
-      <main>{tab === "pack" ? <PackOpener /> : <GameSetup />}</main>
+      <main>
+        {tab === "lobby" && <Lobby onPlay={handlePlay} />}
+        {tab === "play" && <GameBoard />}
+        {tab === "builder" && <DeckBuilder />}
+        {tab === "pack" && <PackOpener />}
+      </main>
     </div>
   );
 }

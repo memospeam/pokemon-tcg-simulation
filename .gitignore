@@ -9,6 +9,7 @@ npm-debug.log*
 # Environment
 .env
 .env.*
+!.env.example
 
 # IDE / OS
 .idea/
