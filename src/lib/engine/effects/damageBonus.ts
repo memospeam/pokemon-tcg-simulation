@@ -102,7 +102,9 @@ export function computePreDamageBonus(
       return allPokemonInPlay(player).length * effect.perPokemon;
     }
     case "damage_bonus_if_moved_from_bench":
-      return effect.amount;
+      return state.turnFlags.movedFromBenchToActiveIds?.includes(source.instanceId)
+        ? effect.amount
+        : 0;
     case "damage_bonus_if_self_poisoned":
       return hasSpecialCondition(source) ? effect.amount : 0;
     case "damage_per_energy_in_opponent_discard": {

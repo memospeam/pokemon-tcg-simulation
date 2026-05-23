@@ -13,6 +13,20 @@ function nameFilter(raw: string): string {
   return trimmed.toLowerCase().endsWith("'s") ? trimmed : `${trimmed}'s`;
 }
 
+const ENERGY_TYPES = new Set([
+  "grass",
+  "fire",
+  "water",
+  "lightning",
+  "psychic",
+  "fighting",
+  "darkness",
+  "metal",
+  "dragon",
+  "fairy",
+  "colorless",
+]);
+
 /** Clauses absorbed during coalescing — not counted as unknown. */
 export const SKIP_UNKNOWN_CLAUSE_PATTERNS: RegExp[] = [
   /^flip a coin\.?$/,
@@ -34,7 +48,6 @@ export const SKIP_UNKNOWN_CLAUSE_PATTERNS: RegExp[] = [
   /^the effect of .+ doesn't stack\.?$/,
   /^put this pok[ée]mon into play only with the effect of .+\.?$/,
   /^then, discard that stadium\.?$/,
-  /^if you do, the new active pok[ée]mon is now poisoned\.?$/,
   /^if you attached energy to a pok[ée]mon in this way, this pok[ée]mon is now poisoned\.?$/,
   /^if heads, knock out your opponent's active basic pok[ée]mon\.?$/,
   /^if tails, knock out 1 of your opponent's benched basic pok[ée]mon\.?$/,
@@ -65,6 +78,10 @@ export function matchBulkClause(clause: string): ParsedEffect[] | null {
 
   if (/^during your opponent's next turn, that pok[ée]mon can't retreat\.?$/i.test(clause)) {
     return [{ kind: "cant_retreat_defending_next_turn" }];
+  }
+
+  if (/^if you do, the new active pok[ée]mon is now poisoned\.?$/i.test(clause)) {
+    return [{ kind: "apply_status_to_new_active", status: "Poisoned" }];
   }
 
   match = clause.match(/^discard the top (\d+) cards? of your opponent's deck\.?$/i);
@@ -348,11 +365,22 @@ export function matchBulkClause(clause: string): ParsedEffect[] | null {
     /^switch 1 of your benched (.+?) pok[ée]mon, except any (.+?), with your active pok[ée]mon\.?$/i,
   );
   if (match) {
+    const rawFilter = match[1]!.trim().toLowerCase();
+    const excludeName = titleCase(match[2]!.trim()).replace(/\bEx\b/g, "ex");
+    if (ENERGY_TYPES.has(rawFilter)) {
+      return [
+        {
+          kind: "switch_bench_typed_to_active",
+          typeFilter: cap(rawFilter),
+          excludeName,
+        },
+      ];
+    }
     return [
       {
         kind: "switch_bench_named_to_active",
         nameFilter: nameFilter(match[1]!),
-        excludeName: match[2]!.trim(),
+        excludeName,
       },
     ];
   }
@@ -544,7 +572,14 @@ export function matchBulkClause(clause: string): ParsedEffect[] | null {
     /^put up to (\d+) (\w+) pok[ée]mon from your discard pile onto your bench\.?$/i,
   );
   if (match) {
-    return [{ kind: "recover_pokemon_from_discard", count: parseInt(match[1]!, 10), nameFilter: match[2]! }];
+    return [
+      {
+        kind: "recover_pokemon_from_discard",
+        count: parseInt(match[1]!, 10),
+        nameFilter: match[2]!,
+        target: "bench",
+      },
+    ];
   }
 
   match = clause.match(/^search your deck for up to (\d+) basic (\w+) energy cards and attach them to this pok[ée]mon\.?$/i);

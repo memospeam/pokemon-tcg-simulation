@@ -22,6 +22,8 @@ import {
   parseAbilityText,
   resolveReconDirectivePick,
   resolveSwitchWithBench,
+  resolveSwitchTypedBenchToActive,
+  continueRecoverToBenchPick,
   resolveMoveEnergyToBench,
   resolveChooseOpponentDamage,
   resolveAttachHandEnergyToPokemon,
@@ -41,6 +43,7 @@ import {
   startGrandTreeFlow,
 } from "./effects/grandTreeEffects";
 import { logStadiumOnPlay, getMaxBenchSize, canUseLumioseCity, getLumioseDeckOptions } from "./effects/stadiumEffects";
+import { markMovedFromBenchToActive } from "./effects/pokemonZoneHelpers";
 import {
   canPlayToolFromHand,
   canPlayTrainerCardFromHand,
@@ -649,6 +652,14 @@ function handleSwitchWithBench(
   playerId: PlayerId,
   benchInstanceId: string,
 ): EngineState {
+  if (state.pendingAction?.type === "SWITCH_TYPED_BENCH") {
+    const result = resolveSwitchTypedBenchToActive(state, playerId, benchInstanceId);
+    if (result === "failed") return state;
+    resolveBenchKnockouts(state);
+    finishIfWinner(state);
+    return state;
+  }
+
   const result = resolveSwitchWithBench(state, playerId, benchInstanceId);
   if (result === "failed") return state;
   return finishAttackAndEffects(state, playerId);
@@ -756,6 +767,7 @@ function handleRetreat(
   incoming.zone = Zone.Active;
   player.active = incoming;
   state.turnFlags.retreated = true;
+  markMovedFromBenchToActive(state, incoming.instanceId);
 
   log(
     state,
@@ -1034,7 +1046,15 @@ function handlePickDiscardPokemon(state: EngineState, playerId: PlayerId, instan
     return state;
   }
 
-  continueNightStretcherPick(state, playerId, instanceId);
+  const wasAttack = state.turnFlags.attacked;
+  if (pending.toBench) {
+    continueRecoverToBenchPick(state, playerId, instanceId);
+  } else {
+    continueNightStretcherPick(state, playerId, instanceId);
+  }
+  if (state.pendingAction === null && wasAttack) {
+    return finishAttackAndEffects(state, playerId);
+  }
   return state;
 }
 
@@ -1119,7 +1139,10 @@ function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState
 
   if (pending.type === "PICK_DISCARD" && pending.slotsRemaining !== undefined) {
     state.pendingAction = null;
-    log(state, "Night Stretcher: finished choosing Pokémon.");
+    log(state, pending.toBench ? "Finished choosing Pokémon for Bench." : "Night Stretcher: finished choosing Pokémon.");
+    if (state.turnFlags.attacked) {
+      return finishAttackAndEffects(state, playerId);
+    }
     return state;
   }
 
@@ -1705,6 +1728,17 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       }
       if (pending.optional) {
         actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      }
+      break;
+    }
+    case "SWITCH_TYPED_BENCH": {
+      if (pending.playerId !== current) break;
+      for (const benchInstanceId of pending.options) {
+        actions.push({
+          type: "SWITCH_WITH_BENCH",
+          playerId: current,
+          benchInstanceId,
+        });
       }
       break;
     }

@@ -11,6 +11,8 @@ export {
   selectMoveDamageTarget,
   resolveReconDirectivePick,
   resolveSwitchWithBench,
+  resolveSwitchTypedBenchToActive,
+  continueRecoverToBenchPick,
   resolveMoveEnergyToBench,
   resolveChooseOpponentDamage,
   resolveAttachHandEnergyToPokemon,

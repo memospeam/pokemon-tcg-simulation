@@ -18,11 +18,15 @@ import {
 import { discardAttachedEnergy, attachEnergyToPokemon } from "../trainerEffects";
 import { discardPokemonAttachments } from "./toolEffects";
 import {
+  getEligibleTypedBenchPokemon,
+  markMovedFromBenchToActive,
+  placePokemonFromDiscardToBench,
+  pokemonIsExcludedByName,
   returnPokemonToHand,
   shufflePokemonAndAttachmentsToDeck,
 } from "./pokemonZoneHelpers";
 import { pokemonMatchesNameFilter, evolvePokemonFromDeck } from "./attackFlow";
-import { applySpecialCondition } from "./stadiumEffects";
+import { applySpecialCondition, getMaxBenchSize } from "./stadiumEffects";
 import type { EffectContext, ParsedEffect } from "./types";
 import { countersToDamage } from "./types";
 import { executeBulk8Effect } from "./executeBulk8";
@@ -71,6 +75,37 @@ function opponentPlayer(state: EngineState, ctx: EffectContext) {
 
 function selfPlayer(state: EngineState, ctx: EffectContext) {
   return getPlayer(state, ctx.playerId);
+}
+
+function performBenchToActiveSwitch(
+  state: EngineState,
+  playerId: PlayerId,
+  benchInstanceId: string,
+  applyStatus?: string,
+): boolean {
+  const player = getPlayer(state, playerId);
+  if (!player.active) return false;
+  const benchIndex = player.bench.findIndex((card) => card.instanceId === benchInstanceId);
+  if (benchIndex === -1) return false;
+
+  const incoming = player.bench.splice(benchIndex, 1)[0]!;
+  const outgoing = player.active;
+  outgoing.zone = Zone.Bench;
+  player.bench.push(outgoing);
+  incoming.zone = Zone.Active;
+  player.active = incoming;
+  markMovedFromBenchToActive(state, incoming.instanceId);
+  if (applyStatus) {
+    applySpecialCondition(state, incoming, applyStatus);
+  }
+  logMessage(
+    state,
+    `Switched ${getDefinitionSafe(state, outgoing.definitionId).name} with ${getDefinitionSafe(state, incoming.definitionId).name}.`,
+  );
+  if (applyStatus) {
+    logMessage(state, `${getDefinitionSafe(state, incoming.definitionId).name} is now ${applyStatus}.`);
+  }
+  return true;
 }
 
 function executeSingleEffect(
@@ -841,6 +876,103 @@ function executeSingleEffect(
       return "complete";
     }
 
+    case "recover_pokemon_from_discard": {
+      const player = selfPlayer(state, ctx);
+      const target = effect.target ?? "hand";
+      const matches = player.discard.filter((card) => {
+        const def = getDefinitionSafe(state, card.definitionId);
+        return def.supertype === "Pokémon" && pokemonMatchesNameFilter(state, card, effect.nameFilter);
+      });
+      if (matches.length === 0) {
+        logMessage(state, "No matching Pokémon in discard.");
+        return "complete";
+      }
+      if (target === "bench") {
+        const benchSlots = getMaxBenchSize(state, ctx.playerId) - player.bench.length;
+        if (benchSlots <= 0) {
+          logMessage(state, "Bench is full.");
+          return "complete";
+        }
+        const maxPick = Math.min(effect.count, benchSlots, matches.length);
+        if (maxPick <= 0) return "complete";
+        if (matches.length === 1) {
+          const placed = placePokemonFromDiscardToBench(state, ctx.playerId, matches[0]!.instanceId);
+          if (placed) {
+            logMessage(
+              state,
+              `Put ${getDefinitionSafe(state, placed.definitionId).name} onto your Bench from discard.`,
+            );
+          }
+          return "complete";
+        }
+        state.pendingAction = {
+          type: "PICK_DISCARD",
+          playerId: ctx.playerId,
+          options: matches.map((entry) => entry.instanceId),
+          slotsRemaining: maxPick,
+          toBench: true,
+          nameFilter: effect.nameFilter,
+        };
+        logMessage(
+          state,
+          `Choose up to ${maxPick} ${effect.nameFilter} from your discard pile to put onto your Bench.`,
+        );
+        return "pending";
+      }
+      if (matches.length === 1 && effect.count >= 1) {
+        const index = player.discard.findIndex((card) => card.instanceId === matches[0]!.instanceId);
+        const card = player.discard.splice(index, 1)[0]!;
+        card.zone = Zone.Hand;
+        player.hand.push(card);
+        logMessage(state, `Put ${getDefinitionSafe(state, card.definitionId).name} into hand from discard.`);
+        return "complete";
+      }
+      state.pendingAction = {
+        type: "PICK_DISCARD",
+        playerId: ctx.playerId,
+        options: matches.map((entry) => entry.instanceId),
+        slotsRemaining: Math.min(effect.count, matches.length),
+      };
+      logMessage(
+        state,
+        `Choose up to ${Math.min(effect.count, matches.length)} Pokémon from your discard pile.`,
+      );
+      return "pending";
+    }
+
+    case "switch_bench_named_to_active":
+    case "switch_bench_typed_to_active": {
+      const player = selfPlayer(state, ctx);
+      if (!player.active) return "complete";
+      const eligible =
+        effect.kind === "switch_bench_typed_to_active"
+          ? getEligibleTypedBenchPokemon(state, ctx.playerId, effect.typeFilter, effect.excludeName)
+          : player.bench.filter(
+              (pokemon) =>
+                pokemonMatchesNameFilter(state, pokemon, effect.nameFilter) &&
+                !pokemonIsExcludedByName(state, pokemon, effect.excludeName),
+            );
+      if (eligible.length === 0) {
+        logMessage(state, "No eligible Benched Pokémon to switch.");
+        return "complete";
+      }
+      if (eligible.length === 1) {
+        performBenchToActiveSwitch(state, ctx.playerId, eligible[0]!.instanceId, effect.applyStatus);
+        return "complete";
+      }
+      state.pendingAction = {
+        type: "SWITCH_TYPED_BENCH",
+        playerId: ctx.playerId,
+        typeFilter:
+          effect.kind === "switch_bench_typed_to_active" ? effect.typeFilter : effect.nameFilter,
+        excludeName: effect.excludeName,
+        applyStatus: effect.applyStatus,
+        options: eligible.map((pokemon) => pokemon.instanceId),
+      };
+      logMessage(state, "Choose a Benched Pokémon to switch with your Active Pokémon.");
+      return "pending";
+    }
+
     case "bonus_prize_on_defender_ko_next_turn":
     case "move_energy_to_new_bench_after_search":
     case "self_hand_equal_damage_bonus":
@@ -854,7 +986,6 @@ function executeSingleEffect(
     case "ability_use_limit_per_turn":
     case "poison_attacker_when_damaged_from_opponent":
     case "prevent_damage_from_ability_pokemon":
-    case "switch_bench_named_to_active":
     case "attach_hand_energy_to_benched":
     case "search_attach_energy_each_bench":
     case "discard_special_energy_opponent":
@@ -873,12 +1004,10 @@ function executeSingleEffect(
     case "prevent_item_supporter_effects_on_self":
     case "no_retreat_cost_if_no_energy":
     case "mill_self_deck":
-    case "recover_pokemon_from_discard":
     case "search_attach_energy_to_self":
     case "choose_two_opponent_bench":
     case "coin_flip_ko_basic":
     case "damage_per_named_attack_in_play":
-    case "damage_bonus_if_moved_from_bench":
     case "discard_typed_energy_optional":
     case "return_typed_energy_to_hand":
     case "attack_cost_reduction_per_discard_name":
@@ -888,7 +1017,6 @@ function executeSingleEffect(
     case "damage_per_energy_in_opponent_discard":
     case "recover_supporter_from_discard":
     case "damage_bonus_if_self_poisoned":
-    case "switch_with_bench_typed":
     case "delayed_counters_on_defender":
     case "move_energy_from_yours_to_self":
     case "look_deck_attach_energy":
@@ -1439,12 +1567,71 @@ export function resolveSwitchWithBench(
   player.bench.push(outgoing);
   incoming.zone = Zone.Active;
   player.active = incoming;
+  markMovedFromBenchToActive(state, incoming.instanceId);
   state.pendingAction = null;
   logMessage(
     state,
     `Switched ${getDefinitionSafe(state, outgoing.definitionId).name} with ${getDefinitionSafe(state, incoming.definitionId).name}.`,
   );
   return "complete";
+}
+
+export function resolveSwitchTypedBenchToActive(
+  state: EngineState,
+  playerId: PlayerId,
+  benchInstanceId: string,
+): ExecuteResult {
+  const pending = state.pendingAction;
+  if (pending?.type !== "SWITCH_TYPED_BENCH" || pending.playerId !== playerId) return "failed";
+  if (!pending.options.includes(benchInstanceId)) return "failed";
+  if (!performBenchToActiveSwitch(state, playerId, benchInstanceId, pending.applyStatus)) return "failed";
+  state.pendingAction = null;
+  return "complete";
+}
+
+export function continueRecoverToBenchPick(
+  state: EngineState,
+  playerId: PlayerId,
+  instanceId: string,
+): void {
+  const pending = state.pendingAction;
+  if (pending?.type !== "PICK_DISCARD" || pending.playerId !== playerId || !pending.toBench) return;
+  if (!pending.options.includes(instanceId)) return;
+
+  const player = getPlayer(state, playerId);
+  if (player.bench.length >= getMaxBenchSize(state, playerId)) {
+    state.pendingAction = null;
+    return;
+  }
+
+  const placed = placePokemonFromDiscardToBench(state, playerId, instanceId);
+  if (!placed) return;
+
+  logMessage(
+    state,
+    `${player.name} put ${getDefinitionSafe(state, placed.definitionId).name} onto their Bench from discard.`,
+  );
+
+  const remainingSlots = (pending.slotsRemaining ?? 1) - 1;
+  const remaining = player.discard.filter((card) => {
+    const def = getDefinitionSafe(state, card.definitionId);
+    return def.supertype === "Pokémon" && pokemonMatchesNameFilter(state, card, pending.nameFilter);
+  });
+  const benchSlots = getMaxBenchSize(state, playerId) - player.bench.length;
+  if (remainingSlots > 0 && remaining.length > 0 && benchSlots > 0) {
+    state.pendingAction = {
+      type: "PICK_DISCARD",
+      playerId,
+      options: remaining.map((entry) => entry.instanceId),
+      slotsRemaining: Math.min(remainingSlots, benchSlots),
+      toBench: true,
+      nameFilter: pending.nameFilter,
+    };
+    logMessage(state, "Choose another Pokémon to put onto your Bench (optional).");
+    return;
+  }
+
+  state.pendingAction = null;
 }
 
 export function resolveReconDirectivePick(

@@ -28,6 +28,8 @@ export interface TurnFlags {
   trFactoryDrawAvailable?: boolean;
   /** Lumiose City / similar once-per-turn stadium action used. */
   stadiumOncePerTurnUsed?: boolean;
+  /** Pokémon that moved from Bench to Active this turn (retreat/switch, not KO promote). */
+  movedFromBenchToActiveIds?: string[];
 }
 
 export interface PlayerState {
@@ -193,7 +195,23 @@ export type PendingAction =
       slotsRemaining?: number;
       searchMeta?: { typeFilter?: string; maxHp?: number; nameFilter?: string };
     }
-  | { type: "PICK_DISCARD"; playerId: PlayerId; options: string[]; slotsRemaining?: number; shuffleToDeck?: boolean }
+  | {
+      type: "PICK_DISCARD";
+      playerId: PlayerId;
+      options: string[];
+      slotsRemaining?: number;
+      shuffleToDeck?: boolean;
+      toBench?: boolean;
+      nameFilter?: string;
+    }
+  | {
+      type: "SWITCH_TYPED_BENCH";
+      playerId: PlayerId;
+      typeFilter: string;
+      excludeName?: string;
+      applyStatus?: string;
+      options: string[];
+    }
   | {
       type: "ENERGY_SWITCH";
       playerId: PlayerId;

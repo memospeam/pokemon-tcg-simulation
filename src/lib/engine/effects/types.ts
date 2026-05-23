@@ -128,6 +128,13 @@ export type ParsedEffect =
       applyStatus?: string;
     }
   | {
+      kind: "switch_bench_typed_to_active";
+      typeFilter: string;
+      excludeName?: string;
+      applyStatus?: string;
+    }
+  | { kind: "apply_status_to_new_active"; status: string }
+  | {
       kind: "attach_energy_from_discard";
       energyType: string;
       count: number;
@@ -156,7 +163,12 @@ export type ParsedEffect =
   | { kind: "no_retreat_cost_if_no_energy" }
   | { kind: "mill_self_deck"; count: number }
   | { kind: "search_any_to_hand"; count?: number }
-  | { kind: "recover_pokemon_from_discard"; count: number; nameFilter: string }
+  | {
+      kind: "recover_pokemon_from_discard";
+      count: number;
+      nameFilter: string;
+      target?: "bench" | "hand";
+    }
   | { kind: "search_attach_energy_to_self"; count: number; energyType: string }
   | { kind: "choose_two_opponent_bench" }
   | { kind: "coin_flip_ko_basic" }

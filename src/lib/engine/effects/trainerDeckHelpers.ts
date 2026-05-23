@@ -4,6 +4,7 @@ import { PlayerId, Zone } from "../../models/enums";
 import { getDefinitionSafe } from "../rules";
 import { logMessage, shufflePlayerDeck } from "../helpers";
 import { getDefinition, getPlayer, type EngineState } from "../types";
+import { markMovedFromBenchToActive } from "./pokemonZoneHelpers";
 
 export function deckMatching(
   state: EngineState,
@@ -52,6 +53,7 @@ export function switchActiveWithBench(
   player.bench.push(outgoing);
   incoming.zone = Zone.Active;
   player.active = incoming;
+  markMovedFromBenchToActive(state, incoming.instanceId);
   logMessage(
     state,
     `${player.name} switched ${getDefinitionSafe(state, outgoing.definitionId).name} with ${getDefinitionSafe(state, incoming.definitionId).name}.`,

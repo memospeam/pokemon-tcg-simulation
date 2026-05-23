@@ -7,6 +7,11 @@ import {
   getExecutableAbilityEffects,
   hasActivatableAbility,
 } from "./abilityMeta";
+import {
+  getEligibleTypedBenchPokemon,
+  pokemonIsExcludedByName,
+} from "./pokemonZoneHelpers";
+import { pokemonMatchesNameFilter } from "./attackFlow";
 import { isAbilityDisabledOnPokemon } from "./abilityHooks";
 import type { AbilityCondition, ParsedAbility, ParsedEffect } from "./types";
 import { parseAbilityText } from "./parseText";
@@ -153,6 +158,24 @@ export function canUseAbilityNow(
   for (const effect of parsed.effects) {
     if (effect.kind === "recon_directive" && player.deck.length === 0) {
       return false;
+    }
+    if (effect.kind === "switch_bench_typed_to_active") {
+      if (!player.active) return false;
+      if (
+        getEligibleTypedBenchPokemon(state, pokemon.ownerId, effect.typeFilter, effect.excludeName)
+          .length === 0
+      ) {
+        return false;
+      }
+    }
+    if (effect.kind === "switch_bench_named_to_active") {
+      if (!player.active) return false;
+      const eligible = player.bench.filter(
+        (entry) =>
+          pokemonMatchesNameFilter(state, entry, effect.nameFilter) &&
+          !pokemonIsExcludedByName(state, entry, effect.excludeName),
+      );
+      if (eligible.length === 0) return false;
     }
   }
   return true;

@@ -309,7 +309,8 @@ const BULK3_RULES: Rule[] = [
     build: (m) => ({
       kind: "recover_pokemon_from_discard",
       count: parseInt(m[1]!, 10),
-      nameFilter: m[2]!.trim(),
+      nameFilter: cap(m[2]!.trim()),
+      target: "bench",
     }),
   },
 ];

@@ -5,6 +5,7 @@ export const ABILITY_CONDITION_KINDS = new Set<ParsedEffect["kind"]>([
   "ability_only_while_active",
   "evolve_trigger_ability",
   "ability_use_limit_per_turn",
+  "apply_status_to_new_active",
   "once_during_first_turn",
   "cant_use_ability_first_turn",
   "require_bottom_deck_hand_for_ability",

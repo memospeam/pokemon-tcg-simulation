@@ -884,6 +884,29 @@ function isUnparsedClauseEffect(
 function mergeAbilityEffects(effects: ParsedEffect[]): ParsedEffect[] {
   const merged: ParsedEffect[] = [];
   for (const effect of effects) {
+    if (effect.kind === "apply_status_to_new_active") {
+      const prev = merged[merged.length - 1];
+      if (
+        prev?.kind === "switch_bench_typed_to_active" ||
+        prev?.kind === "switch_bench_named_to_active"
+      ) {
+        merged[merged.length - 1] = { ...prev, applyStatus: effect.status };
+        continue;
+      }
+    }
+    if (
+      isUnparsedClauseEffect(effect) &&
+      /^if you do, the new active pok[ée]mon is now poisoned\.?$/i.test(effect.text)
+    ) {
+      const prev = merged[merged.length - 1];
+      if (
+        prev?.kind === "switch_bench_typed_to_active" ||
+        prev?.kind === "switch_bench_named_to_active"
+      ) {
+        merged[merged.length - 1] = { ...prev, applyStatus: "Poisoned" };
+        continue;
+      }
+    }
     if (
       isUnparsedClauseEffect(effect) &&
       /^if you attached energy to a pok[ée]mon in this way, draw a card/.test(effect.text)
@@ -1155,6 +1178,8 @@ export function summarizeEffects(effects: ParsedEffect[]): string {
           return "Prevent damage from Ability Pokémon";
         case "switch_bench_named_to_active":
           return `Switch ${effect.nameFilter} from Bench`;
+        case "switch_bench_typed_to_active":
+          return `Switch ${effect.typeFilter} from Bench`;
         case "attach_energy_from_discard":
           return `Attach ${effect.count} ${effect.energyType} from discard`;
         case "attach_hand_energy_to_benched":
