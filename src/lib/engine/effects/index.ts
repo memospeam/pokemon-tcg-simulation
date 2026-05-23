@@ -7,6 +7,7 @@ export {
   executeEffects,
   assignBenchDamageCounter,
   chooseBenchDamage,
+  chooseOpponentPokemonDamage,
   confirmDrawUntilHand,
   selectMoveDamageSource,
   selectMoveDamageTarget,

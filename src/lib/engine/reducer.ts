@@ -1,5 +1,6 @@
 import { isBasicPokemon, isAceSpec, isItemTrainer, isStadium, isSupporter, isTeamRocketPokemon, isTool } from "../models/definition";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
+import type { CardInstance } from "../models/instance";
 import {
   canAttackThisTurn,
   canEvolveInto,
@@ -18,6 +19,7 @@ import { shufflePlayerDeck } from "./helpers";
 import {
   assignBenchDamageCounter,
   chooseBenchDamage,
+  chooseOpponentPokemonDamage,
   confirmDrawUntilHand,
   executeEffects,
   parseAbilityText,
@@ -742,6 +744,30 @@ function handleKnockout(state: EngineState, defenderId: PlayerId): EngineState {
   return state;
 }
 
+function attachAbilityKnockOutSource(state: EngineState, pokemonId: string): void {
+  const pending = state.pendingAction;
+  if (!pending) return;
+  if (pending.type === "CHOOSE_OPPONENT_POKEMON_DAMAGE") {
+    state.pendingAction = { ...pending, knockOutSourceId: pokemonId };
+    return;
+  }
+  if (pending.type === "CHOOSE_BENCH_DAMAGE") {
+    state.pendingAction = { ...pending, knockOutSourceId: pokemonId };
+  }
+}
+
+function finishAbilitySelfKnockOut(
+  state: EngineState,
+  playerId: PlayerId,
+  pokemon: CardInstance,
+): void {
+  applyKnockOutSelfAfterAbility(state, pokemon);
+  const player = getPlayer(state, playerId);
+  if (player.active?.instanceId === pokemon.instanceId && isKnockedOut(state, player.active)) {
+    handleKnockout(state, playerId);
+  }
+}
+
 function handleRetreat(
   state: EngineState,
   playerId: PlayerId,
@@ -896,10 +922,15 @@ function handleUseAbility(
   };
   const executable = getExecutableAbilityEffects(parsed.effects);
   const result = executeEffects(state, ctx, executable);
-  if (result === "pending") return state;
+  if (result === "pending") {
+    if (abilityRequiresKnockOutSelf(parsed.effects)) {
+      attachAbilityKnockOutSource(state, pokemon.instanceId);
+    }
+    return state;
+  }
 
   if (abilityRequiresKnockOutSelf(parsed.effects)) {
-    applyKnockOutSelfAfterAbility(state, pokemon);
+    finishAbilitySelfKnockOut(state, playerId, pokemon);
   }
 
   resolveBenchKnockouts(state);
@@ -923,12 +954,46 @@ function handleAssignBenchDamage(state: EngineState, playerId: PlayerId, targetI
 function handleChooseBenchDamageTarget(state: EngineState, playerId: PlayerId, targetId: string): EngineState {
   const pending = state.pendingAction;
   const attackName = pending?.type === "CHOOSE_BENCH_DAMAGE" ? pending.attackName : undefined;
+  const knockOutSourceId =
+    pending?.type === "CHOOSE_BENCH_DAMAGE" ? pending.knockOutSourceId : undefined;
   const result = chooseBenchDamage(state, playerId, targetId);
   if (result === "failed") return state;
+  if (knockOutSourceId) {
+    const player = getPlayer(state, playerId);
+    const source = allPokemonInPlay(player).find((entry) => entry.instanceId === knockOutSourceId);
+    if (source) finishAbilitySelfKnockOut(state, playerId, source);
+  }
+  resolveBenchKnockouts(state);
+  finishIfWinner(state);
   if (attackName) {
     return finishAttackAfterDamagePhase(state, playerId, attackName, "complete");
   }
-  return finishAttackAndEffects(state, playerId);
+  return state;
+}
+
+function handleChooseOpponentPokemonDamageTarget(
+  state: EngineState,
+  playerId: PlayerId,
+  targetId: string,
+): EngineState {
+  const pending = state.pendingAction;
+  const attackName =
+    pending?.type === "CHOOSE_OPPONENT_POKEMON_DAMAGE" ? pending.attackName : undefined;
+  const knockOutSourceId =
+    pending?.type === "CHOOSE_OPPONENT_POKEMON_DAMAGE" ? pending.knockOutSourceId : undefined;
+  const result = chooseOpponentPokemonDamage(state, playerId, targetId);
+  if (result === "failed") return state;
+  if (knockOutSourceId) {
+    const player = getPlayer(state, playerId);
+    const source = allPokemonInPlay(player).find((entry) => entry.instanceId === knockOutSourceId);
+    if (source) finishAbilitySelfKnockOut(state, playerId, source);
+  }
+  resolveBenchKnockouts(state);
+  finishIfWinner(state);
+  if (attackName) {
+    return finishAttackAfterDamagePhase(state, playerId, attackName, "complete");
+  }
+  return state;
 }
 
 function handleMoveDamageSource(state: EngineState, playerId: PlayerId, sourceId: string): EngineState {
@@ -1007,9 +1072,14 @@ function handleSelectHandDiscard(state: EngineState, playerId: PlayerId, instanc
     };
     const executable = getExecutableAbilityEffects(parsed.effects);
     const result = executeEffects(state, ctx, executable);
-    if (result === "pending") return state;
+    if (result === "pending") {
+      if (abilityRequiresKnockOutSelf(parsed.effects)) {
+        attachAbilityKnockOutSource(state, pokemon.instanceId);
+      }
+      return state;
+    }
     if (abilityRequiresKnockOutSelf(parsed.effects)) {
-      applyKnockOutSelfAfterAbility(state, pokemon);
+      finishAbilitySelfKnockOut(state, playerId, pokemon);
     }
     resolveBenchKnockouts(state);
     finishIfWinner(state);
@@ -1638,6 +1708,8 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleAssignBenchDamage(nextState, action.playerId, action.targetId);
     case "CHOOSE_BENCH_DAMAGE_TARGET":
       return handleChooseBenchDamageTarget(nextState, action.playerId, action.targetId);
+    case "CHOOSE_OPPONENT_POKEMON_DAMAGE_TARGET":
+      return handleChooseOpponentPokemonDamageTarget(nextState, action.playerId, action.targetId);
     case "MOVE_DAMAGE_SOURCE":
       return handleMoveDamageSource(nextState, action.playerId, action.sourceId);
     case "MOVE_DAMAGE_TARGET":
@@ -2152,6 +2224,17 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       if (pending.playerId !== current) break;
       for (const instanceId of pending.options) {
         actions.push({ type: "CHOOSE_BENCH_DAMAGE_TARGET", playerId: current, targetId: instanceId });
+      }
+      break;
+    }
+    case "CHOOSE_OPPONENT_POKEMON_DAMAGE": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({
+          type: "CHOOSE_OPPONENT_POKEMON_DAMAGE_TARGET",
+          playerId: current,
+          targetId: instanceId,
+        });
       }
       break;
     }

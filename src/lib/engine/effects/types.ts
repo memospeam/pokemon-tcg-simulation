@@ -10,6 +10,7 @@ export type EffectTarget =
   | "opponent_active"
   | "opponent_bench_each"
   | "opponent_bench_choose"
+  | "opponent_pokemon_choose"
   | "opponent_bench_distribute"
   | "self"
   | "your_pokemon"
@@ -218,6 +219,7 @@ export type ParsedEffect =
   | { kind: "reveal_and_discard_opponent_hand" }
   | { kind: "damage_bonus_if_self_damaged"; amount: number }
   | { kind: "damage_per_opponent_hand_size"; perCard: number }
+  | { kind: "damage_per_self_hand_size"; countersPerCard: number }
   | { kind: "damage_bonus_if_stadium"; amount: number }
   | { kind: "discard_hand_energy_for_damage"; max: number; perCard: number }
   | { kind: "discard_special_energy_opponent_all" }
@@ -542,6 +544,7 @@ export const PRE_DAMAGE_ATTACK_EFFECT_KINDS = new Set<ParsedEffect["kind"]>([
   "damage_bonus_if_extra_energy",
   "damage_bonus_if_opponent_stage",
   "damage_per_opponent_hand_size",
+  "damage_per_self_hand_size",
   "damage_per_typed_energy_in_discard",
   "damage_per_named_in_play",
   "damage_per_benched_named_counters",

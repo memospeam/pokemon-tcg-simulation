@@ -15,6 +15,11 @@ const BULK7_RULES: Rule[] = [
   },
   {
     pattern:
+      /^place (\d+) damage counters on your opponent's active pok[ée]mon for each card in your hand\.?$/i,
+    build: (m) => ({ kind: "damage_per_self_hand_size", countersPerCard: parseInt(m[1]!, 10) }),
+  },
+  {
+    pattern:
       /^if you have the same number of cards in your hand as your opponent, attacks used by this pok[ée]mon do (\d+) more damage to your opponent's active pok[ée]mon \(before applying weakness and resistance\)\.?$/i,
     build: (m) => ({ kind: "self_hand_equal_damage_bonus", amount: parseInt(m[1]!, 10) }),
   },

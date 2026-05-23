@@ -122,7 +122,7 @@ const BULK4_RULES: Rule[] = [
     build: (m) => ({
       kind: "damage",
       amount: parseInt(m[1]!, 10) * 10,
-      target: "opponent_bench_choose",
+      target: "opponent_pokemon_choose",
       applyWeaknessRes: false,
     }),
   },

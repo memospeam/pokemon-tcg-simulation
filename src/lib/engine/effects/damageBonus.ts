@@ -150,6 +150,8 @@ export function computePreDamageBonus(
     }
     case "damage_per_opponent_hand_size":
       return opponent.hand.length * effect.perCard;
+    case "damage_per_self_hand_size":
+      return player.hand.length * effect.countersPerCard * 10;
     case "damage_per_typed_energy_in_discard": {
       const type = effect.energyType.toLowerCase();
       const count = player.discard.filter((card) => {

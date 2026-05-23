@@ -111,6 +111,7 @@ export type GameAction =
   | { type: "USE_ABILITY"; playerId: PlayerId; pokemonId: string; abilityName: string }
   | { type: "ASSIGN_BENCH_DAMAGE"; playerId: PlayerId; targetId: string }
   | { type: "CHOOSE_BENCH_DAMAGE_TARGET"; playerId: PlayerId; targetId: string }
+  | { type: "CHOOSE_OPPONENT_POKEMON_DAMAGE_TARGET"; playerId: PlayerId; targetId: string }
   | { type: "MOVE_DAMAGE_SOURCE"; playerId: PlayerId; sourceId: string }
   | { type: "MOVE_DAMAGE_TARGET"; playerId: PlayerId; targetId: string }
   | { type: "SELECT_REDISTRIBUTE_SOURCE"; playerId: PlayerId; sourceId: string }
@@ -165,7 +166,7 @@ export type PendingAction =
       options: string[];
       attackName?: string;
     }
-  | { type: "ATTACH_HAND_ENERGY"; playerId: PlayerId; energyType: string; energyId: string; nameFilter?: string; targetIds: string[] }
+  | { type: "ATTACH_HAND_ENERGY"; playerId: PlayerId; energyType: string; energyId: string; nameFilter?: string; targetIds: string[]; drawOnAttach?: boolean; healOnAttach?: number }
   | { type: "ULTRA_BALL_DISCARD"; playerId: PlayerId; selectedIds: string[] }
   | {
       type: "SEARCH_DECK";
@@ -308,6 +309,15 @@ export type PendingAction =
       amount: number;
       options: string[];
       attackName?: string;
+      knockOutSourceId?: string;
+    }
+  | {
+      type: "CHOOSE_OPPONENT_POKEMON_DAMAGE";
+      playerId: PlayerId;
+      amount: number;
+      options: string[];
+      attackName?: string;
+      knockOutSourceId?: string;
     }
   | {
       type: "MOVE_DAMAGE";

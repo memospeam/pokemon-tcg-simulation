@@ -156,6 +156,36 @@ function executeSingleEffect(
         logMessage(state, "Choose a Benched Pokémon to damage.");
         return "pending";
       }
+      if (effect.target === "opponent_pokemon_choose") {
+        const options = [
+          ...(opponent.active ? [opponent.active.instanceId] : []),
+          ...opponent.bench.map((entry) => entry.instanceId),
+        ];
+        if (options.length === 0) return "complete";
+        if (options.length === 1) {
+          const target =
+            opponent.active?.instanceId === options[0]
+              ? opponent.active
+              : opponent.bench.find((entry) => entry.instanceId === options[0]);
+          if (target) {
+            target.damageCounters += effect.amount;
+            logMessage(
+              state,
+              `${effect.amount} damage to ${getDefinitionSafe(state, target.definitionId).name}.`,
+            );
+          }
+          return "complete";
+        }
+        state.pendingAction = {
+          type: "CHOOSE_OPPONENT_POKEMON_DAMAGE",
+          playerId: ctx.playerId,
+          amount: effect.amount,
+          options,
+          attackName: ctx.attackName,
+        };
+        logMessage(state, "Choose 1 of your opponent's Pokémon to damage.");
+        return "pending";
+      }
       return "complete";
     }
 
@@ -1456,6 +1486,8 @@ function executeSingleEffect(
         energyId: matchingEnergy[0]!.instanceId,
         nameFilter: effect.nameFilter,
         targetIds: targets.map((entry) => entry.instanceId),
+        drawOnAttach: effect.drawOnAttach,
+        healOnAttach: effect.healOnAttach,
       };
       logMessage(state, "Choose a Pokémon to attach Energy to.");
       return "pending";
@@ -1544,6 +1576,37 @@ export function resolveAttachHandEnergyToPokemon(
 
   const energy = player.hand.splice(energyIndex, 1)[0]!;
   attachEnergyToPokemon(state, playerId, energy, target);
+  if (pending.drawOnAttach) drawCards(state, playerId, 1);
+  if (pending.healOnAttach) {
+    target.damageCounters = Math.max(0, target.damageCounters - pending.healOnAttach);
+  }
+  state.pendingAction = null;
+  return "complete";
+}
+
+export function chooseOpponentPokemonDamage(
+  state: EngineState,
+  playerId: PlayerId,
+  targetId: string,
+): ExecuteResult {
+  const pending = state.pendingAction;
+  if (pending?.type !== "CHOOSE_OPPONENT_POKEMON_DAMAGE" || pending.playerId !== playerId) {
+    return "failed";
+  }
+  if (!pending.options.includes(targetId)) return "failed";
+
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  const target =
+    opponent.active?.instanceId === targetId
+      ? opponent.active
+      : opponent.bench.find((entry) => entry.instanceId === targetId);
+  if (!target) return "failed";
+
+  target.damageCounters += pending.amount;
+  logMessage(
+    state,
+    `${pending.amount} damage to ${getDefinitionSafe(state, target.definitionId).name}.`,
+  );
   state.pendingAction = null;
   return "complete";
 }
