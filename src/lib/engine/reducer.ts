@@ -18,6 +18,7 @@ import { shufflePlayerDeck } from "./helpers";
 import {
   assignBenchDamageCounter,
   chooseBenchDamage,
+  confirmDrawUntilHand,
   executeEffects,
   parseAbilityText,
   resolveReconDirectivePick,
@@ -32,6 +33,8 @@ import {
   resolveChooseBlockedAttack,
   selectMoveDamageSource,
   selectMoveDamageTarget,
+  selectRedistributeOpponentSource,
+  selectRedistributeOpponentTarget,
 } from "./effects";
 import { transferPokemonStateOntoEvolution, canAttachToolToPokemon, attachToolToPokemon, discardPokemonAttachments } from "./effects/toolEffects";
 import {
@@ -905,15 +908,26 @@ function handleUseAbility(
 }
 
 function handleAssignBenchDamage(state: EngineState, playerId: PlayerId, targetId: string): EngineState {
+  const pending = state.pendingAction;
+  const attackName =
+    pending?.type === "DISTRIBUTE_BENCH_DAMAGE" ? pending.attackName : undefined;
   const result = assignBenchDamageCounter(state, playerId, targetId);
   if (result === "failed") return state;
   if (result === "pending") return state;
+  if (attackName) {
+    return finishAttackAfterDamagePhase(state, playerId, attackName, "complete");
+  }
   return finishAttackAndEffects(state, playerId);
 }
 
 function handleChooseBenchDamageTarget(state: EngineState, playerId: PlayerId, targetId: string): EngineState {
+  const pending = state.pendingAction;
+  const attackName = pending?.type === "CHOOSE_BENCH_DAMAGE" ? pending.attackName : undefined;
   const result = chooseBenchDamage(state, playerId, targetId);
   if (result === "failed") return state;
+  if (attackName) {
+    return finishAttackAfterDamagePhase(state, playerId, attackName, "complete");
+  }
   return finishAttackAndEffects(state, playerId);
 }
 
@@ -923,10 +937,49 @@ function handleMoveDamageSource(state: EngineState, playerId: PlayerId, sourceId
 }
 
 function handleMoveDamageTarget(state: EngineState, playerId: PlayerId, targetId: string): EngineState {
+  const pending = state.pendingAction;
+  const attackName = pending?.type === "MOVE_DAMAGE" ? pending.attackName : undefined;
   if (selectMoveDamageTarget(state, playerId, targetId) === "failed") return state;
   resolveBenchKnockouts(state);
   finishIfWinner(state);
+  if (attackName) {
+    return finishAttackAfterDamagePhase(state, playerId, attackName, "complete");
+  }
   return tryAutoEndTurnIfAttacked(state);
+}
+
+function handleSelectRedistributeSource(state: EngineState, playerId: PlayerId, sourceId: string): EngineState {
+  if (selectRedistributeOpponentSource(state, playerId, sourceId) === "failed") return state;
+  return state;
+}
+
+function handleSelectRedistributeTarget(state: EngineState, playerId: PlayerId, targetId: string): EngineState {
+  const pending = state.pendingAction;
+  const attackName =
+    pending?.type === "REDISTRIBUTE_OPPONENT_COUNTERS" ? pending.attackName : undefined;
+  if (selectRedistributeOpponentTarget(state, playerId, targetId) === "failed") return state;
+  resolveBenchKnockouts(state);
+  finishIfWinner(state);
+  if (state.pendingAction === null && attackName) {
+    return finishAttackAfterDamagePhase(state, playerId, attackName, "complete");
+  }
+  if (state.pendingAction === null && state.turnFlags.attacked) {
+    return finishAttackAndEffects(state, playerId);
+  }
+  return state;
+}
+
+function handleConfirmDrawUntilHand(state: EngineState, playerId: PlayerId): EngineState {
+  const pending = state.pendingAction;
+  const attackName = pending?.type === "DRAW_UNTIL_HAND" ? pending.attackName : undefined;
+  if (confirmDrawUntilHand(state, playerId) === "failed") return state;
+  if (attackName) {
+    return finishAttackAfterDamagePhase(state, playerId, attackName, "complete");
+  }
+  if (state.turnFlags.attacked) {
+    return finishAttackAndEffects(state, playerId);
+  }
+  return state;
 }
 
 function handleSelectHandDiscard(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
@@ -1131,6 +1184,29 @@ function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState
   if (pending.type === "SWITCH_WITH_BENCH" && pending.optional) {
     state.pendingAction = null;
     log(state, "Optional switch skipped.");
+    if (state.turnFlags.attacked) {
+      return finishAttackAndEffects(state, playerId);
+    }
+    return state;
+  }
+
+  if (pending.type === "REDISTRIBUTE_OPPONENT_COUNTERS" && pending.optional) {
+    const attackName = pending.attackName;
+    state.pendingAction = null;
+    log(state, "Optional redistribution skipped.");
+    if (attackName) {
+      return finishAttackAfterDamagePhase(state, playerId, attackName, "complete");
+    }
+    return state;
+  }
+
+  if (pending.type === "DRAW_UNTIL_HAND" && pending.optional) {
+    const attackName = pending.attackName;
+    state.pendingAction = null;
+    log(state, "Optional draw skipped.");
+    if (attackName) {
+      return finishAttackAfterDamagePhase(state, playerId, attackName, "complete");
+    }
     if (state.turnFlags.attacked) {
       return finishAttackAndEffects(state, playerId);
     }
@@ -1566,6 +1642,12 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleMoveDamageSource(nextState, action.playerId, action.sourceId);
     case "MOVE_DAMAGE_TARGET":
       return handleMoveDamageTarget(nextState, action.playerId, action.targetId);
+    case "SELECT_REDISTRIBUTE_SOURCE":
+      return handleSelectRedistributeSource(nextState, action.playerId, action.sourceId);
+    case "SELECT_REDISTRIBUTE_TARGET":
+      return handleSelectRedistributeTarget(nextState, action.playerId, action.targetId);
+    case "CONFIRM_DRAW_UNTIL_HAND":
+      return handleConfirmDrawUntilHand(nextState, action.playerId);
     case "DISCARD_OWN_ENERGY_FOR_ATTACK":
       return handleDiscardOwnEnergyForAttack(
         nextState,
@@ -2088,6 +2170,44 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
         for (const pokemon of allPokemonInPlay(targetPlayer)) {
           actions.push({ type: "MOVE_DAMAGE_TARGET", playerId: current, targetId: pokemon.instanceId });
         }
+      }
+      break;
+    }
+    case "REDISTRIBUTE_OPPONENT_COUNTERS": {
+      if (pending.playerId !== current) break;
+      if (pending.step === "SOURCE") {
+        const opponent = getPlayer(state, getOpponentId(current));
+        for (const pokemon of allPokemonInPlay(opponent)) {
+          if (pokemon.damageCounters > 0) {
+            actions.push({
+              type: "SELECT_REDISTRIBUTE_SOURCE",
+              playerId: current,
+              sourceId: pokemon.instanceId,
+            });
+          }
+        }
+        if (pending.optional) {
+          actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+        }
+      } else if (pending.step === "TARGET" && pending.sourceId) {
+        const opponent = getPlayer(state, getOpponentId(current));
+        for (const pokemon of allPokemonInPlay(opponent)) {
+          if (pokemon.instanceId !== pending.sourceId) {
+            actions.push({
+              type: "SELECT_REDISTRIBUTE_TARGET",
+              playerId: current,
+              targetId: pokemon.instanceId,
+            });
+          }
+        }
+      }
+      break;
+    }
+    case "DRAW_UNTIL_HAND": {
+      if (pending.playerId !== current) break;
+      actions.push({ type: "CONFIRM_DRAW_UNTIL_HAND", playerId: current });
+      if (pending.optional) {
+        actions.push({ type: "SKIP_OPTIONAL", playerId: current });
       }
       break;
     }

@@ -1,7 +1,7 @@
 import { isBasicEnergy, type CardDefinition } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import type { PlayerId } from "../../models/enums";
-import { getDefinition, getPlayer, type EngineState } from "../types";
+import { allPokemonInPlay, getDefinition, getOpponentId, getPlayer, type EngineState } from "../types";
 import {
   abilityRequiresKnockOutSelf,
   getExecutableAbilityEffects,
@@ -176,6 +176,20 @@ export function canUseAbilityNow(
           !pokemonIsExcludedByName(state, entry, effect.excludeName),
       );
       if (eligible.length === 0) return false;
+    }
+    if (effect.kind === "search_named_pokemon_to_hand") {
+      const matches = player.deck.filter((card) => {
+        const def = getDefinition(state, card.definitionId);
+        return def?.supertype === "Pokémon" && pokemonMatchesNameFilter(state, card, effect.nameFilter);
+      });
+      if (matches.length === 0) return false;
+    }
+    if (effect.kind === "move_damage") {
+      const self = allPokemonInPlay(player);
+      const hasSource = self.some((mon) => mon.damageCounters > 0);
+      if (!hasSource) return false;
+      const opponent = getPlayer(state, getOpponentId(pokemon.ownerId));
+      if (allPokemonInPlay(opponent).length === 0) return false;
     }
   }
   return true;

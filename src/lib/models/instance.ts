@@ -24,6 +24,8 @@ export interface CardInstance {
   preventDamageFromBasicNonColorless?: "pending" | "active";
   /** Opponent chose an attack this Pokémon can't use during the owner's next turn. */
   blockedAttackNextOpponentTurn?: { name: string; phase: "pending" | "active" };
+  /** No Weakness during the opponent's next turn. */
+  noWeaknessNextOpponentTurn?: "pending" | "active";
 }
 
 export function createInstanceId(): string {

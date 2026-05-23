@@ -1078,8 +1078,14 @@ export function summarizeEffects(effects: ParsedEffect[]): string {
           return "Reveal opponent hand";
         case "search_basic_energy_to_hand":
           return `Search ${effect.count} Basic Energy → hand`;
+        case "search_named_pokemon_to_hand":
+          return `Search ${effect.nameFilter} Pokémon → hand`;
         case "search_pokemon_to_hand":
           return "Search Pokémon → hand";
+        case "redistribute_opponent_counters":
+          return "Redistribute damage on opponent's Pokémon";
+        case "discard_hand_energy_ko_opponent_active":
+          return `Discard ${effect.count} ${effect.energyType} from hand → KO Active`;
         case "optional_switch_with_bench":
           return "Optional switch with Bench";
         case "heal_matching_damage_dealt":

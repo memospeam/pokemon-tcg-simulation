@@ -40,6 +40,12 @@ export type ParsedEffect =
   | { kind: "switch_with_bench" }
   | { kind: "search_basic_to_bench"; count: number }
   | { kind: "move_energy_to_bench"; count?: number }
+  | { kind: "redistribute_opponent_counters"; optional?: boolean }
+  | {
+      kind: "discard_hand_energy_ko_opponent_active";
+      count: number;
+      energyType: string;
+    }
   | { kind: "draw_until_hand"; targetCount: number; optional: boolean }
   | { kind: "discard_random_opponent_hand"; count: number }
   | { kind: "damage_reduction_passive"; amount: number }
@@ -63,6 +69,7 @@ export type ParsedEffect =
   | { kind: "reveal_opponent_hand" }
   | { kind: "search_basic_energy_to_hand"; count: number }
   | { kind: "search_pokemon_to_hand"; count?: number }
+  | { kind: "search_named_pokemon_to_hand"; nameFilter: string; count?: number }
   | { kind: "optional_switch_with_bench" }
   | { kind: "heal_matching_damage_dealt" }
   | { kind: "return_energy_to_hand" }

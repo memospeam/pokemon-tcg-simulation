@@ -79,6 +79,8 @@ export function getPendingPrompt(pending: import("@/lib/engine").PendingAction):
       return "Crispin: choose a Basic Pokémon to attach the Energy.";
     case "CRISPIN_DISCARD":
       return "Crispin (optional): discard 1 card to draw 2, or skip.";
+    case "DRAW_UNTIL_HAND":
+      return `You may draw until you have ${pending.targetCount} cards in your hand.`;
     case "TOOL_SCRAPPER":
       return `Tool Scrapper: choose ${pending.discardRemaining} Tool(s) to discard.`;
     case "GRAND_TREE":

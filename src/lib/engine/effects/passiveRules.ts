@@ -281,7 +281,7 @@ export function applyWeaknessAndResistanceForPokemon(
   let weaknessMultiplier: number | null = null;
 
   const naturalWeakness = defenderDef.weaknesses?.find((entry) => attackerTypes?.includes(entry.type));
-  if (naturalWeakness) {
+  if (naturalWeakness && defender.noWeaknessNextOpponentTurn !== "active") {
     weaknessMultiplier = naturalWeakness.value.startsWith("×")
       ? parseInt(naturalWeakness.value.slice(1), 10)
       : 2;
@@ -289,7 +289,7 @@ export function applyWeaknessAndResistanceForPokemon(
 
   if (defenderDef.types?.includes("Dragon")) {
     const overrideType = getDragonWeaknessOverrideType(state, defender);
-    if (overrideType && attackerTypes?.includes(overrideType)) {
+    if (overrideType && attackerTypes?.includes(overrideType) && defender.noWeaknessNextOpponentTurn !== "active") {
       weaknessMultiplier = 2;
     }
   }

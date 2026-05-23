@@ -16,6 +16,30 @@ export function hasSpecialCondition(pokemon: CardInstance): boolean {
   return pokemon.statusConditions.length > 0;
 }
 
+function countAttachedEnergyOfType(
+  state: EngineState,
+  pokemon: CardInstance,
+  energyType: string,
+): number {
+  const type = energyType.toLowerCase();
+  return pokemon.attachedEnergy.filter((energy) => {
+    const def = getDefinitionSafe(state, energy.definitionId);
+    return def.name.toLowerCase().includes(type) || def.types?.some((t) => t.toLowerCase() === type);
+  }).length;
+}
+
+function countOwnedTypedEnergy(
+  state: EngineState,
+  playerId: import("../../models/enums").PlayerId,
+  energyType: string,
+): number {
+  const player = getPlayer(state, playerId);
+  return allPokemonInPlay(player).reduce(
+    (sum, mon) => sum + countAttachedEnergyOfType(state, mon, energyType),
+    0,
+  );
+}
+
 export function computePreDamageBonus(
   state: EngineState,
   effect: ParsedEffect,
@@ -59,17 +83,9 @@ export function computePreDamageBonus(
     }
     case "damage_per_typed_energy": {
       if (effect.scope === "all_yours") {
-        const total = allPokemonInPlay(player).reduce(
-          (sum, mon) => sum + mon.attachedEnergy.length,
-          0,
-        );
-        return total * effect.perEnergy;
+        return countOwnedTypedEnergy(state, playerId, effect.energyType) * effect.perEnergy;
       }
-      return source.attachedEnergy.filter((energy) => {
-        const def = getDefinitionSafe(state, energy.definitionId);
-        const type = effect.energyType.toLowerCase();
-        return def.name.toLowerCase().includes(type) || def.types?.some((t) => t.toLowerCase() === type);
-      }).length * effect.perEnergy;
+      return countAttachedEnergyOfType(state, source, effect.energyType) * effect.perEnergy;
     }
     case "damage_per_opponent_active_counter": {
       const counters = Math.floor((opponent.active?.damageCounters ?? 0) / 10);

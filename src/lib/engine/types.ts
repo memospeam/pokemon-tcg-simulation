@@ -113,6 +113,9 @@ export type GameAction =
   | { type: "CHOOSE_BENCH_DAMAGE_TARGET"; playerId: PlayerId; targetId: string }
   | { type: "MOVE_DAMAGE_SOURCE"; playerId: PlayerId; sourceId: string }
   | { type: "MOVE_DAMAGE_TARGET"; playerId: PlayerId; targetId: string }
+  | { type: "SELECT_REDISTRIBUTE_SOURCE"; playerId: PlayerId; sourceId: string }
+  | { type: "SELECT_REDISTRIBUTE_TARGET"; playerId: PlayerId; targetId: string }
+  | { type: "CONFIRM_DRAW_UNTIL_HAND"; playerId: PlayerId }
   | { type: "SELECT_ENERGY_SWITCH_POKEMON"; playerId: PlayerId; pokemonId: string }
   | { type: "SELECT_ENHANCED_HAMMER_POKEMON"; playerId: PlayerId; pokemonId: string }
   | { type: "SELECT_WALLYS_POKEMON"; playerId: PlayerId; pokemonId: string }
@@ -297,8 +300,15 @@ export type PendingAction =
       type: "DISTRIBUTE_BENCH_DAMAGE";
       playerId: PlayerId;
       countersRemaining: number;
+      attackName?: string;
     }
-  | { type: "CHOOSE_BENCH_DAMAGE"; playerId: PlayerId; amount: number; options: string[] }
+  | {
+      type: "CHOOSE_BENCH_DAMAGE";
+      playerId: PlayerId;
+      amount: number;
+      options: string[];
+      attackName?: string;
+    }
   | {
       type: "MOVE_DAMAGE";
       playerId: PlayerId;
@@ -307,6 +317,22 @@ export type PendingAction =
       targetSide: "self" | "opponent";
       sourceId?: string;
       amountToMove?: number;
+      attackName?: string;
+    }
+  | {
+      type: "REDISTRIBUTE_OPPONENT_COUNTERS";
+      playerId: PlayerId;
+      step: "SOURCE" | "TARGET";
+      sourceId?: string;
+      optional?: boolean;
+      attackName?: string;
+    }
+  | {
+      type: "DRAW_UNTIL_HAND";
+      playerId: PlayerId;
+      targetCount: number;
+      optional: boolean;
+      attackName?: string;
     }
   | {
       type: "COPY_BENCH_ATTACK";

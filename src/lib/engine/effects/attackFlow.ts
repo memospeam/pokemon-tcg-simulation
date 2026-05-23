@@ -1,5 +1,5 @@
 import type { CardAttack } from "../../models/definition";
-import { isSupporter } from "../../models/definition";
+import { isBasicEnergy, isSupporter } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import { PlayerId } from "../../models/enums";
 import {
@@ -14,10 +14,13 @@ import {
   getOpponentId,
   getPlayer,
   moveToDiscard,
+  removeFromHand,
   type EngineState,
 } from "../types";
 import { executeEffects } from "./execute";
 import { parseAttackText } from "./parseText";
+import type { ParsedEffect } from "./types";
+import { PRE_DAMAGE_ATTACK_EFFECT_KINDS } from "./types";
 import {
   computePreDamageBonus,
   isSecondPlayerFirstTurnBlocked,
@@ -42,8 +45,6 @@ import {
 } from "./passiveRules";
 import { getTrainerTurnAttackBonus } from "./trainerTurnBonuses";
 import { discardToolsFromOpponentActive, getToolAttackBonus } from "./toolEffects";
-import type { ParsedEffect } from "./types";
-import { PRE_DAMAGE_ATTACK_EFFECT_KINDS } from "./types";
 
 export function isFestivalGroundsInPlay(state: EngineState): boolean {
   if (!state.stadium) return false;
@@ -179,6 +180,21 @@ function applyAttackDamagePhaseWithDefinition(
   const attackerDef = getDefinitionSafe(state, player.active.definitionId);
   const defenderDef = getDefinitionSafe(state, opponent.active.definitionId);
   const textEffects = parseAttackText(attack.text);
+  const hydraEffect = textEffects.find(
+    (effect): effect is Extract<ParsedEffect, { kind: "discard_hand_energy_ko_opponent_active" }> =>
+      effect.kind === "discard_hand_energy_ko_opponent_active",
+  );
+  if (hydraEffect) {
+    return applyDiscardHandEnergyKoActive(
+      state,
+      playerId,
+      attack,
+      festivalAttackName,
+      hydraEffect,
+      textEffects,
+    );
+  }
+
   const preDamageEffects = textEffects.filter((effect) =>
     PRE_DAMAGE_ATTACK_EFFECT_KINDS.has(effect.kind),
   );
@@ -267,6 +283,65 @@ function applyAttackDamagePhaseWithDefinition(
     postDamageEffects,
     damageApplied,
   );
+}
+
+function handBasicEnergyOfType(
+  state: EngineState,
+  playerId: PlayerId,
+  energyType: string,
+): CardInstance[] {
+  const player = getPlayer(state, playerId);
+  const type = energyType.toLowerCase();
+  return player.hand.filter((card) => {
+    const def = getDefinition(state, card.definitionId);
+    if (!def || !isBasicEnergy(def)) return false;
+    return def.name.toLowerCase().includes(type) || def.types?.some((t) => t.toLowerCase() === type);
+  });
+}
+
+function applyDiscardHandEnergyKoActive(
+  state: EngineState,
+  playerId: PlayerId,
+  attack: CardAttack,
+  festivalAttackName: string,
+  effect: Extract<ParsedEffect, { kind: "discard_hand_energy_ko_opponent_active" }>,
+  textEffects: ParsedEffect[],
+): "complete" | "knockout" | "pending" {
+  const player = getPlayer(state, playerId);
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  const matching = handBasicEnergyOfType(state, playerId, effect.energyType);
+  if (matching.length < effect.count) {
+    logMessage(
+      state,
+      `${attack.name} did nothing — not enough Basic ${effect.energyType} Energy in hand.`,
+    );
+    state.turnFlags.attacked = true;
+    return "complete";
+  }
+
+  for (let i = 0; i < effect.count; i += 1) {
+    const card = matching[i]!;
+    const removed = removeFromHand(player, card.instanceId);
+    if (removed) moveToDiscard(player, removed);
+  }
+  logMessage(
+    state,
+    `${player.name} discarded ${effect.count} Basic ${effect.energyType} Energy from their hand.`,
+  );
+
+  if (opponent.active) {
+    const defenderDef = getDefinitionSafe(state, opponent.active.definitionId);
+    opponent.active.damageCounters = remainingHpWithPassives(state, opponent.active) + 10;
+    logMessage(state, `${defenderDef.name} was Knocked Out by ${attack.name}.`);
+    if (isKnockedOutWithPassives(state, opponent.active)) {
+      return "knockout";
+    }
+  }
+
+  const postDamageEffects = filterPostDamageEffects(
+    textEffects.filter((entry) => entry.kind !== "discard_hand_energy_ko_opponent_active"),
+  );
+  return applyPostAttackEffects(state, playerId, festivalAttackName, postDamageEffects, 0);
 }
 
 function applyPostAttackEffects(

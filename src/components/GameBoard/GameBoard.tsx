@@ -235,6 +235,12 @@ export function GameBoard() {
             playerId: boardGame.pendingAction?.playerId ?? viewingId,
           })
         }
+        onConfirmDrawUntil={() =>
+          controller.runAction({
+            type: "CONFIRM_DRAW_UNTIL_HAND",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+          })
+        }
       />
 
       {boardGame.pendingAction?.type === "DISTRIBUTE_BENCH_DAMAGE" && (

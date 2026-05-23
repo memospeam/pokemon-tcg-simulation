@@ -305,6 +305,15 @@ const BULK3_RULES: Rule[] = [
     }),
   },
   {
+    pattern:
+      /^discard (\d+) basic (\w+) energy cards from your hand, and knock out your opponent's active pok[ée]mon\.?$/i,
+    build: (m) => ({
+      kind: "discard_hand_energy_ko_opponent_active",
+      count: parseInt(m[1]!, 10),
+      energyType: cap(m[2]!),
+    }),
+  },
+  {
     pattern: /^put up to (\d+) (\w+) from your discard pile onto your bench\.?$/i,
     build: (m) => ({
       kind: "recover_pokemon_from_discard",

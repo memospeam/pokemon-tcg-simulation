@@ -7,6 +7,7 @@ interface PendingActionPanelProps {
   game: EngineState;
   onPickDeck: (instanceId: string) => void;
   onSkipOptional: () => void;
+  onConfirmDrawUntil: () => void;
 }
 
 function deckSearchTitle(pending: Extract<EngineState["pendingAction"], { type: "SEARCH_DECK" }>): string {
@@ -43,6 +44,7 @@ export function PendingActionPanel({
   game,
   onPickDeck,
   onSkipOptional,
+  onConfirmDrawUntil,
 }: PendingActionPanelProps) {
   const pending = game.pendingAction;
   if (!pending) return null;
@@ -117,6 +119,25 @@ export function PendingActionPanel({
         <button type="button" className="pending-panel__skip" onClick={onSkipOptional}>
           Skip optional effect
         </button>
+      </div>
+    );
+  }
+
+  if (pending.type === "DRAW_UNTIL_HAND") {
+    return (
+      <div className="pending-panel pending-panel--compact">
+        <p>
+          Draw until you have {pending.targetCount} cards in your hand ({getPlayer(game, pending.playerId).hand.length}{" "}
+          now)?
+        </p>
+        <div className="pending-panel__actions">
+          <button type="button" className="pending-panel__pick" onClick={onConfirmDrawUntil}>
+            Draw up to {pending.targetCount}
+          </button>
+          <button type="button" className="pending-panel__skip" onClick={onSkipOptional}>
+            Skip optional draw
+          </button>
+        </div>
       </div>
     );
   }

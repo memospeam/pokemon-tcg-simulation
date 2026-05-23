@@ -56,6 +56,12 @@ export function activatePendingModifiersForTurnStart(state: EngineState, current
           phase: "active",
         };
       }
+      if (
+        pokemon.noWeaknessNextOpponentTurn === "pending" &&
+        getOpponentId(playerId) === currentPlayerId
+      ) {
+        pokemon.noWeaknessNextOpponentTurn = "active";
+      }
     }
   }
 }
@@ -90,6 +96,12 @@ export function clearModifiersWhenTurnEnds(state: EngineState, playerIdWhoEndedT
       }
       if (playerId === playerIdWhoEndedTurn && pokemon.blockedAttackNextOpponentTurn?.phase === "active") {
         pokemon.blockedAttackNextOpponentTurn = undefined;
+      }
+      if (
+        getOpponentId(playerId) === playerIdWhoEndedTurn &&
+        pokemon.noWeaknessNextOpponentTurn === "active"
+      ) {
+        pokemon.noWeaknessNextOpponentTurn = undefined;
       }
     }
   }

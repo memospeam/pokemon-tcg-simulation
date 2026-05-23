@@ -84,6 +84,23 @@ export function matchBulkClause(clause: string): ParsedEffect[] | null {
     return [{ kind: "apply_status_to_new_active", status: "Poisoned" }];
   }
 
+  if (
+    /^you may move any number of damage counters from your opponent's pok[ée]mon to their other pok[ée]mon in any way you like\.?$/i.test(
+      clause,
+    )
+  ) {
+    return [{ kind: "redistribute_opponent_counters", optional: true }];
+  }
+
+  match = clause.match(
+    /^search your deck for a (.+?) pok[ée]mon, reveal it, and put it into your hand\.?$/i,
+  );
+  if (match) {
+    const raw = match[1]!.trim();
+    const nameFilter = raw.charAt(0).toUpperCase() + raw.slice(1);
+    return [{ kind: "search_named_pokemon_to_hand", nameFilter }];
+  }
+
   match = clause.match(/^discard the top (\d+) cards? of your opponent's deck\.?$/i);
   if (match) {
     return [{ kind: "mill_opponent_deck", count: parseInt(match[1]!, 10) }];

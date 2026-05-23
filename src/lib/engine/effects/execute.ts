@@ -151,6 +151,7 @@ function executeSingleEffect(
           options: opponent.bench
             .filter((b) => canReceiveBenchAttackDamage(state, b, ctx.playerId))
             .map((b) => b.instanceId),
+          attackName: ctx.attackName,
         };
         logMessage(state, "Choose a Benched Pokémon to damage.");
         return "pending";
@@ -166,6 +167,7 @@ function executeSingleEffect(
         type: "DISTRIBUTE_BENCH_DAMAGE",
         playerId: ctx.playerId,
         countersRemaining: effect.counters,
+        attackName: ctx.attackName,
       };
       logMessage(
         state,
@@ -190,6 +192,12 @@ function executeSingleEffect(
       return "complete";
     }
 
+    case "no_weakness_next_opponent_turn": {
+      ctx.sourcePokemon.noWeaknessNextOpponentTurn = "pending";
+      logMessage(state, "This Pokémon has no Weakness during your opponent's next turn.");
+      return "complete";
+    }
+
     case "move_damage": {
       state.pendingAction = {
         type: "MOVE_DAMAGE",
@@ -197,6 +205,7 @@ function executeSingleEffect(
         maxCounters: effect.maxCounters,
         step: "SOURCE",
         targetSide: effect.to === "opponent_pokemon" ? "opponent" : "self",
+        attackName: ctx.attackName,
       };
       logMessage(state, `Move up to ${effect.maxCounters} damage counters — choose the source Pokémon.`);
       return "pending";
@@ -330,15 +339,24 @@ function executeSingleEffect(
 
     case "draw_until_hand": {
       const player = selfPlayer(state, ctx);
-      let drawn = 0;
-      while (player.hand.length < effect.targetCount && player.deck.length > 0) {
-        drawCards(state, ctx.playerId, 1);
-        drawn += 1;
+      if (player.hand.length >= effect.targetCount || player.deck.length === 0) {
+        return "complete";
       }
-      if (drawn > 0) {
-        logMessage(state, `Drew ${drawn} card(s) until ${player.hand.length} in hand.`);
+      if (effect.optional) {
+        state.pendingAction = {
+          type: "DRAW_UNTIL_HAND",
+          playerId: ctx.playerId,
+          targetCount: effect.targetCount,
+          optional: true,
+          attackName: ctx.attackName,
+        };
+        logMessage(
+          state,
+          `You may draw until you have ${effect.targetCount} cards in your hand.`,
+        );
+        return "pending";
       }
-      return "complete";
+      return performDrawUntilHand(state, ctx.playerId, effect.targetCount);
     }
 
     case "discard_random_opponent_hand": {
@@ -494,6 +512,58 @@ function executeSingleEffect(
         slotsRemaining: effect.count ? slots : undefined,
       };
       logMessage(state, `Search your deck for ${effect.count ? `up to ${slots}` : "a"} Pokémon.`);
+      return "pending";
+    }
+
+    case "search_named_pokemon_to_hand": {
+      const player = selfPlayer(state, ctx);
+      const matches = player.deck.filter((card) => {
+        const def = getDefinition(state, card.definitionId);
+        return def?.supertype === "Pokémon" && pokemonMatchesNameFilter(state, card, effect.nameFilter);
+      });
+      if (matches.length === 0) {
+        logMessage(state, `No ${effect.nameFilter} Pokémon found in deck.`);
+        shufflePlayerDeck(state, ctx.playerId);
+        return "complete";
+      }
+      if (matches.length === 1) {
+        const card = player.deck.splice(
+          player.deck.findIndex((entry) => entry.instanceId === matches[0]!.instanceId),
+          1,
+        )[0]!;
+        card.zone = Zone.Hand;
+        player.hand.push(card);
+        shufflePlayerDeck(state, ctx.playerId);
+        logMessage(
+          state,
+          `${player.name} added ${getDefinitionSafe(state, card.definitionId).name} to their hand.`,
+        );
+        return "complete";
+      }
+      state.pendingAction = {
+        type: "SEARCH_DECK",
+        playerId: ctx.playerId,
+        filter: "ANY_POKEMON",
+        options: matches.map((entry) => entry.instanceId),
+      };
+      logMessage(state, `Search your deck for a ${effect.nameFilter} Pokémon.`);
+      return "pending";
+    }
+
+    case "redistribute_opponent_counters": {
+      const opponent = opponentPlayer(state, ctx);
+      const inPlay = allPokemonInPlay(opponent);
+      if (inPlay.length < 2 || !inPlay.some((pokemon) => pokemon.damageCounters > 0)) {
+        return "complete";
+      }
+      state.pendingAction = {
+        type: "REDISTRIBUTE_OPPONENT_COUNTERS",
+        playerId: ctx.playerId,
+        step: "SOURCE",
+        optional: effect.optional,
+        attackName: ctx.attackName,
+      };
+      logMessage(state, "Choose an opponent's Pokémon to move damage counters from.");
       return "pending";
     }
 
@@ -1023,7 +1093,6 @@ function executeSingleEffect(
     case "damage_per_typed_energy_in_discard":
     case "evolve_each_bench_from_deck":
     case "shuffle_opponent_pokemon_to_deck":
-    case "no_weakness_next_opponent_turn":
     case "opponent_choose_shuffle_hand":
     case "damage_per_named_in_play":
     case "discard_named_energy":
@@ -1673,6 +1742,31 @@ export function resolveReconDirectivePick(
   return "complete";
 }
 
+function performDrawUntilHand(
+  state: EngineState,
+  playerId: PlayerId,
+  targetCount: number,
+): ExecuteResult {
+  const player = getPlayer(state, playerId);
+  let drawn = 0;
+  while (player.hand.length < targetCount && player.deck.length > 0) {
+    drawCards(state, playerId, 1);
+    drawn += 1;
+  }
+  if (drawn > 0) {
+    logMessage(state, `Drew ${drawn} card(s) until ${player.hand.length} in hand.`);
+  }
+  return "complete";
+}
+
+export function confirmDrawUntilHand(state: EngineState, playerId: PlayerId): ExecuteResult {
+  const pending = state.pendingAction;
+  if (pending?.type !== "DRAW_UNTIL_HAND" || pending.playerId !== playerId) return "failed";
+  performDrawUntilHand(state, playerId, pending.targetCount);
+  state.pendingAction = null;
+  return "complete";
+}
+
 export function assignBenchDamageCounter(
   state: EngineState,
   playerId: PlayerId,
@@ -1782,6 +1876,90 @@ export function selectMoveDamageTarget(
     state,
     `Moved ${moved} damage from ${getDefinitionSafe(state, source.definitionId).name} to ${getDefinitionSafe(state, target.definitionId).name}.`,
   );
+  state.pendingAction = null;
+  return "complete";
+}
+
+function canContinueOpponentRedistribute(state: EngineState, playerId: PlayerId): boolean {
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  const inPlay = allPokemonInPlay(opponent);
+  const withCounters = inPlay.filter((pokemon) => pokemon.damageCounters > 0);
+  if (withCounters.length === 0) return false;
+  return withCounters.some((source) =>
+    inPlay.some((target) => target.instanceId !== source.instanceId),
+  );
+}
+
+function findOpponentPokemon(
+  state: EngineState,
+  playerId: PlayerId,
+  instanceId: string,
+): CardInstance | null {
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  return allPokemonInPlay(opponent).find((pokemon) => pokemon.instanceId === instanceId) ?? null;
+}
+
+export function selectRedistributeOpponentSource(
+  state: EngineState,
+  playerId: PlayerId,
+  sourceId: string,
+): ExecuteResult {
+  const pending = state.pendingAction;
+  if (
+    pending?.type !== "REDISTRIBUTE_OPPONENT_COUNTERS" ||
+    pending.step !== "SOURCE" ||
+    pending.playerId !== playerId
+  ) {
+    return "failed";
+  }
+
+  const source = findOpponentPokemon(state, playerId, sourceId);
+  if (!source || source.damageCounters <= 0) return "failed";
+
+  pending.sourceId = sourceId;
+  pending.step = "TARGET";
+  logMessage(
+    state,
+    `Move damage counters from ${getDefinitionSafe(state, source.definitionId).name} — choose target.`,
+  );
+  return "pending";
+}
+
+export function selectRedistributeOpponentTarget(
+  state: EngineState,
+  playerId: PlayerId,
+  targetId: string,
+): ExecuteResult {
+  const pending = state.pendingAction;
+  if (
+    pending?.type !== "REDISTRIBUTE_OPPONENT_COUNTERS" ||
+    pending.step !== "TARGET" ||
+    !pending.sourceId ||
+    pending.playerId !== playerId
+  ) {
+    return "failed";
+  }
+  if (pending.sourceId === targetId) return "failed";
+
+  const source = findOpponentPokemon(state, playerId, pending.sourceId);
+  const target = findOpponentPokemon(state, playerId, targetId);
+  if (!source || !target || source.damageCounters <= 0) return "failed";
+
+  const moved = source.damageCounters;
+  source.damageCounters = 0;
+  target.damageCounters += moved;
+  logMessage(
+    state,
+    `Moved ${moved} damage from ${getDefinitionSafe(state, source.definitionId).name} to ${getDefinitionSafe(state, target.definitionId).name}.`,
+  );
+
+  if (canContinueOpponentRedistribute(state, playerId)) {
+    pending.sourceId = undefined;
+    pending.step = "SOURCE";
+    logMessage(state, "Choose another opponent's Pokémon to move damage counters from.");
+    return "pending";
+  }
+
   state.pendingAction = null;
   return "complete";
 }
