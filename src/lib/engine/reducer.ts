@@ -1,4 +1,4 @@
-import { isBasicPokemon, isAceSpec, isItemTrainer, isStadium, isSupporter, isTeamRocketPokemon, isTool } from "../models/definition";
+import { isBasicPokemon, isAceSpec, isItemTrainer, isProtonSupporter, isStadium, isSupporter, isTeamRocketPokemon, isTool } from "../models/definition";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
 import type { CardInstance } from "../models/instance";
 import {
@@ -449,11 +449,7 @@ function handlePlayTrainer(state: EngineState, playerId: PlayerId, instanceId: s
   if (isSupporter(def) && state.turnFlags.supporterPlayed) {
     return state;
   }
-  const parsedForPlay = parseTrainerText(def);
-  const isProton =
-    isSupporter(def) &&
-    parsedForPlay.effects.some((effect) => effect.kind === "trainer_proton");
-  if (isSupporter(def) && !canPlaySupporterThisTurn(state, playerId) && !isProton) {
+  if (isSupporter(def) && !canPlaySupporterThisTurn(state, playerId) && !isProtonSupporter(def)) {
     log(state, "The player who goes first cannot play Supporter cards on their first turn.");
     return state;
   }
@@ -1519,7 +1515,7 @@ function handleSelectWallysPokemon(state: EngineState, playerId: PlayerId, pokem
 }
 
 function canPlayTrainerCard(state: EngineState, playerId: PlayerId, def: ReturnType<typeof getDefinitionSafe>): boolean {
-  if (isSupporter(def) && !canPlaySupporterThisTurn(state, playerId)) {
+  if (isSupporter(def) && !canPlaySupporterThisTurn(state, playerId) && !isProtonSupporter(def)) {
     return false;
   }
   if (!canPlayTrainerCardFromHand(state, playerId, def)) {

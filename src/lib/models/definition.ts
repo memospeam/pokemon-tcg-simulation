@@ -114,6 +114,10 @@ export function isTeamRocketSupporter(def: CardDefinition): boolean {
   return isSupporter(def) && def.name.toLowerCase().includes("team rocket");
 }
 
+export function isProtonSupporter(def: CardDefinition): boolean {
+  return isSupporter(def) && def.name === "Team Rocket's Proton";
+}
+
 export function isMegaEvolutionEx(def: CardDefinition): boolean {
   return def.supertype === "Pokémon" && def.subtypes.includes("MEGA") && def.subtypes.includes("ex");
 }

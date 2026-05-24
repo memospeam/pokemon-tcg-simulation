@@ -168,7 +168,7 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_ariana" }),
   },
   {
-    test: /you can use this card only if any of your team rocket's pok[ée]mon were knocked out during your opponent's last turn\.each player shuffles their hand into their deck\. then, you draw 5 cards, and your opponent draws 3 cards/,
+    test: /you can use this card only if any of your team rocket's pok[ée]mon were knocked out during your opponent's last turn\.\s*each player shuffles their hand into their deck\. then, you draw 5 cards, and your opponent draws 3 cards/,
     build: () => ({ kind: "trainer_archer" }),
   },
   {
@@ -176,7 +176,7 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_giovanni" }),
   },
   {
-    test: /if you go first, you may use this card during your first turn\.search your deck for up to 3 basic team rocket's pok[ée]mon, reveal them, and put them into your hand\. then, shuffle your deck/,
+    test: /if you go first, you may use this card during your first turn\.\s*search your deck for up to 3 basic team rocket's pok[ée]mon, reveal them, and put them into your hand\. then, shuffle your deck/,
     build: () => ({ kind: "trainer_proton", count: 3 }),
   },
   {
@@ -224,11 +224,11 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_brocks_scouting" }),
   },
   {
-    test: /you can use this card only if you have more prize cards remaining than your opponent\.attach up to 2 basic energy cards from your discard pile to 1 of your stage 2 pok[ée]mon/,
+    test: /you can use this card only if you have more prize cards remaining than your opponent\.\s*attach up to 2 basic energy cards from your discard pile to 1 of your stage 2 pok[ée]mon/,
     build: () => ({ kind: "trainer_rosas_encouragement", count: 2 }),
   },
   {
-    test: /you can use this card only if your opponent has exactly 2 prize cards remaining\.during this turn, if your opponent's active pok[ée]mon is knocked out by damage from an attack used by your tera pok[ée]mon, take 1 more prize card/,
+    test: /you can use this card only if your opponent has exactly 2 prize cards remaining\.\s*during this turn, if your opponent's active pok[ée]mon is knocked out by damage from an attack used by your tera pok[ée]mon, take 1 more prize card/,
     build: () => ({ kind: "trainer_briar" }),
   },
   {
@@ -252,7 +252,7 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: (_match: RegExpMatchArray) => ({ kind: "trainer_miracle_headset", count: 2 }),
   },
   {
-    test: /you can use this card only if you discard 3 other cards from your hand\.search your deck for an item card, a pok[ée]mon tool card, a supporter card, and a stadium card, reveal them, and put them into your hand\. then, shuffle your deck/,
+    test: /you can use this card only if you discard 3 other cards from your hand\.\s*search your deck for an item card, a pok[ée]mon tool card, a supporter card, and a stadium card, reveal them, and put them into your hand\. then, shuffle your deck/,
     build: () => ({ kind: "trainer_secret_box" }),
   },
   {
