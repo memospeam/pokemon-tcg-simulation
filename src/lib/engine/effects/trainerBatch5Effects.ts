@@ -48,6 +48,29 @@ function bugCatchingEligible(def: CardDefinition): boolean {
   return isGrassPokemon(def) || isBasicGrassEnergy(def);
 }
 
+export function applyPokegear(state: EngineState, playerId: PlayerId): void {
+  const top = deckTopCards(state, playerId, 7);
+  const supporters = top.filter((card) => isSupporter(getDefinitionSafe(state, card.definitionId)));
+  if (supporters.length === 0) {
+    shufflePlayerDeck(state, playerId);
+    logMessage(state, "Pokégear 3.0: no Supporters in the top 7 cards — shuffled deck.");
+    return;
+  }
+  if (supporters.length === 1) {
+    moveDeckCardToHand(state, playerId, supporters[0]!.instanceId);
+    shufflePlayerDeck(state, playerId);
+    logMessage(state, "Pokégear 3.0: put 1 Supporter into hand and shuffled deck.");
+    return;
+  }
+  state.pendingAction = {
+    type: "SEARCH_DECK",
+    playerId,
+    filter: "POKEGEAR_TOP7",
+    options: supporters.map((card) => card.instanceId),
+  };
+  logMessage(state, "Pokégear 3.0: choose a Supporter from the top 7 cards of your deck.");
+}
+
 export function applyRotoStick(state: EngineState, playerId: PlayerId): void {
   const top = deckTopCards(state, playerId, 4);
   const supporters = top.filter((card) => isSupporter(getDefinitionSafe(state, card.definitionId)));
@@ -323,9 +346,16 @@ export function canPlayTrainerBatch5Kind(
   const player = getPlayer(state, playerId);
 
   switch (kind) {
+    case "trainer_pokegear":
     case "trainer_roto_stick":
       if (player.deck.length === 0) {
-        return { ok: false, reason: "Roto-Stick: your deck is empty." };
+        return {
+          ok: false,
+          reason:
+            kind === "trainer_pokegear"
+              ? "Pokégear 3.0: your deck is empty."
+              : "Roto-Stick: your deck is empty.",
+        };
       }
       return { ok: true };
     case "trainer_miracle_headset":
@@ -358,6 +388,9 @@ export function canPlayTrainerBatch5Kind(
 
 export function applyTrainerBatch5Kind(state: EngineState, playerId: PlayerId, effect: ParsedEffect): void {
   switch (effect.kind) {
+    case "trainer_pokegear":
+      applyPokegear(state, playerId);
+      return;
     case "trainer_roto_stick":
       applyRotoStick(state, playerId);
       return;

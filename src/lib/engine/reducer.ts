@@ -1316,6 +1316,13 @@ function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState
     return state;
   }
 
+  if (pending.type === "SEARCH_DECK" && pending.filter === "POKEGEAR_TOP7") {
+    shufflePlayerDeck(state, playerId);
+    state.pendingAction = null;
+    log(state, "Pokégear 3.0: skipped taking a Supporter — shuffled deck.");
+    return state;
+  }
+
   if (pending.type === "SEARCH_DECK" && pending.slotsRemaining !== undefined) {
     shufflePlayerDeck(state, playerId);
     state.pendingAction = null;
@@ -1976,7 +1983,9 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       for (const instanceId of pending.options) {
         actions.push({ type: "PICK_DECK_CARD", playerId: current, instanceId });
       }
-      if (pending.slotsRemaining !== undefined && pending.slotsRemaining > 1) {
+      if (pending.filter === "POKEGEAR_TOP7") {
+        actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      } else if (pending.slotsRemaining !== undefined && pending.slotsRemaining > 1) {
         actions.push({ type: "SKIP_OPTIONAL", playerId: current });
       }
       break;

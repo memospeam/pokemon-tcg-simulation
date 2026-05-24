@@ -36,7 +36,10 @@ export function getPendingPrompt(pending: import("@/lib/engine").PendingAction):
         return "Poké Pad: choose a Pokémon without a Rule Box from your deck.";
       }
       if (pending.filter === "SUPPORTER_HAND") {
-        return "Pokégear 3.0: choose a Supporter from your deck.";
+        return "Choose a Supporter from your deck.";
+      }
+      if (pending.filter === "POKEGEAR_TOP7") {
+        return "Pokégear 3.0: choose a Supporter from the top 7 cards of your deck.";
       }
       if (pending.filter === "TOOL_HAND") {
         return `Treasure Tracker: choose up to ${pending.slotsRemaining ?? 1} Tool card(s) from your deck.`;

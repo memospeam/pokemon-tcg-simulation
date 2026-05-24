@@ -5,6 +5,7 @@ import { normalizePokemonName } from "../engine/rules";
 import type { CardAbility, CardAttack, CardDefinition } from "../models/definition";
 import type { BuiltDeck } from "./builder";
 import { parseLimitlessDeckList, type ParsedDeckLine } from "./limitlessParser";
+import { resolveTrainerRulesText } from "./trainerStubTexts";
 import { validateDeck, type DeckValidationResult } from "./validator";
 
 export function findCorpusCard(
@@ -70,6 +71,10 @@ const EVOLUTION_PARENT: Record<string, string> = {
   alakazam: "Kadabra",
   "mega lopunny ex": "Buneary",
   froslass: "Snorunt",
+  frogadier: "Froakie",
+  "mega greninja ex": "Frogadier",
+  "mega pyroar ex": "Litleo",
+  "mega dragalge ex": "Skrelp",
   "team rocket's honchkrow": "Team Rocket's Murkrow",
   "team rocket's porygon2": "Team Rocket's Porygon",
   "team rocket's articuno": "Team Rocket's Murkrow",
@@ -122,7 +127,22 @@ function inferEnergyTypes(name: string): string[] {
 
 function inferPokemonTypes(name: string, deckEnergyTypes: Set<string>): string[] {
   const lower = name.toLowerCase();
-  if (lower.includes("greninja") || lower.includes("munkidori") || lower.includes("alakazam")) {
+  if (lower.includes("froakie") || lower.includes("frogadier") || lower.includes("greninja")) {
+    return ["Water"];
+  }
+  if (lower.includes("litleo") || lower.includes("pyroar")) {
+    return ["Fire"];
+  }
+  if (lower.includes("skrelp") || lower.includes("dragalge")) {
+    return ["Psychic"];
+  }
+  if (lower.includes("floette") || lower.includes("flabebe")) {
+    return ["Psychic"];
+  }
+  if (lower.includes("gallade") || lower.includes("ralts") || lower.includes("kirlia")) {
+    return ["Psychic"];
+  }
+  if (lower.includes("munkidori") || lower.includes("alakazam")) {
     return ["Psychic"];
   }
   if (lower.includes("dragapult") || lower.includes("dreepy") || lower.includes("drakloak")) {
@@ -248,6 +268,7 @@ function stubTrainerDefinition(line: ParsedDeckLine): CardDefinition {
     name: line.name,
     supertype: "Trainer",
     subtypes,
+    rules: resolveTrainerRulesText(line.name),
     set: { id: setCode.toLowerCase(), name: setCode, ptcgoCode: setCode },
     number: line.number ?? "1",
     images: { small: "", large: "" },
@@ -297,7 +318,7 @@ function lineToDefinition(
 
 /**
  * Build a 60-card deck synchronously from a Limitless list using the Standard corpus
- * for Pokémon (real attack/ability text) and lightweight stubs for Trainer/Energy lines.
+ * for Pokémon (real attack/ability text) and corpus-backed rules text for Trainer/Energy stubs.
  */
 export function buildPlaytestDeckFromCorpusText(name: string, text: string): BuiltDeck {
   const parsed = parseLimitlessDeckList(text);

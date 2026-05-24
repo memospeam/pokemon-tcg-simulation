@@ -3,7 +3,7 @@ import type { CardDefinition } from "../../models/definition";
 import { PlayerId, Zone, GamePhase } from "../../models/enums";
 import type { CardInstance } from "../../models/instance";
 import { createCardInstance } from "../../models/instance";
-import { applyMiracleHeadset, applyRotoStick } from "./trainerBatch5Effects";
+import { applyMiracleHeadset, applyPokegear, applyRotoStick } from "./trainerBatch5Effects";
 import { emptyTurnFlags, getPlayer, type EngineState } from "../types";
 
 function mockSupporter(name: string): CardDefinition {
@@ -111,5 +111,34 @@ describe("trainerBatch5Effects", () => {
 
     applyMiracleHeadset(state, PlayerId.P1, 2);
     expect(state.pendingAction?.type).toBe("MIRACLE_HEADSET");
+  });
+
+  it("Pokégear 3.0 only looks at the top 7 cards, not the whole deck", () => {
+    const deck = [
+      createCardInstance("boss", PlayerId.P1, Zone.Deck),
+      createCardInstance("judge", PlayerId.P1, Zone.Deck),
+      ...Array.from({ length: 5 }, () => createCardInstance("energy", PlayerId.P1, Zone.Deck)),
+      ...Array.from({ length: 10 }, () => createCardInstance("boss", PlayerId.P1, Zone.Deck)),
+    ];
+    const state = stateWithDeckAndDiscard(deck);
+
+    applyPokegear(state, PlayerId.P1);
+    expect(state.pendingAction?.type).toBe("SEARCH_DECK");
+    if (state.pendingAction?.type === "SEARCH_DECK") {
+      expect(state.pendingAction.filter).toBe("POKEGEAR_TOP7");
+      expect(state.pendingAction.options).toHaveLength(2);
+    }
+  });
+
+  it("Pokégear 3.0 shuffles when no Supporter is in the top 7 cards", () => {
+    const deck = [
+      ...Array.from({ length: 7 }, () => createCardInstance("energy", PlayerId.P1, Zone.Deck)),
+      ...Array.from({ length: 5 }, () => createCardInstance("boss", PlayerId.P1, Zone.Deck)),
+    ];
+    const state = stateWithDeckAndDiscard(deck);
+
+    applyPokegear(state, PlayerId.P1);
+    expect(state.pendingAction).toBeNull();
+    expect(getPlayer(state, PlayerId.P1).hand).toHaveLength(0);
   });
 });

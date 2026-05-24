@@ -23,6 +23,17 @@ export function getStandardEffectText(id: string): EffectTextRecord | undefined 
   return corpus.effectTexts.find((entry) => entry.id === id);
 }
 
+/** Resolve playable rules text for a Trainer card name from the Standard corpus. */
+export function getTrainerRulesTextByCardName(cardName: string): string | undefined {
+  const normalized = cardName.trim().toLowerCase();
+  const record = corpus.effectTexts.find(
+    (entry) =>
+      entry.kind === "trainer" &&
+      entry.exampleCards.some((name) => name.trim().toLowerCase() === normalized),
+  );
+  return record?.text;
+}
+
 export function findStandardEffectsByText(text: string): EffectTextRecord[] {
   const normalized = text.trim().replace(/\s+/g, " ").toLowerCase();
   return corpus.effectTexts.filter(

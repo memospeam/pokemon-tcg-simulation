@@ -343,11 +343,11 @@ function canPlayTrainerKind(
         };
       }
       return { ok: true };
-    case "trainer_pokegear":
-      if (deckTrainerMatching(state, playerId, isSupporter).length === 0) {
-        return { ok: false, reason: "Pokégear 3.0: no Supporter cards found in your deck." };
-      }
+    case "trainer_pokegear": {
+      const pokegearCheck = canPlayTrainerBatch5Kind(state, playerId, "trainer_pokegear");
+      if (!pokegearCheck.ok) return pokegearCheck;
       return { ok: true };
+    }
     case "trainer_wallys_compassion":
       if (allPokemonInPlay(player).length === 0) {
         return { ok: false, reason: "Wally's Compassion requires a Pokémon in play." };
@@ -467,12 +467,9 @@ function applyTrainerByKind(state: EngineState, playerId: PlayerId, effect: Pars
     case "trainer_hilda":
       applyHilda(state, playerId);
       return;
-    case "trainer_pokegear": {
-      const matches = deckTrainerMatching(state, playerId, isSupporter);
-      setSearchPending(state, playerId, "SUPPORTER_HAND", matches);
-      logMessage(state, "Pokégear 3.0: choose a Supporter from your deck.");
+    case "trainer_pokegear":
+      applyTrainerBatch5Kind(state, playerId, { kind: "trainer_pokegear" });
       return;
-    }
     case "trainer_wallys_compassion":
       applyWallysCompassionEffect(state, playerId);
       return;
@@ -691,9 +688,8 @@ function canPlayLegacyTrainerEffect(
   }
 
   if (matchesTrainer(def, "pokégear 3.0", "pokegear 3.0")) {
-    if (deckTrainerMatching(state, playerId, isSupporter).length === 0) {
-      return { ok: false, reason: "Pokégear 3.0: no Supporter cards found in your deck." };
-    }
+    const pokegearCheck = canPlayTrainerBatch5Kind(state, playerId, "trainer_pokegear");
+    if (!pokegearCheck.ok) return pokegearCheck;
   }
 
   if (matchesTrainer(def, "wally's compassion")) {
@@ -849,6 +845,15 @@ export function resolveDeckPick(
         return;
       }
     }
+    shufflePlayerDeck(state, playerId);
+    state.pendingAction = null;
+    return;
+  }
+
+  if (filter === "POKEGEAR_TOP7") {
+    card.zone = Zone.Hand;
+    player.hand.push(card);
+    logMessage(state, `${player.name} revealed ${def.name} and put it into their hand (Pokégear 3.0).`);
     shufflePlayerDeck(state, playerId);
     state.pendingAction = null;
     return;
@@ -1147,9 +1152,7 @@ function applyLegacyTrainerEffect(
   }
 
   if (matchesTrainer(def, "pokégear 3.0", "pokegear 3.0")) {
-    const matches = deckTrainerMatching(state, playerId, isSupporter);
-    setSearchPending(state, playerId, "SUPPORTER_HAND", matches);
-    logMessage(state, "Pokégear 3.0: choose a Supporter from your deck.");
+    applyTrainerBatch5Kind(state, playerId, { kind: "trainer_pokegear" });
     return;
   }
 

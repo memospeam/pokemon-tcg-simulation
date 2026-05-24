@@ -123,7 +123,7 @@ describe("utrechtGameRunner", () => {
     expect(result.actionCount).toBeGreaterThan(0);
   });
 
-  it("reports stall when an attack needs manual target selection", () => {
+  it("auto-resolves Mirage Barrage two-target damage during auto-play", () => {
     const base = mirrorMatchState();
     const greninjaDef = mockBasic("Greninja ex", "330", ["Water"], [
       {
@@ -170,9 +170,9 @@ describe("utrechtGameRunner", () => {
       },
     };
 
-    const result = runEngineAutoPlay(state, { maxTurns: 5, maxActions: 10 });
-    expect(result.stalled).toBe(true);
-    expect(result.state.pendingAction?.type).toBe("DAMAGE_TWO_OPPONENT");
+    const result = runEngineAutoPlay(state, { maxTurns: 5, maxActions: 20 });
+    expect(result.stalled).toBe(false);
+    expect(result.state.pendingAction).toBeNull();
     expect(getPlayer(result.state, PlayerId.P1).active!.attachedEnergy).toHaveLength(2);
   });
 
@@ -214,7 +214,7 @@ describe("utrechtGameRunner", () => {
     expect(result.resolveErrors).toEqual([]);
     expect(result.setupComplete).toBe(true);
     expect(result.actionCount).toBeGreaterThan(0);
-    expect(result.state.phase).toBe(GamePhase.Active);
+    expect([GamePhase.Active, GamePhase.Finished]).toContain(result.state.phase);
   });
 
   it("runs a full mirror match from built corpus decks", () => {

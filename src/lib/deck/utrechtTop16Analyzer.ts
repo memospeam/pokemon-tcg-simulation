@@ -85,12 +85,15 @@ export const ENGINE_READY_SIGNATURES = new Set([
   "Psychic Draw",
 ]);
 
+export type ArchetypeSignatureMap = Record<string, { attacks?: string[]; abilities?: string[] }>;
+
 function isSignatureEffect(
   deckName: string,
   kind: "attack" | "ability",
   effectName: string,
+  signatures: ArchetypeSignatureMap,
 ): boolean {
-  const sig = ARCHETYPE_SIGNATURES[deckName];
+  const sig = signatures[deckName];
   if (!sig) return false;
   return kind === "attack"
     ? (sig.attacks?.includes(effectName) ?? false)
@@ -101,6 +104,7 @@ function collectEffectsForCard(
   card: StandardCardIndex,
   deckCopies: number,
   deckName: string,
+  signatures: ArchetypeSignatureMap,
 ): DeckEffectEntry[] {
   const entries: DeckEffectEntry[] = [];
 
@@ -114,7 +118,7 @@ function collectEffectsForCard(
       parseCoverage: record?.coverage ?? "none",
       implementationCoverage: record?.implementationCoverage ?? "unknown",
       deckCopies,
-      isSignature: isSignatureEffect(deckName, "attack", attack.name),
+      isSignature: isSignatureEffect(deckName, "attack", attack.name, signatures),
     });
   }
 
@@ -128,7 +132,7 @@ function collectEffectsForCard(
       parseCoverage: record?.coverage ?? "none",
       implementationCoverage: record?.implementationCoverage ?? "unknown",
       deckCopies,
-      isSignature: isSignatureEffect(deckName, "ability", ability.name),
+      isSignature: isSignatureEffect(deckName, "ability", ability.name, signatures),
     });
   }
 
@@ -145,7 +149,10 @@ function emptyCoverageStats(): Record<ImplementationCoverage, number> {
   };
 }
 
-export function analyzeTournamentDeck(deck: TournamentDeckPreset): TournamentDeckAnalysis {
+export function analyzeTournamentDeck(
+  deck: TournamentDeckPreset,
+  signatures: ArchetypeSignatureMap = ARCHETYPE_SIGNATURES,
+): TournamentDeckAnalysis {
   const parsed = parseLimitlessDeckList(deck.text);
   const sections: Record<DeckSection, number> = {
     Pokémon: parsed.sections.Pokémon ?? 0,
@@ -183,7 +190,7 @@ export function analyzeTournamentDeck(deck: TournamentDeckPreset): TournamentDec
 
     if (line.section === "Pokémon") {
       pokemonResolved += line.count;
-      for (const entry of collectEffectsForCard(match, line.count, deck.deckName)) {
+      for (const entry of collectEffectsForCard(match, line.count, deck.deckName, signatures)) {
         const key = `${entry.kind}:${entry.textId}`;
         const existing = effectMap.get(key);
         if (existing) {
@@ -224,7 +231,7 @@ export function analyzeTournamentDeck(deck: TournamentDeckPreset): TournamentDec
 }
 
 export function analyzeAllUtrechtTop16(): TournamentDeckAnalysis[] {
-  return UTRECHT_535_TOP16.decks.map(analyzeTournamentDeck);
+  return UTRECHT_535_TOP16.decks.map((deck) => analyzeTournamentDeck(deck));
 }
 
 export function summarizeTop16Analysis(analyses: TournamentDeckAnalysis[]): Top16AnalysisSummary {

@@ -16,6 +16,7 @@ function deckSearchTitle(pending: Extract<EngineState["pendingAction"], { type: 
   if (pending.filter === "POFFIN") return `Buddy-Buddy Poffin — ${count} eligible Pokémon`;
   if (pending.filter === "POKEMON_NO_RULE_BOX") return `Poké Pad — ${count} Pokémon without Rule Box`;
   if (pending.filter === "SUPPORTER_HAND") return `Choose a Supporter — ${count} found`;
+  if (pending.filter === "POKEGEAR_TOP7") return `Pokégear 3.0 — top 7 cards (${count} Supporter${count === 1 ? "" : "s"})`;
   if (pending.filter === "TOOL_HAND") return `Treasure Tracker — choose Tools (${slots ?? 1} remaining)`;
   if (pending.filter === "TYPED_POKEMON_MAX_HP_HAND") {
     const type = pending.searchMeta?.typeFilter ?? "Pokémon";
@@ -51,7 +52,7 @@ export function PendingActionPanel({
 
   if (pending.type === "SEARCH_DECK") {
     const cards = resolveDeckCards(game, pending);
-    const showSkip = (pending.slotsRemaining ?? 1) > 1;
+    const showSkip = pending.filter === "POKEGEAR_TOP7" || (pending.slotsRemaining ?? 1) > 1;
 
     return (
       <div className="pending-panel pending-panel--deck">

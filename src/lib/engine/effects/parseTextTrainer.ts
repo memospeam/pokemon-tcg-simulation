@@ -48,7 +48,7 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_boss_orders" }),
   },
   {
-    test: /discard 2 cards from your hand\. search your deck for a pok[ée]mon, reveal it, and put it into your hand\. then, shuffle your deck/,
+    test: /(?:you can use this card only if you )?discard 2 (?:other )?cards from your hand\.\s*search your deck for a pok[ée]mon, reveal it, and put it into your hand\. then, shuffle your deck/,
     build: () => ({ kind: "trainer_ultra_ball" }),
   },
   {
@@ -88,8 +88,12 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_hilda" }),
   },
   {
-    test: /search your deck for a supporter card, reveal it, and put it into your hand\. then, shuffle your deck/,
+    test: /look at the top 7 cards of your deck\. you may reveal a supporter card you find there and put it into your hand\. shuffle the other cards back into your deck/,
     build: () => ({ kind: "trainer_pokegear" }),
+  },
+  {
+    test: /search your deck for a supporter card, reveal it, and put it into your hand\. then, shuffle your deck/,
+    build: () => ({ kind: "trainer_search_supporter" }),
   },
   {
     test: /heal 60 damage from 1 of your pok[ée]mon\. then, shuffle that pok[ée]mon and all attached cards into your deck/,
