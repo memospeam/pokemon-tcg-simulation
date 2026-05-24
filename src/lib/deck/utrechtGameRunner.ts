@@ -391,9 +391,19 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
         playerId,
         targetId: pending.options[0]!,
       });
-    case "SWITCH_WITH_BENCH":
-      if (!pending.optional) return null;
-      return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+    case "SWITCH_WITH_BENCH": {
+      const player = getPlayer(state, playerId);
+      if (pending.optional) {
+        return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      }
+      const bench = player.bench[0];
+      if (!bench) return null;
+      return gameReducer(state, {
+        type: "SWITCH_WITH_BENCH",
+        playerId,
+        benchInstanceId: bench.instanceId,
+      });
+    }
     case "DRAW_UNTIL_HAND":
       if (!pending.optional) return null;
       return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });

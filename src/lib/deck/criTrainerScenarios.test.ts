@@ -3,6 +3,7 @@ import type { CardDefinition } from "../models/definition";
 import { createCardInstance } from "../models/instance";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
 import { gameReducer } from "../engine/reducer";
+import { getDefinitionSafe } from "../engine/rules";
 import { parseTrainerText } from "../engine/effects/trainerText";
 import { emptyTurnFlags, getPlayer, type EngineState } from "../engine/types";
 import { buildPlaytestDeckFromCorpusText } from "./corpusDeckBuilder";
@@ -23,6 +24,12 @@ function loadCriDeck(id: string): BuiltDeck {
 function findDefinition(deck: BuiltDeck, name: string): CardDefinition {
   const def = [...deck.definitions.values()].find((entry) => entry.name === name);
   expect(def, name).toBeDefined();
+  return def!;
+}
+
+function findEnergyDefinition(deck: BuiltDeck): CardDefinition {
+  const def = [...deck.definitions.values()].find((entry) => entry.supertype === "Energy");
+  expect(def, "Energy").toBeDefined();
   return def!;
 }
 
@@ -51,7 +58,7 @@ function criTrainerScenarioState(
   const p1Active = createCardInstance(p1ActiveDef.apiId, PlayerId.P1, Zone.Active);
   const p2Active = createCardInstance(p2ActiveDef.apiId, PlayerId.P2, Zone.Active);
   const trainerCard = createCardInstance(setup.p1HandTrainer.apiId, PlayerId.P1, Zone.Hand);
-  const fillerDef = findDefinition(deck, "Water Energy");
+  const fillerDef = findEnergyDefinition(deck);
 
   const p1Discard = setup.p1DiscardPokemon
     ? [createCardInstance(setup.p1DiscardPokemon.apiId, PlayerId.P1, Zone.Discard)]
@@ -294,5 +301,92 @@ describe("CRI trainer staples (Phase 2)", () => {
       });
     }
     expect(getPlayer(state, PlayerId.P1).hand.some((card) => card.definitionId === froakie.apiId)).toBe(true);
+  });
+
+  it("plays Crispin and attaches Basic Energy from deck", () => {
+    const crispin = findDefinition(greninjaDeck, "Crispin");
+    const water = findDefinition(greninjaDeck, "Water Energy");
+    let state = criTrainerScenarioState(greninjaDeck, {
+      p1HandTrainer: crispin,
+      activeName: "Froakie",
+    });
+    getPlayer(state, PlayerId.P1).deck.unshift(
+      createCardInstance(water.apiId, PlayerId.P1, Zone.Deck),
+    );
+    const crispinCard = getPlayer(state, PlayerId.P1).hand[0]!;
+
+    state = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: crispinCard.instanceId });
+    if (state.pendingAction?.type === "CRISPIN_ATTACH") {
+      state = gameReducer(state, {
+        type: "SELECT_CRISPIN_TARGET",
+        playerId: PlayerId.P1,
+        pokemonId: getPlayer(state, PlayerId.P1).active!.instanceId,
+      });
+    }
+    if (state.pendingAction?.type === "CRISPIN_DISCARD") {
+      state = gameReducer(state, { type: "SKIP_OPTIONAL", playerId: PlayerId.P1 });
+    }
+    expect(getPlayer(state, PlayerId.P1).active!.attachedEnergy).toHaveLength(1);
+  });
+
+  it("plays Rare Candy and evolves a Basic Pokémon", () => {
+    const candy = findDefinition(greninjaDeck, "Rare Candy");
+    const greninjaEx = findDefinition(greninjaDeck, "Mega Greninja ex");
+    const frogadier = findDefinition(greninjaDeck, "Frogadier");
+    expect(frogadier.evolvesFrom).toBe("Froakie");
+    let state = criTrainerScenarioState(greninjaDeck, {
+      p1HandTrainer: candy,
+      p1ExtraHand: [greninjaEx],
+      activeName: "Froakie",
+    });
+    state.definitions[greninjaEx.apiId] = {
+      ...greninjaEx,
+      subtypes: ["Stage 2", "MEGA", "ex"],
+      evolvesFrom: "Frogadier",
+    };
+    getPlayer(state, PlayerId.P1).active!.enteredPlayTurn = 1;
+    const candyCard = getPlayer(state, PlayerId.P1).hand.find(
+      (card) => state.definitions[card.definitionId]?.name === "Rare Candy",
+    )!;
+    const active = getPlayer(state, PlayerId.P1).active!;
+
+    state = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: candyCard.instanceId });
+    expect(state.pendingAction?.type).toBe("RARE_CANDY");
+    state = gameReducer(state, {
+      type: "SELECT_RARE_CANDY_BASIC",
+      playerId: PlayerId.P1,
+      targetId: active.instanceId,
+    });
+    expect(getDefinitionSafe(state, getPlayer(state, PlayerId.P1).active!.definitionId).name).toBe(
+      "Mega Greninja ex",
+    );
+  });
+
+  it("plays Professor's Research and draws 7", () => {
+    const pyroarDeck = loadCriDeck("cri-pyroar-fire");
+    const professor = findDefinition(pyroarDeck, "Professor's Research");
+    const filler = findEnergyDefinition(pyroarDeck);
+    let state = criTrainerScenarioState(pyroarDeck, {
+      p1HandTrainer: professor,
+      activeName: "Litleo",
+    });
+    getPlayer(state, PlayerId.P1).hand.push(
+      createCardInstance(filler.apiId, PlayerId.P1, Zone.Hand),
+      createCardInstance(filler.apiId, PlayerId.P1, Zone.Hand),
+    );
+    getPlayer(state, PlayerId.P1).deck = Array.from({ length: 12 }, () =>
+      createCardInstance(filler.apiId, PlayerId.P1, Zone.Deck),
+    );
+    const professorCard = getPlayer(state, PlayerId.P1).hand.find(
+      (card) => state.definitions[card.definitionId]?.name === "Professor's Research",
+    )!;
+
+    state = gameReducer(state, {
+      type: "PLAY_TRAINER",
+      playerId: PlayerId.P1,
+      instanceId: professorCard.instanceId,
+    });
+    expect(getPlayer(state, PlayerId.P1).hand).toHaveLength(7);
+    expect(state.pendingAction).toBeNull();
   });
 });

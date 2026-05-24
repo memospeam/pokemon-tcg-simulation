@@ -125,6 +125,36 @@ Energy : 12
 4 Water Energy MEE 3
 2 Enriching Energy SSP 191`,
   },
+  {
+    id: "cri-gallade-psychic",
+    label: "CRI — Mega Gallade ex (Psychic)",
+    placement: 5,
+    player: "Playtest",
+    deckName: "Mega Gallade ex",
+    text: `Pokémon : 16
+4 Ralts MEG 58
+3 Kirlia MEG 59
+3 Mega Gallade ex CRI 48
+2 Fezandipiti ex ASC 142
+2 Budew ASC 16
+1 Meowth ex POR 62
+1 Dunsparce JTG 120
+
+Trainer : 32
+4 Lillie's Determination MEG 119
+4 Boss's Orders MEG 114
+4 Ultra Ball MEG 131
+4 Buddy-Buddy Poffin TEF 144
+4 Crispin SCR 133
+4 Night Stretcher ASC 196
+3 Rare Candy MEG 125
+3 Poké Pad POR 81
+2 Judge POR 76
+
+Energy : 12
+8 Psychic Energy MEE 5
+4 Enriching Energy SSP 191`,
+  },
 ];
 
 export const CRI_PLAYTEST_BUNDLE: TournamentPresetBundle = {
