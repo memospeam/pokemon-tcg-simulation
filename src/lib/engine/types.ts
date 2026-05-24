@@ -143,7 +143,15 @@ export type GameAction =
   | { type: "SELECT_GRAND_TREE_BASIC"; playerId: PlayerId; targetId: string }
   | { type: "SELECT_GRAND_TREE_STAGE1"; playerId: PlayerId; instanceId: string }
   | { type: "SELECT_GRAND_TREE_STAGE2"; playerId: PlayerId; instanceId: string }
-  | { type: "SKIP_GRAND_TREE_STAGE2"; playerId: PlayerId };
+  | { type: "SKIP_GRAND_TREE_STAGE2"; playerId: PlayerId }
+  | { type: "SELECT_ERI_DISCARD"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_JANINE_DARKNESS"; playerId: PlayerId; pokemonId: string }
+  | { type: "SELECT_GLASS_TRUMPET"; playerId: PlayerId; pokemonId: string }
+  | { type: "SELECT_BIANCA_HEAL"; playerId: PlayerId; pokemonId: string }
+  | { type: "SELECT_MORTY_DISCARD"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_SALVATORE_EVOLVE"; playerId: PlayerId; targetId: string }
+  | { type: "SELECT_PERRIN_HAND"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_PERRIN_SEARCH"; playerId: PlayerId; instanceId: string };
 
 export type PendingAction =
   | { type: "BOSS_ORDERS"; playerId: PlayerId }
@@ -200,7 +208,9 @@ export type PendingAction =
         | "LUMIOSE_BASIC_BENCH"
         | "TOOL_HAND"
         | "TYPED_POKEMON_MAX_HP_HAND"
-        | "NAMED_POKEMON_BENCH";
+        | "NAMED_POKEMON_BENCH"
+        | "MEGA_EVOLUTION_EX_HAND"
+        | "SALVATORE_EVOLUTION";
       options: string[];
       slotsRemaining?: number;
       searchMeta?: { typeFilter?: string; maxHp?: number; nameFilter?: string };
@@ -303,6 +313,46 @@ export type PendingAction =
   | { type: "CRUSHING_HAMMER"; playerId: PlayerId; options: { pokemonId: string; energyId: string }[] }
   | { type: "CRISPIN_ATTACH"; playerId: PlayerId; energyId: string; targets: string[] }
   | { type: "CRISPIN_DISCARD"; playerId: PlayerId }
+  | {
+      type: "ERI_DISCARD";
+      playerId: PlayerId;
+      options: string[];
+      slotsRemaining: number;
+      pickedIds: string[];
+    }
+  | {
+      type: "JANINE_DARKNESS";
+      playerId: PlayerId;
+      options: string[];
+      slotsRemaining: number;
+      pickedIds: string[];
+    }
+  | {
+      type: "GLASS_TRUMPET";
+      playerId: PlayerId;
+      options: string[];
+      slotsRemaining: number;
+      pickedIds: string[];
+    }
+  | { type: "BIANCA_HEAL"; playerId: PlayerId; options: string[] }
+  | {
+      type: "EXPLORERS_GUIDANCE";
+      playerId: PlayerId;
+      options: string[];
+      slotsRemaining: number;
+      pickedIds: string[];
+      revealPool: string[];
+    }
+  | { type: "MORTY_DISCARD"; playerId: PlayerId; options: string[] }
+  | { type: "SALVATORE_EVOLVE"; playerId: PlayerId; evolutionId: string; options: string[] }
+  | {
+      type: "PERRIN";
+      playerId: PlayerId;
+      step: "HAND" | "SEARCH";
+      options: string[];
+      pickedIds: string[];
+      slotsRemaining: number;
+    }
   | {
       type: "DISTRIBUTE_BENCH_DAMAGE";
       playerId: PlayerId;

@@ -34,4 +34,32 @@ describe("corpus deck builder", () => {
       expect(built.validation.valid, preset.label).toBe(true);
     }
   });
+
+  it("preserves MEGA ex subtypes from corpus for CRI evolution lines", () => {
+    const greninjaText = `Pokémon : 3
+1 Froakie CRI 20
+1 Frogadier CRI 21
+1 Mega Greninja ex CRI 22
+
+Trainer : 0
+
+Energy : 0`;
+    const built = buildPlaytestDeckFromCorpusText("Mega Greninja line", greninjaText);
+    const greninja = [...built.definitions.values()].find((entry) => entry.name === "Mega Greninja ex");
+    expect(greninja?.subtypes).toEqual(["Stage 2", "MEGA", "ex"]);
+    expect(greninja?.evolvesFrom).toBe("Frogadier");
+
+    const galladeText = `Pokémon : 3
+1 Ralts MEG 58
+1 Kirlia MEG 59
+1 Mega Gallade ex CRI 48
+
+Trainer : 0
+
+Energy : 0`;
+    const galladeBuilt = buildPlaytestDeckFromCorpusText("Mega Gallade line", galladeText);
+    const gallade = [...galladeBuilt.definitions.values()].find((entry) => entry.name === "Mega Gallade ex");
+    expect(gallade?.subtypes).toEqual(["Stage 2", "MEGA", "ex"]);
+    expect(gallade?.evolvesFrom).toBe("Kirlia");
+  });
 });

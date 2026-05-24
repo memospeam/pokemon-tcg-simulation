@@ -104,6 +104,46 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_prime_catcher" }),
   },
   {
+    test: /search your deck for a mega evolution pok[ée]mon ex, reveal it, and put it into your hand\. then, shuffle your deck/,
+    build: () => ({ kind: "trainer_mega_signal" }),
+  },
+  {
+    test: /your opponent reveals their hand, and you discard up to 2 item cards you find there/,
+    build: () => ({ kind: "trainer_eri" }),
+  },
+  {
+    test: /discard your hand and draw 5 cards/,
+    build: () => ({ kind: "trainer_carmine" }),
+  },
+  {
+    test: /choose up to 2 of your darkness pok[ée]mon\. for each of those pok[ée]mon, search your deck for a basic darkness energy card and attach it to that pok[ée]mon\. then, shuffle your deck\. if you attached energy to your active pok[ée]mon in this way, it is now poisoned/,
+    build: () => ({ kind: "trainer_janine_secret_art" }),
+  },
+  {
+    test: /choose up to 2 of your benched colorless pok[ée]mon and attach a basic energy card from your discard pile to each of them/,
+    build: () => ({ kind: "trainer_glass_trumpet" }),
+  },
+  {
+    test: /heal all damage from 1 of your pok[ée]mon that has 30 hp or less remaining/,
+    build: () => ({ kind: "trainer_bianca_devotion" }),
+  },
+  {
+    test: /look at the top 6 cards of your deck and put 2 of them into your hand\. discard the other cards/,
+    build: () => ({ kind: "trainer_explorers_guidance" }),
+  },
+  {
+    test: /draw a card for each of your opponent's benched pok[ée]mon/,
+    build: () => ({ kind: "trainer_mortys_conviction" }),
+  },
+  {
+    test: /search your deck for a card that has no abilities and evolves from 1 of your pok[ée]mon, and put it onto that pok[ée]mon to evolve it\. then, shuffle your deck/,
+    build: () => ({ kind: "trainer_salvatore" }),
+  },
+  {
+    test: /reveal up to 2 pok[ée]mon in your hand and put them into your deck\. if you do, search your deck for up to that many pok[ée]mon, reveal them, and put them into your hand\. then, shuffle your deck/,
+    build: () => ({ kind: "trainer_perrin" }),
+  },
+  {
     test: /search your deck for a pok[ée]mon, reveal it, and put it into your hand\. then, shuffle your deck/,
     build: () => ({ kind: "trainer_master_ball" }),
   },

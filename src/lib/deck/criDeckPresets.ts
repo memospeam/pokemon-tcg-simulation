@@ -26,8 +26,8 @@ Trainer : 32
 4 Crispin SCR 133
 4 Night Stretcher ASC 196
 3 Rare Candy MEG 125
+2 Mega Signal MEG 121
 3 Poké Pad POR 81
-2 Judge POR 76
 
 Energy : 10
 7 Water Energy MEE 3
@@ -56,8 +56,8 @@ Trainer : 32
 4 Crispin SCR 133
 4 Night Stretcher ASC 196
 3 Rare Candy MEG 125
+2 Mega Signal MEG 121
 3 Poké Pad POR 81
-2 Judge POR 76
 
 Energy : 14
 10 Psychic Energy MEE 5
@@ -86,8 +86,8 @@ Trainer : 33
 4 Crispin SCR 133
 4 Night Stretcher ASC 196
 3 Rare Candy MEG 125
+2 Mega Signal MEG 121
 3 Poké Pad POR 81
-2 Judge POR 76
 1 Professor's Research JTG 155
 
 Energy : 12
@@ -117,7 +117,8 @@ Trainer : 32
 4 Buddy-Buddy Poffin TEF 144
 4 Crispin SCR 133
 4 Night Stretcher ASC 196
-4 Rare Candy MEG 125
+2 Rare Candy MEG 125
+2 Mega Signal MEG 121
 4 Poké Pad POR 81
 
 Energy : 12
@@ -148,8 +149,8 @@ Trainer : 32
 4 Crispin SCR 133
 4 Night Stretcher ASC 196
 3 Rare Candy MEG 125
+2 Mega Signal MEG 121
 3 Poké Pad POR 81
-2 Judge POR 76
 
 Energy : 12
 8 Psychic Energy MEE 5

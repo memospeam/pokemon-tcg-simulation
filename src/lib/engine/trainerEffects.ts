@@ -42,6 +42,14 @@ import {
   canPlayTrainerBatch3Kind,
 } from "./effects/trainerBatch3Effects";
 import {
+  applyTrainerBatch10Kind,
+  applyGlassTrumpetAttach,
+  applyJanineAttach,
+  canPlayTrainerBatch10Kind,
+  finishMortysConviction,
+  startSalvatoreEvolve,
+} from "./effects/trainerBatch10Effects";
+import {
   applyTrainerBatch5Kind,
   canPlayTrainerBatch5Kind,
 } from "./effects/trainerBatch5Effects";
@@ -354,6 +362,8 @@ function canPlayTrainerKind(
       }
       return { ok: true };
     default: {
+      const batch10Check = canPlayTrainerBatch10Kind(state, playerId, kind);
+      if (!batch10Check.ok) return batch10Check;
       const batch9Check = canPlayTrainerBatch9Kind(state, playerId, kind);
       if (!batch9Check.ok) return batch9Check;
       const batch7Check = canPlayTrainerBatch7Kind(state, playerId, kind);
@@ -481,6 +491,7 @@ function applyTrainerByKind(state: EngineState, playerId: PlayerId, effect: Pars
       logMessage(state, "Switch: choose a Benched Pokémon to swap with your Active Pokémon.");
       return;
     default:
+      applyTrainerBatch10Kind(state, playerId, effect);
       applyTrainerBatch9Kind(state, playerId, effect);
       applyTrainerBatch7Kind(state, playerId, effect);
       applyTrainerBatch5Kind(state, playerId, effect);
@@ -888,9 +899,15 @@ export function resolveDeckPick(
     return;
   }
 
+  if (filter === "SALVATORE_EVOLUTION") {
+    startSalvatoreEvolve(state, playerId, instanceId);
+    return;
+  }
+
   if (
     filter === "TEAM_ROCKET_BASIC_HAND" ||
     filter === "POKEMON_EX_HAND" ||
+    filter === "MEGA_EVOLUTION_EX_HAND" ||
     filter === "ANY_TRAINER_HAND" ||
     filter === "TEAM_ROCKET_SUPPORTER_HAND" ||
     filter === "TOOL_HAND" ||

@@ -408,6 +408,16 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
       if (!pending.optional) return null;
       return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
     case "SEARCH_DECK":
+      if (pending.filter === "MEGA_EVOLUTION_EX_HAND" || pending.filter === "SALVATORE_EVOLUTION") {
+        if (pending.options.length > 0) {
+          return gameReducer(state, {
+            type: "PICK_DECK_CARD",
+            playerId,
+            instanceId: pending.options[0]!,
+          });
+        }
+        return null;
+      }
       if (pending.slotsRemaining !== undefined && pending.slotsRemaining > 1) {
         return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
       }
@@ -466,6 +476,66 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
     }
     case "CRISPIN_DISCARD":
       return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+    case "ERI_DISCARD":
+    case "JANINE_DARKNESS":
+    case "GLASS_TRUMPET":
+      return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+    case "BIANCA_HEAL": {
+      const player = getPlayer(state, playerId);
+      const targetId =
+        pending.options[0] ?? player.active?.instanceId ?? player.bench[0]?.instanceId;
+      if (!targetId) return null;
+      return gameReducer(state, {
+        type: "SELECT_BIANCA_HEAL",
+        playerId,
+        pokemonId: targetId,
+      });
+    }
+    case "EXPLORERS_GUIDANCE": {
+      const player = getPlayer(state, playerId);
+      const pick = pending.revealPool.find(
+        (id) =>
+          !pending.pickedIds.includes(id) &&
+          player.deck.some((entry) => entry.instanceId === id),
+      );
+      if (!pick) return null;
+      return gameReducer(state, { type: "PICK_DECK_CARD", playerId, instanceId: pick });
+    }
+    case "MORTY_DISCARD": {
+      const player = getPlayer(state, playerId);
+      const card = player.hand[0];
+      if (!card) return null;
+      return gameReducer(state, {
+        type: "SELECT_MORTY_DISCARD",
+        playerId,
+        instanceId: card.instanceId,
+      });
+    }
+    case "SALVATORE_EVOLVE": {
+      const targetId = pending.options[0];
+      if (!targetId) return null;
+      return gameReducer(state, {
+        type: "SELECT_SALVATORE_EVOLVE",
+        playerId,
+        targetId,
+      });
+    }
+    case "PERRIN":
+      if (pending.step === "HAND") {
+        const pick = pending.options.find((id) => !pending.pickedIds.includes(id));
+        if (pick) {
+          return gameReducer(state, { type: "SELECT_PERRIN_HAND", playerId, instanceId: pick });
+        }
+        return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      }
+      if (pending.step === "SEARCH") {
+        const pick = pending.options.find((id) => !pending.pickedIds.includes(id));
+        if (pick) {
+          return gameReducer(state, { type: "SELECT_PERRIN_SEARCH", playerId, instanceId: pick });
+        }
+        return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      }
+      return null;
     case "PICK_DISCARD":
       if (pending.options.length === 0) return null;
       return gameReducer(state, {

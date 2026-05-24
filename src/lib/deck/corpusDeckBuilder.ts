@@ -1,7 +1,6 @@
 import { normalizeSetCode } from "../catalog/setCodeMap";
 import { loadStandardCorpus } from "../format/loadStandardCorpus";
 import type { StandardCardIndex } from "../format/prepareStandardCorpus";
-import { normalizePokemonName } from "../engine/rules";
 import type { CardAbility, CardAttack, CardDefinition } from "../models/definition";
 import type { BuiltDeck } from "./builder";
 import { parseLimitlessDeckList, type ParsedDeckLine } from "./limitlessParser";
@@ -75,6 +74,7 @@ const EVOLUTION_PARENT: Record<string, string> = {
   "mega greninja ex": "Frogadier",
   "mega pyroar ex": "Litleo",
   "mega dragalge ex": "Skrelp",
+  "mega gallade ex": "Kirlia",
   "team rocket's honchkrow": "Team Rocket's Murkrow",
   "team rocket's porygon2": "Team Rocket's Porygon",
   "team rocket's articuno": "Team Rocket's Murkrow",
@@ -189,9 +189,9 @@ function inferSubtypes(name: string, pokemonNames: Set<string>): string[] {
   else if (/\bV\b/.test(name) && !/\bVMAX\b|\bVSTAR\b/i.test(name)) subtypes.push("V");
   if (/\bex\b/i.test(name)) subtypes.push("ex");
 
-  const parentName = EVOLUTION_PARENT[normalizePokemonName(name).toLowerCase()];
+  const parentName = EVOLUTION_PARENT[name.toLowerCase()];
   if (parentName && pokemonNames.has(parentName)) {
-    const parentKey = normalizePokemonName(parentName).toLowerCase();
+    const parentKey = parentName.toLowerCase();
     const grandparentName = EVOLUTION_PARENT[parentKey];
     subtypes.push(grandparentName && pokemonNames.has(grandparentName) ? "Stage 2" : "Stage 1");
     return subtypes;
@@ -222,14 +222,31 @@ function buildAbilities(card: StandardCardIndex): CardAbility[] {
   }));
 }
 
+function resolveSubtypes(
+  card: StandardCardIndex,
+  line: ParsedDeckLine,
+  pokemonNames: Set<string>,
+): string[] {
+  if (card.subtypes.length > 0) {
+    return [...card.subtypes];
+  }
+  return inferSubtypes(line.name, pokemonNames);
+}
+
+function resolveEvolvesFrom(name: string, pokemonNames: Set<string>): string | undefined {
+  const parentName = EVOLUTION_PARENT[name.toLowerCase()];
+  if (parentName && pokemonNames.has(parentName)) return parentName;
+  return undefined;
+}
+
 function corpusCardToDefinition(
   card: StandardCardIndex,
   line: ParsedDeckLine,
   pokemonNames: Set<string>,
   deckEnergyTypes: Set<string>,
 ): CardDefinition {
-  const subtypes = inferSubtypes(line.name, pokemonNames);
-  const parentName = EVOLUTION_PARENT[normalizePokemonName(line.name).toLowerCase()];
+  const subtypes = resolveSubtypes(card, line, pokemonNames);
+  const parentName = resolveEvolvesFrom(line.name, pokemonNames);
   const types = inferPokemonTypes(line.name, deckEnergyTypes);
   const setCode = normalizeSetCode(line.setCode ?? card.set) ?? card.set;
 
@@ -242,8 +259,7 @@ function corpusCardToDefinition(
     types,
     attacks: buildAttacks(card, types),
     abilities: buildAbilities(card),
-    evolvesFrom:
-      parentName && pokemonNames.has(parentName) ? parentName : undefined,
+    evolvesFrom: parentName,
     regulationMark: card.regulationMark,
     set: { id: setCode.toLowerCase(), name: setCode, ptcgoCode: setCode },
     number: line.number ?? card.number,

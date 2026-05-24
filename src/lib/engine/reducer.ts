@@ -128,6 +128,19 @@ import {
   continueToolScrapperPick,
 } from "./effects/trainerMetaEffects";
 import {
+  continueBiancaHealPick,
+  continueEriDiscardPick,
+  continueExplorersGuidancePick,
+  continueGlassTrumpetPick,
+  continueJanineDarknessPick,
+  continueMortyDiscardPick,
+  continuePerrinHandPick,
+  continuePerrinSearchPick,
+  continueSalvatoreEvolvePick,
+  finishPerrinHandStep,
+} from "./effects/trainerBatch10Effects";
+import { finishDeckSearchShuffle } from "./effects/trainerDeckHelpers";
+import {
   applyLumioseCitySearch,
   applyTrFactoryDraw,
   continueSacredAshDiscardPick,
@@ -1162,6 +1175,10 @@ function handlePickDeckCard(state: EngineState, playerId: PlayerId, instanceId: 
     }
     return state;
   }
+  if (pending?.type === "EXPLORERS_GUIDANCE" && pending.playerId === playerId) {
+    continueExplorersGuidancePick(state, playerId, instanceId);
+    return state;
+  }
   if (pending?.type !== "SEARCH_DECK" || pending.playerId !== playerId) return state;
   if (!pending.options.includes(instanceId)) return state;
   resolveDeckPick(state, playerId, instanceId, pending.filter);
@@ -1248,6 +1265,66 @@ function handleCrispinOptionalDiscard(state: EngineState, playerId: PlayerId, in
   return state;
 }
 
+function handleSelectEriDiscard(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "ERI_DISCARD" || pending.playerId !== playerId) return state;
+  continueEriDiscardPick(state, playerId, instanceId);
+  return state;
+}
+
+function handleSelectJanineDarkness(state: EngineState, playerId: PlayerId, pokemonId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "JANINE_DARKNESS" || pending.playerId !== playerId) return state;
+  if (!pending.options.includes(pokemonId)) return state;
+  continueJanineDarknessPick(state, playerId, pokemonId);
+  return state;
+}
+
+function handleSelectGlassTrumpet(state: EngineState, playerId: PlayerId, pokemonId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "GLASS_TRUMPET" || pending.playerId !== playerId) return state;
+  if (!pending.options.includes(pokemonId)) return state;
+  continueGlassTrumpetPick(state, playerId, pokemonId);
+  return state;
+}
+
+function handleSelectBiancaHeal(state: EngineState, playerId: PlayerId, pokemonId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "BIANCA_HEAL" || pending.playerId !== playerId) return state;
+  if (!pending.options.includes(pokemonId)) return state;
+  continueBiancaHealPick(state, playerId, pokemonId);
+  return state;
+}
+
+function handleSelectMortyDiscard(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "MORTY_DISCARD" || pending.playerId !== playerId) return state;
+  continueMortyDiscardPick(state, playerId, instanceId);
+  return state;
+}
+
+function handleSelectSalvatoreEvolve(state: EngineState, playerId: PlayerId, targetId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "SALVATORE_EVOLVE" || pending.playerId !== playerId) return state;
+  if (!pending.options.includes(targetId)) return state;
+  continueSalvatoreEvolvePick(state, playerId, targetId);
+  return state;
+}
+
+function handleSelectPerrinHand(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "PERRIN" || pending.step !== "HAND" || pending.playerId !== playerId) return state;
+  continuePerrinHandPick(state, playerId, instanceId);
+  return state;
+}
+
+function handleSelectPerrinSearch(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "PERRIN" || pending.step !== "SEARCH" || pending.playerId !== playerId) return state;
+  continuePerrinSearchPick(state, playerId, instanceId);
+  return state;
+}
+
 function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState {
   if (
     !state.pendingAction &&
@@ -1265,6 +1342,34 @@ function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState
   if (pending.type === "CRISPIN_DISCARD") {
     state.pendingAction = null;
     log(state, "Optional effect skipped.");
+    return state;
+  }
+
+  if (pending.type === "ERI_DISCARD") {
+    state.pendingAction = null;
+    log(state, "Eri: finished choosing Item cards.");
+    return state;
+  }
+
+  if (pending.type === "JANINE_DARKNESS") {
+    state.pendingAction = null;
+    log(state, "Janine's Secret Art: finished choosing Pokémon.");
+    return state;
+  }
+
+  if (pending.type === "GLASS_TRUMPET") {
+    state.pendingAction = null;
+    log(state, "Glass Trumpet: finished choosing Pokémon.");
+    return state;
+  }
+
+  if (pending.type === "PERRIN" && pending.step === "HAND") {
+    finishPerrinHandStep(state, playerId);
+    return state;
+  }
+
+  if (pending.type === "PERRIN" && pending.step === "SEARCH") {
+    finishDeckSearchShuffle(state, playerId, "Perrin");
     return state;
   }
 
@@ -1733,6 +1838,22 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleSkipGrandTreeStage2(nextState, action.playerId);
     case "CRISPIN_OPTIONAL_DISCARD":
       return handleCrispinOptionalDiscard(nextState, action.playerId, action.instanceId);
+    case "SELECT_ERI_DISCARD":
+      return handleSelectEriDiscard(nextState, action.playerId, action.instanceId);
+    case "SELECT_JANINE_DARKNESS":
+      return handleSelectJanineDarkness(nextState, action.playerId, action.pokemonId);
+    case "SELECT_GLASS_TRUMPET":
+      return handleSelectGlassTrumpet(nextState, action.playerId, action.pokemonId);
+    case "SELECT_BIANCA_HEAL":
+      return handleSelectBiancaHeal(nextState, action.playerId, action.pokemonId);
+    case "SELECT_MORTY_DISCARD":
+      return handleSelectMortyDiscard(nextState, action.playerId, action.instanceId);
+    case "SELECT_SALVATORE_EVOLVE":
+      return handleSelectSalvatoreEvolve(nextState, action.playerId, action.targetId);
+    case "SELECT_PERRIN_HAND":
+      return handleSelectPerrinHand(nextState, action.playerId, action.instanceId);
+    case "SELECT_PERRIN_SEARCH":
+      return handleSelectPerrinSearch(nextState, action.playerId, action.instanceId);
     case "SKIP_OPTIONAL":
       return handleSkipOptional(nextState, action.playerId);
     case "USE_ABILITY":
@@ -2256,6 +2377,100 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
         actions.push({ type: "CRISPIN_OPTIONAL_DISCARD", playerId: current, instanceId: card.instanceId });
       }
       actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      break;
+    }
+    case "ERI_DISCARD": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        if (!pending.pickedIds.includes(instanceId)) {
+          actions.push({ type: "SELECT_ERI_DISCARD", playerId: current, instanceId });
+        }
+      }
+      if (pending.pickedIds.length < pending.slotsRemaining) {
+        actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      }
+      break;
+    }
+    case "JANINE_DARKNESS": {
+      if (pending.playerId !== current) break;
+      for (const pokemonId of pending.options) {
+        if (!pending.pickedIds.includes(pokemonId)) {
+          actions.push({ type: "SELECT_JANINE_DARKNESS", playerId: current, pokemonId });
+        }
+      }
+      if (pending.pickedIds.length < pending.slotsRemaining) {
+        actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      }
+      break;
+    }
+    case "GLASS_TRUMPET": {
+      if (pending.playerId !== current) break;
+      for (const pokemonId of pending.options) {
+        if (!pending.pickedIds.includes(pokemonId)) {
+          actions.push({ type: "SELECT_GLASS_TRUMPET", playerId: current, pokemonId });
+        }
+      }
+      if (pending.pickedIds.length < pending.slotsRemaining) {
+        actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+      }
+      break;
+    }
+    case "BIANCA_HEAL": {
+      if (pending.playerId !== current) break;
+      for (const pokemonId of pending.options) {
+        actions.push({ type: "SELECT_BIANCA_HEAL", playerId: current, pokemonId });
+      }
+      break;
+    }
+    case "EXPLORERS_GUIDANCE": {
+      if (pending.playerId !== current) break;
+      const player = getPlayer(state, current);
+      for (const instanceId of pending.revealPool) {
+        if (
+          !pending.pickedIds.includes(instanceId) &&
+          player.deck.some((entry) => entry.instanceId === instanceId)
+        ) {
+          actions.push({ type: "PICK_DECK_CARD", playerId: current, instanceId });
+        }
+      }
+      break;
+    }
+    case "MORTY_DISCARD": {
+      if (pending.playerId !== current) break;
+      const player = getPlayer(state, current);
+      for (const card of player.hand) {
+        actions.push({ type: "SELECT_MORTY_DISCARD", playerId: current, instanceId: card.instanceId });
+      }
+      break;
+    }
+    case "SALVATORE_EVOLVE": {
+      if (pending.playerId !== current) break;
+      for (const targetId of pending.options) {
+        actions.push({ type: "SELECT_SALVATORE_EVOLVE", playerId: current, targetId });
+      }
+      break;
+    }
+    case "PERRIN": {
+      if (pending.playerId !== current) break;
+      if (pending.step === "HAND") {
+        for (const instanceId of pending.options) {
+          if (!pending.pickedIds.includes(instanceId)) {
+            actions.push({ type: "SELECT_PERRIN_HAND", playerId: current, instanceId });
+          }
+        }
+        if (pending.pickedIds.length < pending.slotsRemaining) {
+          actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+        }
+      } else {
+        for (const instanceId of pending.options) {
+          if (!pending.pickedIds.includes(instanceId)) {
+            actions.push({ type: "SELECT_PERRIN_SEARCH", playerId: current, instanceId });
+          }
+        }
+        if (pending.pickedIds.length < pending.slotsRemaining) {
+          actions.push({ type: "SKIP_OPTIONAL", playerId: current });
+        }
+      }
       break;
     }
     case "DISTRIBUTE_BENCH_DAMAGE": {

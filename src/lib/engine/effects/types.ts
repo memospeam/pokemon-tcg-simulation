@@ -500,6 +500,16 @@ export type ParsedEffect =
   | { kind: "trainer_prime_catcher" }
   | { kind: "trainer_master_ball" }
   | { kind: "trainer_treasure_tracker"; count: number }
+  | { kind: "trainer_mega_signal" }
+  | { kind: "trainer_eri" }
+  | { kind: "trainer_carmine" }
+  | { kind: "trainer_janine_secret_art" }
+  | { kind: "trainer_glass_trumpet" }
+  | { kind: "trainer_bianca_devotion" }
+  | { kind: "trainer_explorers_guidance" }
+  | { kind: "trainer_mortys_conviction" }
+  | { kind: "trainer_salvatore" }
+  | { kind: "trainer_perrin" }
   | { kind: "stadium_battle_cage" }
   | { kind: "stadium_risky_ruins" }
   | { kind: "stadium_watchtower" }

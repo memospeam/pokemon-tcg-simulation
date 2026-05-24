@@ -4,6 +4,7 @@ import {
   isColorlessPokemon,
   isEnergyCard,
   isNsPokemon,
+  isMegaEvolutionEx,
   isPokemonEx,
   isStage1,
   isStage2,
@@ -693,6 +694,8 @@ function deckFilterPredicate(
       return isBasicPokemon(def) && isTeamRocketPokemon(def);
     case "POKEMON_EX_HAND":
       return isPokemonEx(def);
+    case "MEGA_EVOLUTION_EX_HAND":
+      return isMegaEvolutionEx(def);
     case "ANY_TRAINER_HAND":
       return def.supertype === "Trainer";
     case "TEAM_ROCKET_SUPPORTER_HAND":

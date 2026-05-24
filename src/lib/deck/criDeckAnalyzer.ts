@@ -44,9 +44,27 @@ export const CRI_TRAINER_STAPLES = [
   "Crispin",
   "Night Stretcher",
   "Rare Candy",
+  "Mega Signal",
   "Poké Pad",
   "Judge",
   "Professor's Research",
+] as const;
+
+/** T3/T4 trainers implemented in batch10 (tracked when present in a list). */
+export const CRI_TRAINER_T3 = [
+  "Mega Signal",
+  "Eri",
+  "Carmine",
+  "Janine's Secret Art",
+  "Glass Trumpet",
+] as const;
+
+export const CRI_TRAINER_T4 = [
+  "Bianca's Devotion",
+  "Explorer's Guidance",
+  "Morty's Conviction",
+  "Salvatore",
+  "Perrin",
 ] as const;
 
 /** Trainers verified via parsed rules or legacy engine paths in CRI smokes. */
@@ -58,9 +76,12 @@ export const CRI_ENGINE_READY_TRAINERS = new Set<string>([
   "Crispin",
   "Night Stretcher",
   "Rare Candy",
+  "Mega Signal",
   "Poké Pad",
   "Judge",
   "Professor's Research",
+  ...CRI_TRAINER_T3,
+  ...CRI_TRAINER_T4,
 ]);
 
 export interface CriTrainerCoverageEntry {

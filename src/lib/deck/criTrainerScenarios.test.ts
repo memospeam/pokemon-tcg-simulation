@@ -182,9 +182,20 @@ describe("CRI trainer staples (Phase 2)", () => {
   });
 
   it("plays Judge and both players draw 4", () => {
-    const judge = findDefinition(greninjaDeck, "Judge");
-    const filler = findDefinition(greninjaDeck, "Water Energy");
-    let state = criTrainerScenarioState(greninjaDeck, { p1HandTrainer: judge });
+    const judgeDeck = buildPlaytestDeckFromCorpusText(
+      "Judge smoke",
+      `Pokémon : 1
+1 Froakie CRI 20
+
+Trainer : 1
+1 Judge POR 76
+
+Energy : 1
+1 Water Energy MEE 3`,
+    );
+    const judge = findDefinition(judgeDeck, "Judge");
+    const filler = findDefinition(judgeDeck, "Water Energy");
+    let state = criTrainerScenarioState(judgeDeck, { p1HandTrainer: judge });
     getPlayer(state, PlayerId.P1).deck = Array.from({ length: 8 }, () =>
       createCardInstance(filler.apiId, PlayerId.P1, Zone.Deck),
     );
@@ -339,11 +350,6 @@ describe("CRI trainer staples (Phase 2)", () => {
       p1ExtraHand: [greninjaEx],
       activeName: "Froakie",
     });
-    state.definitions[greninjaEx.apiId] = {
-      ...greninjaEx,
-      subtypes: ["Stage 2", "MEGA", "ex"],
-      evolvesFrom: "Frogadier",
-    };
     getPlayer(state, PlayerId.P1).active!.enteredPlayTurn = 1;
     const candyCard = getPlayer(state, PlayerId.P1).hand.find(
       (card) => state.definitions[card.definitionId]?.name === "Rare Candy",
