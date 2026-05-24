@@ -196,6 +196,7 @@ function applyAttackDamagePhaseWithDefinition(
     );
   }
 
+  const ignoreResistance = textEffects.some((effect) => effect.kind === "ignore_resistance");
   const preDamageEffects = textEffects.filter((effect) =>
     PRE_DAMAGE_ATTACK_EFFECT_KINDS.has(effect.kind),
   );
@@ -248,6 +249,7 @@ function applyAttackDamagePhaseWithDefinition(
       baseDamage,
       attackerDef.types,
       opponent.active,
+      { ignoreResistance },
     );
     if (shouldPreventDamageFromAttacker(opponent.active, attackerDef)) {
       damage = 0;

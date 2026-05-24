@@ -261,7 +261,31 @@ export function onKnockOut(
   attackerId: PlayerId,
 ): void {
   const player = getPlayer(state, knockedOut.ownerId);
-  for (const ability of getDefinitionSafe(state, knockedOut.definitionId).abilities ?? []) {
+  const knockedOutDef = getDefinitionSafe(state, knockedOut.definitionId);
+
+  if (state.turnFlags.attacked && state.currentPlayerId === attackerId) {
+    for (const ability of knockedOutDef.abilities ?? []) {
+      const parsed = parseAbilityText(ability);
+      if (!parsed.effects.some((effect) => effect.kind === "active_ko_by_attack_trigger")) continue;
+      const executable = parsed.effects.filter(
+        (effect) =>
+          effect.kind !== "active_ko_by_attack_trigger" &&
+          effect.kind !== "evolve_trigger_ability" &&
+          effect.kind !== "generic_effect_stub" &&
+          effect.kind !== "unknown",
+      );
+      if (executable.length === 0) continue;
+      const ctx = {
+        playerId: knockedOut.ownerId,
+        sourcePokemon: knockedOut,
+        opponentId: attackerId,
+      };
+      logMessage(state, `${knockedOutDef.name}'s ${ability.name} triggered on being Knocked Out.`);
+      executeEffects(state, ctx, executable);
+    }
+  }
+
+  for (const ability of knockedOutDef.abilities ?? []) {
     for (const effect of parseAbilityText(ability).effects) {
       if (effect.kind !== "return_energy_on_ko_water") continue;
       const target = player.active ?? player.bench[0];

@@ -31,6 +31,18 @@ export function matchFallbackClause(clause: string): ParsedEffect[] | null {
     return [{ kind: "evolve_trigger_ability" }];
   }
 
+  if (
+    /also use this ability if this pok[ée]mon is in the active spot and is knocked out by damage from an attack from your opponent's pok[ée]mon/i.test(
+      clause,
+    )
+  ) {
+    return [{ kind: "active_ko_by_attack_trigger" }];
+  }
+
+  if (/this attack's damage isn't affected by resistance/i.test(clause)) {
+    return [{ kind: "ignore_resistance" }];
+  }
+
   if (/^when you play this pok[ée]mon from your hand onto your bench/i.test(clause)) {
     if (/search your deck for a supporter/i.test(clause) || /you may use this ability/i.test(clause)) {
       return [{ kind: "on_bench_play_trigger" }];

@@ -54,6 +54,8 @@ export type ParsedEffect =
   | { kind: "coin_multi_damage"; perHeads: number; coinCount: number; bonusOnly: boolean }
   | { kind: "damage_per_self_counter"; perCounter: number }
   | { kind: "mill_opponent_deck"; count: number }
+  | { kind: "ignore_resistance" }
+  | { kind: "active_ko_by_attack_trigger" }
   | { kind: "discard_opponent_tools"; max?: number }
   | { kind: "coin_attack_fails_on_tails" }
   | { kind: "coin_damage_bonus"; amount: number }

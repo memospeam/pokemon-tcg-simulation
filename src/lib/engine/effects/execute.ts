@@ -1,3 +1,4 @@
+import type { CardDefinition } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import { isBasicEnergy, isBasicPokemon, isColorlessPokemon, isStadium, isSupporter } from "../../models/definition";
 import { getHp } from "../../models/definition";
@@ -30,6 +31,62 @@ import { applySpecialCondition, getMaxBenchSize } from "./stadiumEffects";
 import type { EffectContext, ParsedEffect } from "./types";
 import { countersToDamage } from "./types";
 import { executeBulk8Effect } from "./executeBulk8";
+
+function matchesDeckBasicEnergyType(def: CardDefinition, energyType: string): boolean {
+  if (!isBasicEnergy(def)) return false;
+  if (energyType.toLowerCase() === "any") return true;
+  const type = energyType.toLowerCase();
+  return def.name.toLowerCase().includes(type) || def.types?.some((entry) => entry.toLowerCase() === type);
+}
+
+function searchAttachEnergyFromDeck(
+  state: EngineState,
+  ctx: EffectContext,
+  effect: Extract<ParsedEffect, { kind: "search_attach_energy_any" | "search_attach_energy_typed" }>,
+): ExecuteResult {
+  const player = selfPlayer(state, ctx);
+  const energyType = effect.kind === "search_attach_energy_any" ? "any" : effect.energyType;
+  const targets =
+    effect.kind === "search_attach_energy_typed" && effect.target === "benched"
+      ? player.bench
+      : allPokemonInPlay(player);
+
+  if (targets.length === 0) {
+    shufflePlayerDeck(state, ctx.playerId);
+    logMessage(state, "No Pokémon in play to attach searched Energy to.");
+    return "complete";
+  }
+
+  const matches = player.deck
+    .filter((card) => {
+      const def = getDefinition(state, card.definitionId);
+      return def && matchesDeckBasicEnergyType(def, energyType);
+    })
+    .slice(0, effect.count);
+
+  if (matches.length === 0) {
+    shufflePlayerDeck(state, ctx.playerId);
+    logMessage(state, "No matching Basic Energy found in deck.");
+    return "complete";
+  }
+
+  let attached = 0;
+  for (const match of matches) {
+    const index = player.deck.findIndex((card) => card.instanceId === match.instanceId);
+    if (index === -1) continue;
+    const energy = player.deck.splice(index, 1)[0]!;
+    const target = targets[attached % targets.length]!;
+    attachEnergyToPokemon(state, ctx.playerId, energy, target);
+    attached += 1;
+  }
+
+  shufflePlayerDeck(state, ctx.playerId);
+  logMessage(
+    state,
+    `Attached ${attached} Basic ${energyType === "any" ? "" : `${energyType} `}Energy from deck.`,
+  );
+  return "complete";
+}
 
 export type ExecuteResult = "complete" | "pending" | "failed";
 
@@ -1073,6 +1130,14 @@ function executeSingleEffect(
       return "pending";
     }
 
+    case "search_attach_energy_any":
+    case "search_attach_energy_typed":
+      return searchAttachEnergyFromDeck(
+        state,
+        ctx,
+        effect as Extract<ParsedEffect, { kind: "search_attach_energy_any" | "search_attach_energy_typed" }>,
+      );
+
     case "bonus_prize_on_defender_ko_next_turn":
     case "move_energy_to_new_bench_after_search":
     case "self_hand_equal_damage_bonus":
@@ -1133,8 +1198,6 @@ function executeSingleEffect(
     case "damage_bonus_if_opponent_damaged":
     case "poison_enhanced_checkup":
     case "damage_bonus_if_self_undamaged":
-    case "search_attach_energy_any":
-    case "search_attach_energy_typed":
     case "damage_per_trainer_in_revealed":
     case "attack_fails_if_bench_at_most":
     case "named_attack_bonus_next_turn":

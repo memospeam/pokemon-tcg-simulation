@@ -27,6 +27,7 @@ export const ABILITY_TRIGGER_KINDS = new Set<ParsedEffect["kind"]>([
   "trigger_on_retreat_to_bench",
   "mill_when_discarded_from_deck",
   "return_energy_on_ko_water",
+  "active_ko_by_attack_trigger",
   "poison_on_attach_energy",
   "counter_on_opponent_energy_attach",
   "coin_on_opponent_retreat",

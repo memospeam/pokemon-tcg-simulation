@@ -275,6 +275,7 @@ export function applyWeaknessAndResistanceForPokemon(
   damage: number,
   attackerTypes: string[] | undefined,
   defender: CardInstance,
+  options: { ignoreResistance?: boolean } = {},
 ): number {
   const defenderDef = getDefinitionSafe(state, defender.definitionId);
   let total = damage;
@@ -299,7 +300,7 @@ export function applyWeaknessAndResistanceForPokemon(
   }
 
   const resistance = defenderDef.resistances?.find((entry) => attackerTypes?.includes(entry.type));
-  if (resistance) {
+  if (resistance && !options.ignoreResistance) {
     const reduction = parseInt(resistance.value.replace(/[^\d]/g, ""), 10) || 30;
     total = Math.max(0, total - reduction);
   }

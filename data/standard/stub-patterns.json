@@ -1,16 +1,1 @@
-[
-  {
-    "id": "ability-dd5ef62",
-    "kind": "ability",
-    "text": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. You may also use this Ability if this Pokémon is in the Active Spot and is Knocked Out by damage from an attack from your opponent's Pokémon. Discard the top 2 cards of your opponent's deck.",
-    "parseCoverage": "full",
-    "implementationCoverage": "partial_stub",
-    "stubClauses": [
-      "also use this ability if this pokémon is in the active spot and is knocked out by damage from an attack from your opponent's pokémon."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Flygon"
-    ]
-  }
-]
+[]
