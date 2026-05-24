@@ -160,6 +160,9 @@ export type PendingAction =
       discardedCount: number;
       fromBenchOnly: boolean;
       maxDiscard?: number;
+      returnToHand?: boolean;
+      energyType?: string;
+      activeOnly?: boolean;
     }
   | {
       type: "SEARCH_EVOLUTION";
@@ -357,6 +360,13 @@ export type PendingAction =
       playerId: PlayerId;
       pokemonId: string;
       abilityName: string;
+    }
+  | {
+      type: "ABILITY_DISCARD_HAND_ENERGY";
+      playerId: PlayerId;
+      pokemonId: string;
+      abilityName: string;
+      energyType: string;
     }
   | {
       type: "DISCARD_NAMED_SUPPORTERS_FOR_DAMAGE";

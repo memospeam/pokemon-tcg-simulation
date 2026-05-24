@@ -18,14 +18,19 @@ import { parseAbilityText } from "./parseText";
 
 export { getExecutableAbilityEffects, hasActivatableAbility, abilityRequiresKnockOutSelf };
 
+export function handCardMatchesBasicEnergyType(
+  state: EngineState,
+  card: CardInstance,
+  energyType: string,
+): boolean {
+  const def = getDefinition(state, card.definitionId);
+  if (!def || !isBasicEnergy(def)) return false;
+  return energyMatchesType(def, energyType);
+}
+
 function handHasBasicEnergyOfType(state: EngineState, playerId: PlayerId, energyType: string): boolean {
   const player = getPlayer(state, playerId);
-  const type = energyType.toLowerCase();
-  return player.hand.some((card) => {
-    const def = getDefinition(state, card.definitionId);
-    if (!def || !isBasicEnergy(def)) return false;
-    return def.name.toLowerCase().includes(type) || def.types?.some((t) => t.toLowerCase() === type);
-  });
+  return player.hand.some((card) => handCardMatchesBasicEnergyType(state, card, energyType));
 }
 
 function abilityNeedsHandEnergy(effects: ParsedEffect[]): ParsedEffect | null {

@@ -534,7 +534,7 @@ export function matchBulkClause(clause: string): ParsedEffect[] | null {
       {
         kind: "damage",
         amount: parseInt(match[1]!, 10) * 10,
-        target: "opponent_bench_choose",
+        target: "opponent_pokemon_choose",
         applyWeaknessRes: false,
       },
     ];

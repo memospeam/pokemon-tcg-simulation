@@ -1,8 +1,11 @@
 /** Limitless/PTCGO set codes mapped to pokemontcg.io set.ptcgoCode values. */
 const SET_CODE_MAP: Record<string, string> = {
   ASC: "ASC",
+  BLK: "BLK",
+  CRI: "CRI",
   DRI: "DRI",
   JTG: "JTG",
+  ME4: "CRI",
   MEG: "MEG",
   MEE: "MEE",
   PAL: "PAL",

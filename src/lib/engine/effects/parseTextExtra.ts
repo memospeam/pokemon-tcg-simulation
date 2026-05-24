@@ -67,7 +67,10 @@ const EXTRA_CLAUSE_RULES: PatternRule[] = [
   {
     pattern:
       /^if this pok[ée]mon is in the active spot, you may discard a basic (\w+) energy card from your hand in order to use this ability\.?$/i,
-    build: (m) => ({ kind: "require_hand_energy_in_active", energyType: cap(m[1]!) }),
+    build: (m) => [
+      { kind: "ability_only_while_active" },
+      { kind: "require_hand_energy_in_active", energyType: cap(m[1]!) },
+    ],
   },
   {
     pattern: /^this attack does (\d+) (more )?damage for each basic energy card in your opponent's discard pile\.?$/i,

@@ -33,3 +33,12 @@ export function findStandardEffectsByText(text: string): EffectTextRecord[] {
 export function getStandardCardIndex(apiId: string): StandardCardIndex | undefined {
   return corpus.cards.find((entry) => entry.apiId === apiId);
 }
+
+export function getStandardCardsBySet(ptcgoCode: string): StandardCardIndex[] {
+  const code = ptcgoCode.toUpperCase();
+  return corpus.cards.filter((card) => card.set === code);
+}
+
+export function countStandardCardsBySet(ptcgoCode: string): number {
+  return getStandardCardsBySet(ptcgoCode).length;
+}

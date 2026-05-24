@@ -1,31 +1,49 @@
 {
-  "generatedAt": "2026-05-22T11:42:28.188Z",
+  "generatedAt": "2026-05-24T09:33:49.872Z",
   "format": {
     "name": "Standard",
     "season": "2025-26 / 2026 rotation",
     "effectiveFrom": "2026-04-10",
+    "focusExpansion": {
+      "id": "me4",
+      "ptcgoCode": "CRI",
+      "name": "Chaos Rising",
+      "series": "Mega Evolution",
+      "releaseDate": "2026-05-22"
+    },
     "regulationMarks": [
       "H",
       "I",
       "J"
     ],
-    "pokemonQuery": "supertype:Pokémon (regulationMark:H OR regulationMark:I OR regulationMark:J)"
+    "pokemonQuery": "supertype:Pokémon (regulationMark:H OR regulationMark:I OR regulationMark:J)",
+    "trainerQuery": "supertype:Trainer (regulationMark:H OR regulationMark:I OR regulationMark:J)"
   },
+  "totalPokemonCards": 2386,
+  "totalTrainerCards": 421,
   "totalCards": 2386,
   "cardsWithAttacks": 2386,
   "cardsWithAbilities": 536,
+  "cardsWithTrainerRules": 421,
   "uniqueAttackTexts": 830,
   "uniqueAbilityTexts": 239,
+  "uniqueTrainerTexts": 228,
   "attackCoverage": {
-    "full": 38,
-    "partial": 31,
-    "none": 756,
-    "empty": 5
+    "full": 821,
+    "partial": 0,
+    "none": 0,
+    "empty": 9
   },
   "abilityCoverage": {
-    "full": 3,
-    "partial": 9,
-    "none": 227,
+    "full": 238,
+    "partial": 0,
+    "none": 0,
+    "empty": 1
+  },
+  "trainerCoverage": {
+    "full": 70,
+    "partial": 111,
+    "none": 47,
     "empty": 0
   }
 }

@@ -1,7 +1,7 @@
 import type { CardAttack } from "../../models/definition";
 import { isBasicEnergy, isSupporter } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
-import { PlayerId } from "../../models/enums";
+import { PlayerId, Zone } from "../../models/enums";
 import {
   canEvolveInto,
   getDefinitionSafe,
@@ -59,6 +59,7 @@ function filterPostDamageEffects(textEffects: ParsedEffect[]): ParsedEffect[] {
       effect.kind !== "discard_basic_energy_optional" &&
       effect.kind !== "damage_per_discarded_basic_energy" &&
       effect.kind !== "discard_bench_energy_optional" &&
+      effect.kind !== "return_typed_energy_to_hand" &&
       effect.kind !== "copy_benched_attack",
   );
 }
@@ -413,6 +414,29 @@ export function startAttackIfDiscardPending(
     (effect): effect is Extract<ParsedEffect, { kind: "damage_per_discarded_basic_energy" }> =>
       effect.kind === "damage_per_discarded_basic_energy",
   );
+  const returnTyped = textEffects.find(
+    (effect): effect is Extract<ParsedEffect, { kind: "return_typed_energy_to_hand" }> =>
+      effect.kind === "return_typed_energy_to_hand",
+  );
+  if (returnTyped && perDiscarded) {
+    state.pendingAction = {
+      type: "DISCARD_BASIC_ENERGY_FOR_DAMAGE",
+      playerId,
+      attackName,
+      perCard: perDiscarded.perCard,
+      discardedCount: 0,
+      fromBenchOnly: false,
+      returnToHand: true,
+      energyType: returnTyped.energyType,
+      activeOnly: true,
+      maxDiscard: 1,
+    };
+    logMessage(
+      state,
+      `Put ${returnTyped.energyType} Energy from this Pokémon into your hand (optional, +${perDiscarded.perCard} damage).`,
+    );
+    return true;
+  }
   if (discardBasic && perDiscarded) {
     state.pendingAction = {
       type: "DISCARD_BASIC_ENERGY_FOR_DAMAGE",
@@ -477,19 +501,34 @@ export function listDiscardableEnergy(
   state: EngineState,
   playerId: PlayerId,
   fromBenchOnly: boolean,
+  options: { energyType?: string; activeOnly?: boolean } = {},
 ): { pokemonId: string; energyId: string }[] {
   const player = getPlayer(state, playerId);
-  const options: { pokemonId: string; energyId: string }[] = [];
-  const pokemon = fromBenchOnly ? player.bench : allPokemonInPlay(player);
+  const result: { pokemonId: string; energyId: string }[] = [];
+  const pokemon = fromBenchOnly || options.activeOnly
+    ? options.activeOnly
+      ? player.active
+        ? [player.active]
+        : []
+      : player.bench
+    : allPokemonInPlay(player);
+  const typeFilter = options.energyType?.toLowerCase();
   for (const mon of pokemon) {
     for (const energy of mon.attachedEnergy) {
       const def = getDefinition(state, energy.definitionId);
-      if (def?.supertype === "Energy" && def.subtypes.includes("Basic")) {
-        options.push({ pokemonId: mon.instanceId, energyId: energy.instanceId });
+      if (!def || def.supertype !== "Energy") continue;
+      if (typeFilter) {
+        const matchesType =
+          def.name.toLowerCase().includes(typeFilter) ||
+          def.types?.some((entry) => entry.toLowerCase() === typeFilter);
+        if (!matchesType) continue;
+      } else if (!def.subtypes.includes("Basic")) {
+        continue;
       }
+      result.push({ pokemonId: mon.instanceId, energyId: energy.instanceId });
     }
   }
-  return options;
+  return result;
 }
 
 export function evolvePokemonFromDeck(
@@ -551,7 +590,6 @@ export function resolveDiscardOwnEnergyForAttack(
     return "failed";
   }
   if (
-    pending.fromBenchOnly &&
     pending.maxDiscard !== undefined &&
     pending.discardedCount >= pending.maxDiscard
   ) {
@@ -564,6 +602,7 @@ export function resolveDiscardOwnEnergyForAttack(
       ? player.active
       : player.bench.find((entry) => entry.instanceId === pokemonId);
   if (!pokemon) return "failed";
+  if (pending.activeOnly && player.active?.instanceId !== pokemonId) return "failed";
   if (pending.fromBenchOnly && !player.bench.some((entry) => entry.instanceId === pokemonId)) {
     return "failed";
   }
@@ -571,15 +610,35 @@ export function resolveDiscardOwnEnergyForAttack(
   const energyIndex = pokemon.attachedEnergy.findIndex((entry) => entry.instanceId === energyId);
   if (energyIndex === -1) return "failed";
   const def = getDefinition(state, pokemon.attachedEnergy[energyIndex]!.definitionId);
-  if (def?.supertype !== "Energy" || !def.subtypes.includes("Basic")) return "failed";
+  if (!def || def.supertype !== "Energy") return "failed";
+  if (pending.energyType) {
+    const type = pending.energyType.toLowerCase();
+    const matchesType =
+      def.name.toLowerCase().includes(type) || def.types?.some((entry) => entry.toLowerCase() === type);
+    if (!matchesType) return "failed";
+  } else if (!def.subtypes.includes("Basic")) {
+    return "failed";
+  }
 
   const energy = pokemon.attachedEnergy.splice(energyIndex, 1)[0]!;
-  moveToDiscard(player, energy);
+  if (pending.returnToHand) {
+    energy.zone = Zone.Hand;
+    player.hand.push(energy);
+    logMessage(
+      state,
+      `Put ${getDefinitionSafe(state, energy.definitionId).name} into hand (+${pending.perCard} damage).`,
+    );
+  } else {
+    moveToDiscard(player, energy);
+    logMessage(
+      state,
+      `Discarded ${getDefinitionSafe(state, energy.definitionId).name} (${pending.discardedCount + 1} total).`,
+    );
+  }
   pending.discardedCount += 1;
-  logMessage(
-    state,
-    `Discarded ${getDefinitionSafe(state, energy.definitionId).name} (${pending.discardedCount} total).`,
-  );
+  if (pending.maxDiscard !== undefined && pending.discardedCount >= pending.maxDiscard) {
+    return "ready";
+  }
   return "pending";
 }
 

@@ -7,7 +7,9 @@ describe("Standard effect corpus", () => {
     expect(corpus.manifest.totalCards).toBeGreaterThan(2000);
     expect(corpus.manifest.format.regulationMarks).toEqual(["H", "I", "J"]);
     expect(corpus.effectTexts.length).toBe(
-      corpus.manifest.uniqueAttackTexts + corpus.manifest.uniqueAbilityTexts,
+      corpus.manifest.uniqueAttackTexts +
+        corpus.manifest.uniqueAbilityTexts +
+        (corpus.manifest.uniqueTrainerTexts ?? 0),
     );
   });
 

@@ -74,6 +74,8 @@ Prepared attack/ability texts for all **Standard-legal Pokémon** (regulation ma
 | `cards-index.json` | Per-card index linking to effect text IDs |
 | `unknown-patterns.json` | Texts not fully automated yet (priority list) |
 
+**Development focus:** current Standard, with **Chaos Rising** (`CRI` / `ME4`, regulation **J**, released 2026-05-22) as the primary expansion for new parser/engine work. See `STANDARD_FORMAT.focusExpansion` and `summarizeFocusExpansion()` in `@/lib/format`.
+
 Regenerate after parser updates or rotation changes:
 
 ```bash
@@ -82,7 +84,7 @@ npm run prepare:standard
 
 Load in code via `loadStandardCorpus()` from `@/lib/format`.
 
-Current coverage (auto-generated): ~830 unique attack texts, ~239 abilities; parser fully handles a small subset today — see `unknown-patterns.json` for what to implement next.
+Current coverage (auto-generated): ~830 attack texts, ~239 abilities, ~228 trainer texts; Pokémon parse is full for all non-empty clauses. CRI indexes **119** Pokémon (set total **122** — slots 84–86 are Special Energy excluded from the Pokémon corpus). See `unknown-patterns.json` and `summarizeFocusExpansion()` for remaining engine gaps.
 
 ## Scripts
 

@@ -83,6 +83,7 @@ import {
   abilityRequiresKnockOutSelf,
   canUseAbilityNow,
   getExecutableAbilityEffects,
+  handCardMatchesBasicEnergyType,
   hasActivatableAbility,
   markAbilityUsed,
 } from "./effects/abilities";
@@ -592,8 +593,12 @@ function handleDiscardOwnEnergyForAttack(
   pokemonId: string,
   energyId: string,
 ): EngineState {
-  if (resolveDiscardOwnEnergyForAttack(state, playerId, pokemonId, energyId) === "failed") {
-    return state;
+  const result = resolveDiscardOwnEnergyForAttack(state, playerId, pokemonId, energyId);
+  if (result === "failed") return state;
+  if (result === "ready") {
+    const payload = finishDiscardEnergyForAttack(state, playerId);
+    if (!payload) return state;
+    return handleResumeAttackDamage(state, playerId, payload.attackName, payload.bonusDamage);
   }
   return state;
 }
@@ -882,6 +887,40 @@ function handleAttack(state: EngineState, playerId: PlayerId, attackName: string
   return finishAttackAfterDamagePhase(state, playerId, attackName, result);
 }
 
+function finishAbilityExecution(
+  state: EngineState,
+  playerId: PlayerId,
+  pokemon: CardInstance,
+  abilityName: string,
+): EngineState {
+  const def = getDefinitionSafe(state, pokemon.definitionId);
+  const ability = def.abilities?.find((entry) => entry.name === abilityName);
+  if (!ability) return state;
+  const parsed = parseAbilityText(ability);
+  markAbilityUsed(state, pokemon, abilityName, parsed);
+  log(state, `${def.name} used ${abilityName}.`);
+
+  const ctx = {
+    playerId,
+    sourcePokemon: pokemon,
+    opponentId: getOpponentId(playerId),
+  };
+  const executable = getExecutableAbilityEffects(parsed.effects);
+  const result = executeEffects(state, ctx, executable);
+  if (result === "pending") {
+    if (abilityRequiresKnockOutSelf(parsed.effects)) {
+      attachAbilityKnockOutSource(state, pokemon.instanceId);
+    }
+    return state;
+  }
+  if (abilityRequiresKnockOutSelf(parsed.effects)) {
+    finishAbilitySelfKnockOut(state, playerId, pokemon);
+  }
+  resolveBenchKnockouts(state);
+  finishIfWinner(state);
+  return state;
+}
+
 function handleUseAbility(
   state: EngineState,
   playerId: PlayerId,
@@ -913,30 +952,23 @@ function handleUseAbility(
     return state;
   }
 
-  markAbilityUsed(state, pokemon, abilityName, parsed);
-  log(state, `${def.name} used ${abilityName}.`);
-
-  const ctx = {
-    playerId,
-    sourcePokemon: pokemon,
-    opponentId: getOpponentId(playerId),
-  };
-  const executable = getExecutableAbilityEffects(parsed.effects);
-  const result = executeEffects(state, ctx, executable);
-  if (result === "pending") {
-    if (abilityRequiresKnockOutSelf(parsed.effects)) {
-      attachAbilityKnockOutSource(state, pokemon.instanceId);
-    }
+  const handEnergyReq = parsed.effects.find((effect) => effect.kind === "require_hand_energy_in_active");
+  if (handEnergyReq && "energyType" in handEnergyReq) {
+    state.pendingAction = {
+      type: "ABILITY_DISCARD_HAND_ENERGY",
+      playerId,
+      pokemonId,
+      abilityName,
+      energyType: handEnergyReq.energyType,
+    };
+    log(
+      state,
+      `${def.name}: discard a Basic ${handEnergyReq.energyType} Energy from your hand to use ${abilityName}.`,
+    );
     return state;
   }
 
-  if (abilityRequiresKnockOutSelf(parsed.effects)) {
-    finishAbilitySelfKnockOut(state, playerId, pokemon);
-  }
-
-  resolveBenchKnockouts(state);
-  finishIfWinner(state);
-  return state;
+  return finishAbilityExecution(state, playerId, pokemon, abilityName);
 }
 
 function handleAssignBenchDamage(state: EngineState, playerId: PlayerId, targetId: string): EngineState {
@@ -1050,41 +1082,25 @@ function handleConfirmDrawUntilHand(state: EngineState, playerId: PlayerId): Eng
 
 function handleSelectHandDiscard(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
   const pending = state.pendingAction;
-  if (pending?.type === "ABILITY_DISCARD_HAND" && pending.playerId === playerId) {
+  if (
+    (pending?.type === "ABILITY_DISCARD_HAND" || pending?.type === "ABILITY_DISCARD_HAND_ENERGY") &&
+    pending.playerId === playerId
+  ) {
     const player = getPlayer(state, playerId);
     const pokemon = allPokemonInPlay(player).find((entry) => entry.instanceId === pending.pokemonId);
     if (!pokemon) return state;
-    const card = removeFromHand(player, instanceId);
+    const card = player.hand.find((entry) => entry.instanceId === instanceId);
     if (!card) return state;
-    moveToDiscard(player, card);
-    state.pendingAction = null;
-
-    const def = getDefinitionSafe(state, pokemon.definitionId);
-    const ability = def.abilities?.find((entry) => entry.name === pending.abilityName);
-    if (!ability) return state;
-    const parsed = parseAbilityText(ability);
-    markAbilityUsed(state, pokemon, pending.abilityName, parsed);
-    log(state, `${def.name} used ${pending.abilityName}.`);
-
-    const ctx = {
-      playerId,
-      sourcePokemon: pokemon,
-      opponentId: getOpponentId(playerId),
-    };
-    const executable = getExecutableAbilityEffects(parsed.effects);
-    const result = executeEffects(state, ctx, executable);
-    if (result === "pending") {
-      if (abilityRequiresKnockOutSelf(parsed.effects)) {
-        attachAbilityKnockOutSource(state, pokemon.instanceId);
-      }
+    if (
+      pending.type === "ABILITY_DISCARD_HAND_ENERGY" &&
+      !handCardMatchesBasicEnergyType(state, card, pending.energyType)
+    ) {
       return state;
     }
-    if (abilityRequiresKnockOutSelf(parsed.effects)) {
-      finishAbilitySelfKnockOut(state, playerId, pokemon);
-    }
-    resolveBenchKnockouts(state);
-    finishIfWinner(state);
-    return state;
+    removeFromHand(player, instanceId);
+    moveToDiscard(player, card);
+    state.pendingAction = null;
+    return finishAbilityExecution(state, playerId, pokemon, pending.abilityName);
   }
 
   if (pending?.type !== "ULTRA_BALL_DISCARD" || pending.playerId !== playerId) return state;
@@ -2317,7 +2333,10 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
     }
     case "DISCARD_BASIC_ENERGY_FOR_DAMAGE": {
       if (pending.playerId !== current) break;
-      for (const option of listDiscardableEnergy(state, current, pending.fromBenchOnly)) {
+      for (const option of listDiscardableEnergy(state, current, pending.fromBenchOnly, {
+        energyType: pending.energyType,
+        activeOnly: pending.activeOnly,
+      })) {
         actions.push({
           type: "DISCARD_OWN_ENERGY_FOR_ATTACK",
           playerId: current,
@@ -2392,6 +2411,15 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       if (pending.playerId !== current) break;
       const player = getPlayer(state, current);
       for (const card of player.hand) {
+        actions.push({ type: "SELECT_HAND_DISCARD", playerId: current, instanceId: card.instanceId });
+      }
+      break;
+    }
+    case "ABILITY_DISCARD_HAND_ENERGY": {
+      if (pending.playerId !== current) break;
+      const player = getPlayer(state, current);
+      for (const card of player.hand) {
+        if (!handCardMatchesBasicEnergyType(state, card, pending.energyType)) continue;
         actions.push({ type: "SELECT_HAND_DISCARD", playerId: current, instanceId: card.instanceId });
       }
       break;

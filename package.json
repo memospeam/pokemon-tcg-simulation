@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "prepare:standard": "vitest run scripts/prepare-standard-effects.test.ts",
+    "prepare:standard": "vitest run scripts/prepare-standard-effects.test.ts --config vitest.corpus.config.ts",
     "report:coverage": "vitest run scripts/report-coverage.test.ts",
     "generate:tournament-535": "node scripts/generate-tournament-535-decks.mjs",
     "lint": "tsc -b --noEmit"

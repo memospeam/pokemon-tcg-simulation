@@ -1,4 +1,5 @@
 import type { CardDefinition } from "../models/definition";
+import { FOCUS_EXPANSION } from "./standardExpansions";
 
 /** Play! Pokémon Standard (2026 season): G rotated out; H/I/J legal. */
 export const STANDARD_REGULATION_MARKS = ["H", "I", "J"] as const;
@@ -9,6 +10,8 @@ export const STANDARD_FORMAT = {
   name: "Standard",
   season: "2025-26 / 2026 rotation",
   effectiveFrom: "2026-04-10",
+  /** Latest expansion — primary implementation and playtest target. */
+  focusExpansion: FOCUS_EXPANSION,
   regulationMarks: STANDARD_REGULATION_MARKS,
   /** Lucene query for pokemontcg.io — Pokémon only (attacks/abilities). */
   pokemonQuery:
