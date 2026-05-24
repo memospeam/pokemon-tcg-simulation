@@ -942,6 +942,208 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
     expect(getPlayer(state, PlayerId.P1).hand.some((card) => card.instanceId === deckPick.instanceId)).toBe(true);
   });
 
+  it("Greninja Mirage Barrage discards Energy and damages two opponent Pokémon", () => {
+    const attackText =
+      "Discard 2 Energy from this Pokémon. This attack does 120 damage to 2 of your opponent's Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)";
+    const greninjaDef = mockBasic("Greninja ex", "330", ["Water"], [
+      { name: "Mirage Barrage", cost: [], convertedEnergyCost: 0, damage: "", text: attackText },
+    ]);
+    const water = mockEnergy("Water Energy", ["Water"]);
+    const greninja = createCardInstance("greninja", PlayerId.P1, Zone.Active);
+    const energies = Array.from({ length: 4 }, (_, index) =>
+      createCardInstance(`mb-energy-${index}`, PlayerId.P1, Zone.Active),
+    );
+    greninja.attachedEnergy = energies;
+    const p2Bench = createCardInstance("p2-bench", PlayerId.P2, Zone.Bench);
+    const energyDefs = Object.fromEntries(energies.map((card) => [card.definitionId, water]));
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        greninja: greninjaDef,
+        "p2-active": mockBasic("Defender", "330", ["Lightning"]),
+        "p2-bench": mockBasic("Bench One", "200", ["Colorless"]),
+        ...energyDefs,
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: greninja,
+        },
+        [PlayerId.P2]: {
+          ...base.players[PlayerId.P2],
+          bench: [p2Bench],
+        },
+      },
+    });
+
+    state = gameReducer(state, { type: "ATTACK", playerId: PlayerId.P1, attackName: "Mirage Barrage" });
+    expect(state.pendingAction).toBeNull();
+    expect(getPlayer(state, PlayerId.P1).active!.attachedEnergy).toHaveLength(2);
+    expect(getPlayer(state, PlayerId.P2).active!.damageCounters).toBe(120);
+    expect(getPlayer(state, PlayerId.P2).bench[0]!.damageCounters).toBe(120);
+  });
+
+  it("Greninja Mirage Barrage prompts target picks when three opponent Pokémon are in play", () => {
+    const attackText =
+      "Discard 2 Energy from this Pokémon. This attack does 120 damage to 2 of your opponent's Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)";
+    const greninjaDef = mockBasic("Greninja ex", "330", ["Water"], [
+      { name: "Mirage Barrage", cost: [], convertedEnergyCost: 0, damage: "", text: attackText },
+    ]);
+    const water = mockEnergy("Water Energy", ["Water"]);
+    const greninja = createCardInstance("greninja", PlayerId.P1, Zone.Active);
+    const energies = Array.from({ length: 4 }, (_, index) =>
+      createCardInstance(`mb-energy-${index}`, PlayerId.P1, Zone.Active),
+    );
+    greninja.attachedEnergy = energies;
+    const energyDefs = Object.fromEntries(energies.map((card) => [card.definitionId, water]));
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        greninja: greninjaDef,
+        "p2-active": mockBasic("Defender", "330", ["Lightning"]),
+        "p2-bench-1": mockBasic("Bench One", "200", ["Colorless"]),
+        "p2-bench-2": mockBasic("Bench Two", "200", ["Colorless"]),
+        ...energyDefs,
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: greninja,
+        },
+        [PlayerId.P2]: {
+          ...base.players[PlayerId.P2],
+          bench: [
+            createCardInstance("p2-bench-1", PlayerId.P2, Zone.Bench),
+            createCardInstance("p2-bench-2", PlayerId.P2, Zone.Bench),
+          ],
+        },
+      },
+    });
+
+    state = gameReducer(state, { type: "ATTACK", playerId: PlayerId.P1, attackName: "Mirage Barrage" });
+    expect(state.pendingAction?.type).toBe("DAMAGE_TWO_OPPONENT");
+    if (state.pendingAction?.type === "DAMAGE_TWO_OPPONENT") {
+      expect(state.pendingAction.picksRemaining).toBe(2);
+    }
+
+    const opponent = getPlayer(state, PlayerId.P2);
+    state = gameReducer(state, {
+      type: "CHOOSE_OPPONENT_DAMAGE",
+      playerId: PlayerId.P1,
+      targetId: opponent.active!.instanceId,
+    });
+    if (state.pendingAction?.type === "DAMAGE_TWO_OPPONENT") {
+      expect(state.pendingAction.picksRemaining).toBe(1);
+    }
+
+    state = gameReducer(state, {
+      type: "CHOOSE_OPPONENT_DAMAGE",
+      playerId: PlayerId.P1,
+      targetId: getPlayer(state, PlayerId.P2).bench[0]!.instanceId,
+    });
+    expect(state.pendingAction).toBeNull();
+    expect(getPlayer(state, PlayerId.P2).active!.damageCounters).toBe(120);
+    expect(getPlayer(state, PlayerId.P2).bench[0]!.damageCounters).toBe(120);
+  });
+
+  it("Hydrapple Syrup Storm adds Grass Energy bonus damage", () => {
+    const attackText =
+      "This attack does 30 more damage for each Grass Energy attached to all of your Pokémon.";
+    const hydrappleDef = mockBasic("Hydrapple ex", "330", ["Grass"], [
+      { name: "Syrup Storm", cost: ["Grass"], convertedEnergyCost: 1, damage: "30+", text: attackText },
+    ]);
+    const grassEnergy = mockEnergy("Basic Grass Energy", ["Grass"]);
+    const hydrapple = createCardInstance("hydrapple", PlayerId.P1, Zone.Active);
+    const benchMon = createCardInstance("bench-grass", PlayerId.P1, Zone.Bench);
+    const e1 = createCardInstance("e1", PlayerId.P1, Zone.Active);
+    const e2 = createCardInstance("e2", PlayerId.P1, Zone.Active);
+    const e3 = createCardInstance("e3", PlayerId.P1, Zone.Bench);
+    hydrapple.attachedEnergy = [e1, e2];
+    benchMon.attachedEnergy = [e3];
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        hydrapple: hydrappleDef,
+        "bench-grass": mockBasic("Bench Grass", "70", ["Grass"]),
+        e1: grassEnergy,
+        e2: grassEnergy,
+        e3: grassEnergy,
+        "p2-active": mockBasic("Defender", "400", ["Water"]),
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: hydrapple,
+          bench: [benchMon],
+        },
+      },
+    });
+
+    state = gameReducer(state, { type: "ATTACK", playerId: PlayerId.P1, attackName: "Syrup Storm" });
+    expect(getPlayer(state, PlayerId.P2).active!.damageCounters).toBe(120);
+  });
+
+  it("Dragapult Dusknoir Cursed Blast prompts promote when a bench Pokémon remains", () => {
+    const abilityText =
+      "Once during your turn, you may put 13 damage counters on 1 of your opponent's Pokémon. If you use this Ability, this Pokémon is Knocked Out.";
+    const dusknoirDef = mockBasic("Dusknoir", "160", ["Psychic"]);
+    dusknoirDef.abilities = [{ name: "Cursed Blast", type: "Ability", text: abilityText }];
+    const dusknoir = createCardInstance("dusknoir", PlayerId.P1, Zone.Active);
+    const backup = createCardInstance("p1-backup", PlayerId.P1, Zone.Bench);
+    const p2Bench = createCardInstance("p2-bench", PlayerId.P2, Zone.Bench);
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        dusknoir: dusknoirDef,
+        "p1-backup": mockBasic("Backup", "70", ["Psychic"]),
+        "p2-bench": mockBasic("Bench Target", "90", ["Colorless"]),
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: dusknoir,
+          bench: [backup],
+        },
+        [PlayerId.P2]: {
+          ...base.players[PlayerId.P2],
+          bench: [p2Bench],
+        },
+      },
+    });
+
+    state = gameReducer(state, {
+      type: "USE_ABILITY",
+      playerId: PlayerId.P1,
+      pokemonId: dusknoir.instanceId,
+      abilityName: "Cursed Blast",
+    });
+    state = gameReducer(state, {
+      type: "CHOOSE_OPPONENT_POKEMON_DAMAGE_TARGET",
+      playerId: PlayerId.P1,
+      targetId: getPlayer(state, PlayerId.P2).active!.instanceId,
+    });
+    expect(state.pendingAction?.type).toBe("PROMOTE");
+
+    state = gameReducer(state, {
+      type: "PROMOTE_BENCH",
+      playerId: PlayerId.P1,
+      instanceId: backup.instanceId,
+    });
+    expect(getPlayer(state, PlayerId.P1).active?.instanceId).toBe(backup.instanceId);
+  });
+
   it("tracks engine-ready signature count across meta archetypes", () => {
     const analyses = analyzeAllUtrechtTop16();
     const summary = summarizeTop16Analysis(analyses);
