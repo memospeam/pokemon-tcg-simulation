@@ -453,6 +453,7 @@ export type ParsedEffect =
   | { kind: "trainer_shuffle_hand_draw"; baseDraw: number; sixPrizeDraw?: number }
   | { kind: "trainer_discard_hand_draw"; drawCount: number }
   | { kind: "trainer_judge" }
+  | { kind: "trainer_iono" }
   | { kind: "trainer_boss_orders" }
   | { kind: "trainer_ultra_ball" }
   | { kind: "trainer_search_no_rule_box" }

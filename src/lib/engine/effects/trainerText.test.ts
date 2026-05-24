@@ -66,6 +66,14 @@ describe("parseTrainerText", () => {
     expect(parsed.effects[0]).toEqual({ kind: "trainer_boss_orders" });
   });
 
+  it("parses Iono prize-based draw", () => {
+    const def = mockTrainer("Iono", [
+      "Each player puts a card from their hand on the bottom of their deck. Then each player shuffles their deck and draws a card. If you have more Prize cards remaining than your opponent, you draw 3 cards instead of 1 card.",
+    ]);
+    const parsed = parseTrainerText(def);
+    expect(parsed.effects[0]).toEqual({ kind: "trainer_iono" });
+  });
+
   it("parses Dawn evolution line search", () => {
     const def = mockTrainer("Dawn", [
       "Search your deck for a Basic Pokémon, a Stage 1 Pokémon, and a Stage 2 Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",

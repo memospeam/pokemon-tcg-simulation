@@ -5,6 +5,7 @@ const TRAINER_IMPLEMENTED_KINDS = new Set<ParsedEffect["kind"]>([
   "trainer_shuffle_hand_draw",
   "trainer_discard_hand_draw",
   "trainer_judge",
+  "trainer_iono",
   "trainer_boss_orders",
   "trainer_ultra_ball",
   "trainer_search_no_rule_box",

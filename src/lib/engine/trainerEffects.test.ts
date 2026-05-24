@@ -235,6 +235,41 @@ describe("trainerEffects", () => {
     }
   });
 
+  it("Iono puts hand cards on deck bottom and draws 3 when ahead on Prizes", () => {
+    const iono = mockTrainer("Iono", ["Supporter"]);
+    const filler = mockEnergy("Filler Energy");
+    const cards = [mockBasic("Dreepy"), filler, ...Array.from({ length: 58 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    state.turnNumber = 3;
+    const player = getPlayer(state, PlayerId.P1);
+    const opponent = getPlayer(state, PlayerId.P2);
+    player.prizes = Array.from({ length: 6 }, () =>
+      createCardInstance(filler.apiId, PlayerId.P1, Zone.Prizes),
+    );
+    opponent.prizes = Array.from({ length: 4 }, () =>
+      createCardInstance(filler.apiId, PlayerId.P2, Zone.Prizes),
+    );
+    player.hand = [createCardInstance(filler.apiId, PlayerId.P1, Zone.Hand)];
+    opponent.hand = [createCardInstance(filler.apiId, PlayerId.P2, Zone.Hand)];
+    player.deck = Array.from({ length: 8 }, () =>
+      createCardInstance(filler.apiId, PlayerId.P1, Zone.Deck),
+    );
+    opponent.deck = Array.from({ length: 8 }, () =>
+      createCardInstance(filler.apiId, PlayerId.P2, Zone.Deck),
+    );
+
+    applyTrainerEffect(state, PlayerId.P1, iono);
+    expect(state.pendingAction).toBeNull();
+    expect(player.hand.length).toBe(3);
+    expect(opponent.hand.length).toBe(1);
+  });
+
   it("Hilda searches an Evolution Pokémon and an Energy card", () => {
     const hilda = mockTrainer("Hilda", ["Supporter"]);
     const drakloak = {

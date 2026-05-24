@@ -25,6 +25,7 @@ import {
   getOpponentId,
   getPlayer,
   moveToDiscard,
+  removeFromHand,
   type EngineState,
   type PendingAction,
 } from "./types";
@@ -408,6 +409,9 @@ function applyTrainerByKind(state: EngineState, playerId: PlayerId, effect: Pars
     }
     case "trainer_judge":
       applyJudgeEffect(state);
+      return;
+    case "trainer_iono":
+      applyIono(state, playerId);
       return;
     case "trainer_boss_orders":
       state.pendingAction = { type: "BOSS_ORDERS", playerId };
@@ -990,6 +994,11 @@ function applyLegacyTrainerEffect(
 
   if (matchesTrainer(def, "judge")) {
     applyJudgeEffect(state);
+    return;
+  }
+
+  if (matchesTrainer(def, "iono")) {
+    applyIono(state, playerId);
     return;
   }
 
@@ -1638,6 +1647,79 @@ function findRareCandyEvolution(
       return evoDef && isStage2(evoDef) && canRareCandyEvolveInto(state, basicDef, evoDef);
     }) ?? null
   );
+}
+
+function putHandCardOnDeckBottom(state: EngineState, playerId: PlayerId, instanceId: string): boolean {
+  const player = getPlayer(state, playerId);
+  const card = removeFromHand(player, instanceId);
+  if (!card) return false;
+  card.zone = Zone.Deck;
+  player.deck.push(card);
+  logMessage(
+    state,
+    `${player.name} put ${getDefinitionSafe(state, card.definitionId).name} on the bottom of their deck.`,
+  );
+  return true;
+}
+
+function finishIonoDraws(state: EngineState): void {
+  for (const id of [PlayerId.P1, PlayerId.P2]) {
+    shufflePlayerDeck(state, id);
+  }
+  for (const id of [PlayerId.P1, PlayerId.P2]) {
+    const player = getPlayer(state, id);
+    const opponent = getPlayer(state, getOpponentId(id));
+    const drawCount = player.prizes.length > opponent.prizes.length ? 3 : 1;
+    drawCards(state, id, drawCount);
+  }
+  state.pendingAction = null;
+  logMessage(state, "Iono: both players shuffled their decks and drew cards.");
+}
+
+function beginIonoHandBottom(state: EngineState, targetPlayerId: PlayerId): void {
+  const player = getPlayer(state, targetPlayerId);
+  if (player.hand.length === 0) {
+    if (targetPlayerId === PlayerId.P1) {
+      beginIonoHandBottom(state, PlayerId.P2);
+      return;
+    }
+    finishIonoDraws(state);
+    return;
+  }
+  if (player.hand.length === 1) {
+    putHandCardOnDeckBottom(state, targetPlayerId, player.hand[0]!.instanceId);
+    if (targetPlayerId === PlayerId.P1) {
+      beginIonoHandBottom(state, PlayerId.P2);
+      return;
+    }
+    finishIonoDraws(state);
+    return;
+  }
+  state.pendingAction = { type: "IONO_HAND_BOTTOM", playerId: targetPlayerId };
+  logMessage(
+    state,
+    `${player.name} puts a card from their hand on the bottom of their deck (Iono).`,
+  );
+}
+
+export function applyIono(state: EngineState, playerId: PlayerId): void {
+  void playerId;
+  beginIonoHandBottom(state, PlayerId.P1);
+}
+
+export function continueIonoHandBottom(
+  state: EngineState,
+  playerId: PlayerId,
+  instanceId: string,
+): void {
+  const pending = state.pendingAction;
+  if (pending?.type !== "IONO_HAND_BOTTOM" || pending.playerId !== playerId) return;
+  if (!putHandCardOnDeckBottom(state, playerId, instanceId)) return;
+  if (playerId === PlayerId.P1) {
+    beginIonoHandBottom(state, PlayerId.P2);
+    return;
+  }
+  finishIonoDraws(state);
 }
 
 export function continueNightStretcherPick(state: EngineState, playerId: PlayerId, instanceId: string): void {

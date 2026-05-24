@@ -146,7 +146,13 @@ function inferPokemonTypes(name: string, deckEnergyTypes: Set<string>): string[]
   return ["Colorless"];
 }
 
-function inferHp(subtypes: string[]): string {
+function inferHp(name: string, subtypes: string[]): string {
+  const known: Record<string, string> = {
+    Budew: "30",
+    Dunsparce: "60",
+    Dreepy: "60",
+  };
+  if (known[name]) return known[name];
   if (subtypes.includes("VMAX")) return "320";
   if (subtypes.includes("VSTAR")) return "280";
   if (subtypes.includes("V")) return "220";
@@ -212,7 +218,7 @@ function corpusCardToDefinition(
     name: line.name,
     supertype: "Pokémon",
     subtypes,
-    hp: inferHp(subtypes),
+    hp: inferHp(line.name, subtypes),
     types,
     attacks: buildAttacks(card, types),
     abilities: buildAbilities(card),

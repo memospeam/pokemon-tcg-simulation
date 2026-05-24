@@ -40,6 +40,10 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_judge" }),
   },
   {
+    test: /each player puts a card from their hand on the bottom of their deck\. then each player shuffles their deck and draws a card\. if you have more prize cards remaining than your opponent, you draw 3 cards instead of 1 card/,
+    build: () => ({ kind: "trainer_iono" }),
+  },
+  {
     test: /switch 1 of your opponent's benched pok[ée]mon with their active pok[ée]mon/,
     build: () => ({ kind: "trainer_boss_orders" }),
   },

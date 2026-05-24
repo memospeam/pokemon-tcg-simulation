@@ -101,6 +101,7 @@ export type GameAction =
   | { type: "CHOOSE_BENCH_ATTACK"; playerId: PlayerId; benchPokemonId: string; attackName: string }
   | { type: "SWITCH_VIEW"; playerId: PlayerId }
   | { type: "SELECT_HAND_DISCARD"; playerId: PlayerId; instanceId: string }
+  | { type: "IONO_SELECT_HAND"; playerId: PlayerId; instanceId: string }
   | { type: "PICK_DECK_CARD"; playerId: PlayerId; instanceId: string }
   | { type: "PICK_DISCARD_POKEMON"; playerId: PlayerId; instanceId: string }
   | { type: "SELECT_RARE_CANDY_BASIC"; playerId: PlayerId; targetId: string }
@@ -146,6 +147,7 @@ export type GameAction =
 
 export type PendingAction =
   | { type: "BOSS_ORDERS"; playerId: PlayerId }
+  | { type: "IONO_HAND_BOTTOM"; playerId: PlayerId }
   | { type: "PROMOTE"; playerId: PlayerId }
   | { type: "SWITCH_WITH_BENCH"; playerId: PlayerId; optional?: boolean }
   | { type: "MOVE_ENERGY_TO_BENCH"; playerId: PlayerId; sourceId: string }

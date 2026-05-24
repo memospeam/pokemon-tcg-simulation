@@ -105,6 +105,7 @@ import {
   attachEnergyToPokemon,
   canPlayTrainerEffect,
   completeUltraBallDiscard,
+  continueIonoHandBottom,
   continueNightStretcherPick,
   discardAttachedEnergy,
   maybeCrispinOptionalDiscard,
@@ -1154,6 +1155,13 @@ function handlePickDeckCard(state: EngineState, playerId: PlayerId, instanceId: 
   return state;
 }
 
+function handleIonoSelectHand(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "IONO_HAND_BOTTOM" || pending.playerId !== playerId) return state;
+  continueIonoHandBottom(state, playerId, instanceId);
+  return state;
+}
+
 function handlePickDiscardPokemon(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
   const pending = state.pendingAction;
   if (pending?.type === "LANAS_AID" && pending.playerId === playerId) {
@@ -1636,6 +1644,8 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleChooseOpponentDamage(nextState, action.playerId, action.targetId);
     case "SELECT_HAND_DISCARD":
       return handleSelectHandDiscard(nextState, action.playerId, action.instanceId);
+    case "IONO_SELECT_HAND":
+      return handleIonoSelectHand(nextState, action.playerId, action.instanceId);
     case "PICK_DECK_CARD":
       return handlePickDeckCard(nextState, action.playerId, action.instanceId);
     case "PICK_DISCARD_POKEMON":
@@ -1863,6 +1873,17 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
           type: "SWITCH_OPPONENT_ACTIVE",
           playerId: current,
           benchInstanceId: bench.instanceId,
+        });
+      }
+      break;
+    }
+    case "IONO_HAND_BOTTOM": {
+      const picker = getPlayer(state, pending.playerId);
+      for (const card of picker.hand) {
+        actions.push({
+          type: "IONO_SELECT_HAND",
+          playerId: pending.playerId,
+          instanceId: card.instanceId,
         });
       }
       break;
