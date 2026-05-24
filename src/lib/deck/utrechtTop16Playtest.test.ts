@@ -11,7 +11,6 @@ import {
   analyzeAllUtrechtTop16,
   analyzeTournamentDeck,
   ARCHETYPE_SIGNATURES,
-  ENGINE_READY_SIGNATURES,
   formatTop16AnalysisReport,
   summarizeTop16Analysis,
 } from "./utrechtTop16Analyzer";
@@ -48,6 +47,32 @@ function mockEnergy(name: string, types: string[] = ["Psychic"]): CardDefinition
     set: { id: "test", name: "Test" },
     number: "1",
     images: { small: "", large: "" },
+  };
+}
+
+function mockSupporter(name: string): CardDefinition {
+  return {
+    apiId: name,
+    name,
+    supertype: "Trainer",
+    subtypes: ["Supporter"],
+    set: { id: "test", name: "Test" },
+    number: "1",
+    images: { small: "", large: "" },
+  };
+}
+
+function mockStage(
+  name: string,
+  evolvesFrom: string,
+  hp = "80",
+  types: string[] = ["Psychic"],
+  subtypes: string[] = ["Stage 1"],
+): CardDefinition {
+  return {
+    ...mockBasic(name, hp, types),
+    subtypes,
+    evolvesFrom,
   };
 }
 
@@ -172,6 +197,11 @@ describe("Utrecht Top 16 deck analysis", () => {
     for (const analysis of analyses) {
       expect(analysis.signatureEffects.length, analysis.deckName).toBeGreaterThan(0);
     }
+  });
+
+  it("marks every signature effect as engine-ready with no gaps", () => {
+    expect(summary.signatureEffects.engineReady).toBe(summary.signatureEffects.total);
+    expect(summary.signatureEffects.gaps).toEqual([]);
   });
 
   it("prints analysis report for manual review", () => {
@@ -351,12 +381,572 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
     expect(getPlayer(next, PlayerId.P1).active?.damageCounters).toBe(10);
   });
 
+  it("Munkidori Adrena-Brain moves damage through gameReducer", () => {
+    const dragapultDeck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Dragapult")!;
+    expect(analyzeTournamentDeck(dragapultDeck).signatureEffects.some((e) => e.effectName === "Adrena-Brain")).toBe(
+      true,
+    );
+
+    const abilityText =
+      "Once during your turn, if this Pokémon has any Darkness Energy attached, you may move up to 3 damage counters from 1 of your Pokémon to 1 of your opponent's Pokémon.";
+    const munkidoriDef = mockBasic("Munkidori", "110", ["Psychic"]);
+    munkidoriDef.abilities = [{ name: "Adrena-Brain", type: "Ability", text: abilityText }];
+    const darkEnergy = mockEnergy("Darkness Energy", ["Darkness"]);
+    const munkidori = createCardInstance("munkidori", PlayerId.P1, Zone.Bench);
+    const energy = createCardInstance("dark-energy", PlayerId.P1, Zone.Bench);
+    munkidori.attachedEnergy = [energy];
+    munkidori.damageCounters = 30;
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        munkidori: munkidoriDef,
+        "dark-energy": darkEnergy,
+        "p2-active": mockBasic("Opponent Active", "120", ["Psychic"]),
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          bench: [munkidori],
+        },
+      },
+    });
+
+    state = gameReducer(state, {
+      type: "USE_ABILITY",
+      playerId: PlayerId.P1,
+      pokemonId: munkidori.instanceId,
+      abilityName: "Adrena-Brain",
+    });
+    expect(state.pendingAction?.type).toBe("MOVE_DAMAGE");
+
+    state = gameReducer(state, {
+      type: "MOVE_DAMAGE_SOURCE",
+      playerId: PlayerId.P1,
+      sourceId: munkidori.instanceId,
+    });
+    state = gameReducer(state, {
+      type: "MOVE_DAMAGE_TARGET",
+      playerId: PlayerId.P1,
+      targetId: getPlayer(state, PlayerId.P2).active!.instanceId,
+    });
+    const movedMunkidori = getPlayer(state, PlayerId.P1).bench.find(
+      (entry) => entry.instanceId === munkidori.instanceId,
+    )!;
+    expect(movedMunkidori.damageCounters).toBe(0);
+    expect(getPlayer(state, PlayerId.P2).active!.damageCounters).toBe(30);
+  });
+
+  it("Dragapult Dusknoir Cursed Blast damages opponent then KOs self", () => {
+    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Dragapult Dusknoir")!;
+    expect(analyzeTournamentDeck(deck).signatureEffects.some((e) => e.effectName === "Cursed Blast")).toBe(true);
+
+    const abilityText =
+      "Once during your turn, you may put 13 damage counters on 1 of your opponent's Pokémon. If you use this Ability, this Pokémon is Knocked Out.";
+    const dusknoirDef = mockBasic("Dusknoir", "160", ["Psychic"]);
+    dusknoirDef.abilities = [{ name: "Cursed Blast", type: "Ability", text: abilityText }];
+    const dusknoir = createCardInstance("dusknoir", PlayerId.P1, Zone.Active);
+    const p2Bench = createCardInstance("p2-bench", PlayerId.P2, Zone.Bench);
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        dusknoir: dusknoirDef,
+        "p2-bench": mockBasic("Bench Target", "90", ["Colorless"]),
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: dusknoir,
+        },
+        [PlayerId.P2]: {
+          ...base.players[PlayerId.P2],
+          bench: [p2Bench],
+        },
+      },
+    });
+
+    state = gameReducer(state, {
+      type: "USE_ABILITY",
+      playerId: PlayerId.P1,
+      pokemonId: dusknoir.instanceId,
+      abilityName: "Cursed Blast",
+    });
+    expect(state.pendingAction?.type).toBe("CHOOSE_OPPONENT_POKEMON_DAMAGE");
+
+    state = gameReducer(state, {
+      type: "CHOOSE_OPPONENT_POKEMON_DAMAGE_TARGET",
+      playerId: PlayerId.P1,
+      targetId: getPlayer(state, PlayerId.P2).active!.instanceId,
+    });
+    expect(getPlayer(state, PlayerId.P2).active!.damageCounters).toBe(130);
+    expect(getPlayer(state, PlayerId.P1).active).toBeNull();
+  });
+
+  it("Rocket Honchkrow Rocket Feathers discards Team Rocket Supporters for bonus damage", () => {
+    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Rocket's Honchkrow")!;
+    expect(analyzeTournamentDeck(deck).signatureEffects.some((e) => e.effectName === "Rocket Feathers")).toBe(true);
+
+    const attackText =
+      'You may discard any number of Supporter cards that have "Team Rocket" in their name from your hand, and this attack does 60 damage for each card you discarded in this way.';
+    const honchkrowDef = mockBasic("Team Rocket's Honchkrow", "140", ["Darkness"], [
+      { name: "Rocket Feathers", cost: ["Darkness"], convertedEnergyCost: 1, damage: "60×", text: attackText },
+    ]);
+    const darkEnergy = mockEnergy("Darkness Energy", ["Darkness"]);
+    const honchkrow = createCardInstance("honchkrow", PlayerId.P1, Zone.Active);
+    const energy = createCardInstance("dark-energy", PlayerId.P1, Zone.Active);
+    honchkrow.attachedEnergy = [energy];
+    const ariana = createCardInstance("ariana", PlayerId.P1, Zone.Hand);
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        honchkrow: honchkrowDef,
+        "dark-energy": darkEnergy,
+        ariana: mockSupporter("Team Rocket's Ariana"),
+        "p2-active": mockBasic("Defender", "200", ["Colorless"]),
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: honchkrow,
+          hand: [ariana],
+        },
+      },
+    });
+
+    state = gameReducer(state, { type: "ATTACK", playerId: PlayerId.P1, attackName: "Rocket Feathers" });
+    expect(state.pendingAction?.type).toBe("DISCARD_NAMED_SUPPORTERS_FOR_DAMAGE");
+
+    state = gameReducer(state, {
+      type: "DISCARD_HAND_SUPPORTER_FOR_ATTACK",
+      playerId: PlayerId.P1,
+      instanceId: ariana.instanceId,
+    });
+    state = gameReducer(state, { type: "SKIP_OPTIONAL", playerId: PlayerId.P1 });
+    expect(getPlayer(state, PlayerId.P2).active!.damageCounters).toBeGreaterThanOrEqual(120);
+  });
+
+  it("Ogerpon Teal Dance attaches Grass Energy and draws a card", () => {
+    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Ogerpon Box")!;
+    expect(analyzeTournamentDeck(deck).signatureEffects.map((e) => e.effectName)).toEqual(
+      expect.arrayContaining(["Teal Dance", "Myriad Leaf Shower"]),
+    );
+
+    const abilityText =
+      "Once during your turn, you may attach a Basic Grass Energy card from your hand to 1 of your Pokémon. If you attached Energy to a Pokémon in this way, draw a card.";
+    const ogerponDef = mockBasic("Teal Mask Ogerpon ex", "210", ["Grass"]);
+    ogerponDef.abilities = [{ name: "Teal Dance", type: "Ability", text: abilityText }];
+    const ogerpon = createCardInstance("ogerpon", PlayerId.P1, Zone.Active);
+    const benchMon = createCardInstance("bench-mon", PlayerId.P1, Zone.Bench);
+    const grass = createCardInstance("grass", PlayerId.P1, Zone.Hand);
+    const deckCard = createCardInstance("deck-draw", PlayerId.P1, Zone.Deck);
+    const grassEnergy = mockEnergy("Basic Grass Energy", ["Grass"]);
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        ogerpon: ogerponDef,
+        "bench-mon": mockBasic("Bench Mon", "70", ["Grass"]),
+        grass: grassEnergy,
+        "deck-draw": mockBasic("Drawn Card", "60", ["Colorless"]),
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: ogerpon,
+          bench: [benchMon],
+          hand: [grass],
+          deck: [deckCard],
+        },
+      },
+    });
+
+    state = gameReducer(state, {
+      type: "USE_ABILITY",
+      playerId: PlayerId.P1,
+      pokemonId: ogerpon.instanceId,
+      abilityName: "Teal Dance",
+    });
+    expect(state.pendingAction?.type).toBe("ATTACH_HAND_ENERGY");
+
+    state = gameReducer(state, {
+      type: "ATTACH_HAND_ENERGY_TO_POKEMON",
+      playerId: PlayerId.P1,
+      pokemonId: benchMon.instanceId,
+      energyId: grass.instanceId,
+    });
+    expect(getPlayer(state, PlayerId.P1).bench[0]?.attachedEnergy).toHaveLength(1);
+    expect(getPlayer(state, PlayerId.P1).hand.some((card) => card.instanceId === deckCard.instanceId)).toBe(true);
+  });
+
+  it("Ogerpon Myriad Leaf Shower scales with Energy on both Actives", () => {
+    const attackText = "This attack does 30 more damage for each Energy attached to both Active Pokémon.";
+    const ogerponDef = mockBasic("Teal Mask Ogerpon ex", "210", ["Grass"], [
+      { name: "Myriad Leaf Shower", cost: ["Grass"], convertedEnergyCost: 1, damage: "30+", text: attackText },
+    ]);
+    const grassEnergy = mockEnergy("Basic Grass Energy", ["Grass"]);
+    const ogerpon = createCardInstance("ogerpon", PlayerId.P1, Zone.Active);
+    const e1 = createCardInstance("e1", PlayerId.P1, Zone.Active);
+    const e2 = createCardInstance("e2", PlayerId.P1, Zone.Active);
+    ogerpon.attachedEnergy = [e1, e2];
+    const p2Energy = createCardInstance("p2-e", PlayerId.P2, Zone.Active);
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        ogerpon: ogerponDef,
+        "p2-active": mockBasic("Defender", "300", ["Water"]),
+        e1: grassEnergy,
+        e2: grassEnergy,
+        "p2-e": grassEnergy,
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: ogerpon,
+        },
+      },
+    });
+    getPlayer(state, PlayerId.P2).active!.attachedEnergy = [p2Energy];
+
+    state = gameReducer(state, { type: "ATTACK", playerId: PlayerId.P1, attackName: "Myriad Leaf Shower" });
+    expect(getPlayer(state, PlayerId.P2).active!.damageCounters).toBeGreaterThanOrEqual(120);
+  });
+
+  it("N's Zoroark Trade draws after discarding from hand", () => {
+    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "N's Zoroark")!;
+    expect(analyzeTournamentDeck(deck).signatureEffects.map((e) => e.effectName)).toEqual(
+      expect.arrayContaining(["Trade", "Night Joker"]),
+    );
+
+    const abilityText =
+      "You must discard a card from your hand in order to use this Ability. Once during your turn, you may draw 2 cards.";
+    const zoroarkDef = mockBasic("N's Zoroark ex", "280", ["Darkness"]);
+    zoroarkDef.abilities = [{ name: "Trade", type: "Ability", text: abilityText }];
+    const zoroark = createCardInstance("zoroark", PlayerId.P1, Zone.Active);
+    const discardCard = createCardInstance("discard-me", PlayerId.P1, Zone.Hand);
+    const draw1 = createCardInstance("draw-1", PlayerId.P1, Zone.Deck);
+    const draw2 = createCardInstance("draw-2", PlayerId.P1, Zone.Deck);
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        zoroark: zoroarkDef,
+        "discard-me": mockBasic("Discard Me", "60", ["Colorless"]),
+        "draw-1": mockBasic("Draw One", "60", ["Colorless"]),
+        "draw-2": mockBasic("Draw Two", "60", ["Colorless"]),
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: zoroark,
+          hand: [discardCard],
+          deck: [draw1, draw2],
+        },
+      },
+    });
+
+    state = gameReducer(state, {
+      type: "USE_ABILITY",
+      playerId: PlayerId.P1,
+      pokemonId: zoroark.instanceId,
+      abilityName: "Trade",
+    });
+    expect(state.pendingAction?.type).toBe("ABILITY_DISCARD_HAND");
+
+    state = gameReducer(state, {
+      type: "SELECT_HAND_DISCARD",
+      playerId: PlayerId.P1,
+      instanceId: discardCard.instanceId,
+    });
+    expect(getPlayer(state, PlayerId.P1).hand).toHaveLength(2);
+  });
+
+  it("N's Zoroark Night Joker copies a benched N's Pokémon attack", () => {
+    const attackText = "Choose 1 of your Benched N's Pokémon's attacks and use it as this attack.";
+    const zoroarkDef = mockBasic("N's Zoroark ex", "280", ["Darkness"], [
+      { name: "Night Joker", cost: ["Darkness"], convertedEnergyCost: 1, damage: "", text: attackText },
+    ]);
+    const zoruaDef = mockBasic("N's Zorua", "70", ["Darkness"], [
+      { name: "Scratch", cost: ["Darkness"], convertedEnergyCost: 1, damage: "30", text: "" },
+    ]);
+    const darkEnergy = mockEnergy("Darkness Energy", ["Darkness"]);
+    const zoroark = createCardInstance("zoroark", PlayerId.P1, Zone.Active);
+    const zorua = createCardInstance("zorua", PlayerId.P1, Zone.Bench);
+    const energy = createCardInstance("dark-energy", PlayerId.P1, Zone.Active);
+    zoroark.attachedEnergy = [energy];
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        zoroark: zoroarkDef,
+        zorua: zoruaDef,
+        "dark-energy": darkEnergy,
+        "p2-active": mockBasic("Defender", "200", ["Colorless"]),
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: zoroark,
+          bench: [zorua],
+        },
+      },
+    });
+
+    state = gameReducer(state, { type: "ATTACK", playerId: PlayerId.P1, attackName: "Night Joker" });
+    expect(state.pendingAction?.type).toBe("COPY_BENCH_ATTACK");
+
+    state = gameReducer(state, {
+      type: "CHOOSE_BENCH_ATTACK",
+      playerId: PlayerId.P1,
+      benchPokemonId: zorua.instanceId,
+      attackName: "Scratch",
+    });
+    expect(getPlayer(state, PlayerId.P2).active!.damageCounters).toBeGreaterThan(0);
+  });
+
+  it("Alakazam Powerful Hand scales damage with hand size", () => {
+    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Alakazam Dudunsparce")!;
+    expect(analyzeTournamentDeck(deck).signatureEffects.map((e) => e.effectName)).toEqual(
+      expect.arrayContaining(["Powerful Hand", "Psychic Draw"]),
+    );
+
+    const attackText =
+      "Place 2 damage counters on your opponent's Active Pokémon for each card in your hand.";
+    const alakazamDef = mockBasic("Alakazam", "120", ["Psychic"], [
+      { name: "Powerful Hand", cost: ["Psychic"], convertedEnergyCost: 1, damage: "", text: attackText },
+    ]);
+    const psychic = mockEnergy("Psychic Energy", ["Psychic"]);
+    const alakazam = createCardInstance("alakazam", PlayerId.P1, Zone.Active);
+    const energy = createCardInstance("psychic-energy", PlayerId.P1, Zone.Active);
+    alakazam.attachedEnergy = [energy];
+    const handCards = Array.from({ length: 4 }, (_, index) =>
+      createCardInstance(`hand-${index}`, PlayerId.P1, Zone.Hand),
+    );
+    const handDefs = Object.fromEntries(handCards.map((card) => [card.definitionId, mockBasic("Hand Card")]));
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        alakazam: alakazamDef,
+        "psychic-energy": psychic,
+        "p2-active": mockBasic("Defender", "300", ["Colorless"]),
+        ...handDefs,
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: alakazam,
+          hand: handCards,
+        },
+      },
+    });
+
+    state = gameReducer(state, { type: "ATTACK", playerId: PlayerId.P1, attackName: "Powerful Hand" });
+    expect(getPlayer(state, PlayerId.P2).active!.damageCounters).toBe(80);
+  });
+
+  it("Alakazam Psychic Draw triggers on evolution from hand", () => {
+    const abilityText =
+      "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Draw 2 cards.";
+    const kadabraDef = mockStage("Kadabra", "Abra", "80", ["Psychic"]);
+    const alakazamDef = mockStage("Alakazam", "Kadabra", "120", ["Psychic"], ["Stage 2"]);
+    alakazamDef.abilities = [{ name: "Psychic Draw", type: "Ability", text: abilityText }];
+    const kadabra = createCardInstance("kadabra", PlayerId.P1, Zone.Active);
+    kadabra.enteredPlayTurn = 1;
+    const alakazamCard = createCardInstance("alakazam-evo", PlayerId.P1, Zone.Hand);
+    const draw1 = createCardInstance("draw-1", PlayerId.P1, Zone.Deck);
+    const draw2 = createCardInstance("draw-2", PlayerId.P1, Zone.Deck);
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        kadabra: kadabraDef,
+        "alakazam-evo": alakazamDef,
+        "draw-1": mockBasic("Draw One", "60", ["Colorless"]),
+        "draw-2": mockBasic("Draw Two", "60", ["Colorless"]),
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: kadabra,
+          hand: [alakazamCard],
+          deck: [draw1, draw2],
+        },
+      },
+    });
+
+    state = gameReducer(state, {
+      type: "EVOLVE",
+      playerId: PlayerId.P1,
+      evolutionId: alakazamCard.instanceId,
+      targetId: kadabra.instanceId,
+    });
+    const hand = getPlayer(state, PlayerId.P1).hand;
+    expect(hand.some((card) => card.instanceId === draw1.instanceId)).toBe(true);
+    expect(hand.some((card) => card.instanceId === draw2.instanceId)).toBe(true);
+  });
+
+  it("Cynthia's Garchomp Champion's Call searches Cynthia's Pokémon from deck", () => {
+    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Cynthia's Garchomp")!;
+    expect(analyzeTournamentDeck(deck).signatureEffects.map((e) => e.effectName)).toEqual(
+      expect.arrayContaining(["Champion's Call", "Corkscrew Dive"]),
+    );
+
+    const abilityText =
+      "Once during your turn, you may search your deck for a Cynthia's Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.";
+    const gabiteDef = mockStage("Cynthia's Gabite", "Cynthia's Gible", "110", ["Fighting"]);
+    gabiteDef.abilities = [{ name: "Champion's Call", type: "Ability", text: abilityText }];
+    const gibleCard = createCardInstance("deck-gible", PlayerId.P1, Zone.Deck);
+    const filler = createCardInstance("deck-filler", PlayerId.P1, Zone.Deck);
+    const gabiteMon = createCardInstance("gabite", PlayerId.P1, Zone.Active);
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        gabite: gabiteDef,
+        "deck-gible": mockBasic("Cynthia's Gible", "70", ["Fighting"]),
+        "deck-filler": mockBasic("Filler", "60", ["Colorless"]),
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: gabiteMon,
+          deck: [filler, gibleCard],
+        },
+      },
+    });
+
+    state = gameReducer(state, {
+      type: "USE_ABILITY",
+      playerId: PlayerId.P1,
+      pokemonId: gabiteMon.instanceId,
+      abilityName: "Champion's Call",
+    });
+    expect(getPlayer(state, PlayerId.P1).hand.some((card) => card.instanceId === gibleCard.instanceId)).toBe(true);
+  });
+
+  it("Cynthia's Garchomp Corkscrew Dive offers optional draw until 6 cards", () => {
+    const garchompDef = mockBasic("Cynthia's Garchomp ex", "320", ["Fighting"], [
+      {
+        name: "Corkscrew Dive",
+        cost: ["Fighting", "Fighting"],
+        convertedEnergyCost: 2,
+        damage: "100",
+        text: "You may draw cards until you have 6 cards in your hand.",
+      },
+    ]);
+    const fighting = mockEnergy("Fighting Energy", ["Fighting"]);
+    const garchomp = createCardInstance("garchomp", PlayerId.P1, Zone.Active);
+    const energy1 = createCardInstance("energy-1", PlayerId.P1, Zone.Active);
+    const energy2 = createCardInstance("energy-2", PlayerId.P1, Zone.Active);
+    garchomp.attachedEnergy = [energy1, energy2];
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        garchomp: garchompDef,
+        "energy-1": fighting,
+        "energy-2": fighting,
+        "p2-active": mockBasic("Defender", "300", ["Colorless"]),
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: garchomp,
+        },
+      },
+    });
+
+    state = gameReducer(state, { type: "ATTACK", playerId: PlayerId.P1, attackName: "Corkscrew Dive" });
+    expect(state.pendingAction?.type).toBe("DRAW_UNTIL_HAND");
+
+    state = gameReducer(state, { type: "CONFIRM_DRAW_UNTIL_HAND", playerId: PlayerId.P1 });
+    expect(state.pendingAction).toBeNull();
+    expect(getPlayer(state, PlayerId.P1).hand).toHaveLength(6);
+  });
+
+  it("Greninja Shinobi Blade searches the deck after attacking", () => {
+    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Greninja")!;
+    expect(analyzeTournamentDeck(deck).signatureEffects.map((e) => e.effectName)).toEqual(
+      expect.arrayContaining(["Shinobi Blade", "Mirage Barrage"]),
+    );
+
+    const greninjaDef = mockBasic("Greninja ex", "330", ["Water"], [
+      {
+        name: "Shinobi Blade",
+        cost: ["Water", "Water"],
+        convertedEnergyCost: 2,
+        damage: "170",
+        text: "You may search your deck for a card and put it into your hand. Then, shuffle your deck.",
+      },
+    ]);
+    const water = mockEnergy("Water Energy", ["Water"]);
+    const greninja = createCardInstance("greninja", PlayerId.P1, Zone.Active);
+    const energy1 = createCardInstance("energy-1", PlayerId.P1, Zone.Active);
+    const energy2 = createCardInstance("energy-2", PlayerId.P1, Zone.Active);
+    greninja.attachedEnergy = [energy1, energy2];
+    const deckPick = createCardInstance("deck-pick", PlayerId.P1, Zone.Deck);
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        greninja: greninjaDef,
+        "energy-1": water,
+        "energy-2": water,
+        "deck-pick": mockBasic("Deck Pick", "60", ["Colorless"]),
+        "p2-active": mockBasic("Defender", "330", ["Lightning"]),
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: greninja,
+          deck: [deckPick],
+        },
+      },
+    });
+
+    state = gameReducer(state, { type: "ATTACK", playerId: PlayerId.P1, attackName: "Shinobi Blade" });
+    expect(state.pendingAction?.type).toBe("SEARCH_DECK");
+
+    state = gameReducer(state, {
+      type: "PICK_DECK_CARD",
+      playerId: PlayerId.P1,
+      instanceId: deckPick.instanceId,
+    });
+    expect(getPlayer(state, PlayerId.P1).hand.some((card) => card.instanceId === deckPick.instanceId)).toBe(true);
+  });
+
   it("tracks engine-ready signature count across meta archetypes", () => {
     const analyses = analyzeAllUtrechtTop16();
     const summary = summarizeTop16Analysis(analyses);
-    const readyNames = [...ENGINE_READY_SIGNATURES];
-    expect(summary.signatureEffects.engineReady).toBeGreaterThanOrEqual(readyNames.length);
-    expect(summary.signatureEffects.engineReady).toBeLessThanOrEqual(summary.signatureEffects.total);
+    expect(summary.signatureEffects.engineReady).toBe(summary.signatureEffects.total);
+    expect(summary.signatureEffects.gaps).toEqual([]);
   });
 
   it("no Weakness modifier suppresses weakness during the opponent's next turn (Dragapult support)", () => {

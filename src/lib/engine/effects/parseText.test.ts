@@ -292,6 +292,18 @@ describe("parseAttackText", () => {
     expect(trade.conditions).toEqual([{ type: "discard_from_hand_to_use" }]);
     expect(trade.effects).toEqual([{ kind: "draw", count: 2, target: "self" }]);
   });
+
+  it("parses Alakazam Psychic Draw evolve trigger and draw", () => {
+    const parsed = parseAbilityText({
+      name: "Psychic Draw",
+      type: "Ability",
+      text: "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Draw 2 cards.",
+    });
+    expect(parsed.effects).toEqual([
+      { kind: "evolve_trigger_ability" },
+      { kind: "draw", count: 2, target: "self" },
+    ]);
+  });
 });
 
 describe("parseAbilityText", () => {

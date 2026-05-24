@@ -957,6 +957,13 @@ export function parseAbilityText(ability: CardAbility): ParsedAbility {
     body = body.replace(/you must discard a card from your hand in order to use this ability\.?\s*/, "");
   }
 
+  const evolveTriggerPrefix =
+    /^when you play this pok[ée]mon from your hand to evolve 1 of your pok[ée]mon, you may use this ability\.?\s*/i;
+  const hasEvolveTrigger = evolveTriggerPrefix.test(body);
+  if (hasEvolveTrigger) {
+    body = body.replace(evolveTriggerPrefix, "");
+  }
+
   if (/if any of your pok[ée]mon were knocked out during your opponent's last turn/i.test(body)) {
     conditions.push({ type: "own_ko_opponent_last_turn" });
     body = body.replace(
@@ -996,6 +1003,7 @@ export function parseAbilityText(ability: CardAbility): ParsedAbility {
       ...( /once during your first turn/i.test(text)
         ? [{ kind: "once_during_first_turn" as const }]
         : []),
+      ...(hasEvolveTrigger ? [{ kind: "evolve_trigger_ability" as const }] : []),
       ...splitClauses(body).flatMap(parseClause),
     ]),
     rawText: ability.text,
