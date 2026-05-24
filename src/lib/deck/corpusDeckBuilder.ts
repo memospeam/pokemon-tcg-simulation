@@ -1,7 +1,11 @@
 import { normalizeSetCode } from "../catalog/setCodeMap";
 import { loadStandardCorpus } from "../format/loadStandardCorpus";
 import type { StandardCardIndex } from "../format/prepareStandardCorpus";
-import { parseLimitlessDeckList } from "./limitlessParser";
+import { normalizePokemonName } from "../engine/rules";
+import type { CardAbility, CardAttack, CardDefinition } from "../models/definition";
+import type { BuiltDeck } from "./builder";
+import { parseLimitlessDeckList, type ParsedDeckLine } from "./limitlessParser";
+import { validateDeck, type DeckValidationResult } from "./validator";
 
 export function findCorpusCard(
   setCode: string,
@@ -53,4 +57,280 @@ export function validateDeckTextAgainstCorpus(text: string): {
   }
 
   return { missing, resolved, pokemonResolved, pokemonMissing };
+}
+
+const EVOLUTION_PARENT: Record<string, string> = {
+  drakloak: "Dreepy",
+  "dragapult ex": "Drakloak",
+  dusclops: "Duskull",
+  dusknoir: "Dusclops",
+  dudunsparce: "Dunsparce",
+  "dudunsparce ex": "Dunsparce",
+  kadabra: "Abra",
+  alakazam: "Kadabra",
+  "mega lopunny ex": "Buneary",
+  froslass: "Snorunt",
+  "team rocket's honchkrow": "Team Rocket's Murkrow",
+  "team rocket's porygon2": "Team Rocket's Porygon",
+  "team rocket's articuno": "Team Rocket's Murkrow",
+};
+
+const SUPPORTER_NAMES = new Set([
+  "Boss's Orders",
+  "Lillie's Determination",
+  "Iono",
+  "Judge",
+  "Crispin",
+  "Hilda",
+  "Team Rocket's Ariana",
+  "Team Rocket's Archer",
+  "Team Rocket's Giovanni",
+  "Team Rocket's Proton",
+  "Team Rocket's Petrel",
+  "Rosa's Encouragement",
+]);
+
+const STADIUM_NAMES = new Set([
+  "Area Zero Underdepths",
+  "Risky Ruins",
+  "Team Rocket's Watchtower",
+  "Team Rocket's Factory",
+  "Battle Cage",
+]);
+
+const ENERGY_TYPE_BY_NAME: Record<string, string[]> = {
+  "Psychic Energy": ["Psychic"],
+  "Fire Energy": ["Fire"],
+  "Darkness Energy": ["Darkness"],
+  "Grass Energy": ["Grass"],
+  "Water Energy": ["Water"],
+  "Lightning Energy": ["Lightning"],
+  "Fighting Energy": ["Fighting"],
+  "Metal Energy": ["Metal"],
+  "Mist Energy": ["Colorless"],
+  "Enriching Energy": ["Colorless"],
+  "Team Rocket's Energy": ["Darkness"],
+  "Ignition Energy": ["Fire"],
+};
+
+function inferEnergyTypes(name: string): string[] {
+  for (const [label, types] of Object.entries(ENERGY_TYPE_BY_NAME)) {
+    if (name.toLowerCase().includes(label.toLowerCase())) return types;
+  }
+  return ["Colorless"];
+}
+
+function inferPokemonTypes(name: string, deckEnergyTypes: Set<string>): string[] {
+  const lower = name.toLowerCase();
+  if (lower.includes("greninja") || lower.includes("munkidori") || lower.includes("alakazam")) {
+    return ["Psychic"];
+  }
+  if (lower.includes("dragapult") || lower.includes("dreepy") || lower.includes("drakloak")) {
+    return ["Psychic"];
+  }
+  if (lower.includes("hydrapple") || lower.includes("dipplin") || lower.includes("ogerpon")) {
+    return ["Grass"];
+  }
+  if (lower.includes("honchkrow") || lower.includes("murkrow") || lower.includes("zoroark")) {
+    return ["Darkness"];
+  }
+  if (lower.includes("lopunny") || lower.includes("buneary")) {
+    return ["Colorless"];
+  }
+  if (lower.includes("garchomp") || lower.includes("gible") || lower.includes("gabite")) {
+    return ["Fighting"];
+  }
+  if (deckEnergyTypes.size === 1) {
+    return [...deckEnergyTypes];
+  }
+  return ["Colorless"];
+}
+
+function inferHp(subtypes: string[]): string {
+  if (subtypes.includes("VMAX")) return "320";
+  if (subtypes.includes("VSTAR")) return "280";
+  if (subtypes.includes("V")) return "220";
+  if (subtypes.includes("ex") || subtypes.includes("EX")) return "330";
+  if (subtypes.includes("Stage 2")) return "150";
+  if (subtypes.includes("Stage 1")) return "90";
+  return "70";
+}
+
+function inferSubtypes(name: string, pokemonNames: Set<string>): string[] {
+  const subtypes: string[] = [];
+  if (/\bVMAX\b/i.test(name)) subtypes.push("VMAX");
+  else if (/\bVSTAR\b/i.test(name)) subtypes.push("VSTAR");
+  else if (/\bV\b/.test(name) && !/\bVMAX\b|\bVSTAR\b/i.test(name)) subtypes.push("V");
+  if (/\bex\b/i.test(name)) subtypes.push("ex");
+
+  const parentName = EVOLUTION_PARENT[normalizePokemonName(name).toLowerCase()];
+  if (parentName && pokemonNames.has(parentName)) {
+    const parentKey = normalizePokemonName(parentName).toLowerCase();
+    const grandparentName = EVOLUTION_PARENT[parentKey];
+    subtypes.push(grandparentName && pokemonNames.has(grandparentName) ? "Stage 2" : "Stage 1");
+    return subtypes;
+  }
+
+  if (subtypes.length === 0 || (!subtypes.includes("Stage 1") && !subtypes.includes("Stage 2"))) {
+    subtypes.unshift("Basic");
+  }
+  return subtypes;
+}
+
+function buildAttacks(card: StandardCardIndex, types: string[]): CardAttack[] {
+  const primaryType = types[0] ?? "Colorless";
+  return card.attacks.map((attack) => ({
+    name: attack.name,
+    cost: attack.text.includes("Discard") && attack.text.includes("Energy") ? [] : [primaryType],
+    convertedEnergyCost: 1,
+    damage: attack.damage,
+    text: attack.text,
+  }));
+}
+
+function buildAbilities(card: StandardCardIndex): CardAbility[] {
+  return card.abilities.map((ability) => ({
+    name: ability.name,
+    text: ability.text,
+    type: "Ability",
+  }));
+}
+
+function corpusCardToDefinition(
+  card: StandardCardIndex,
+  line: ParsedDeckLine,
+  pokemonNames: Set<string>,
+  deckEnergyTypes: Set<string>,
+): CardDefinition {
+  const subtypes = inferSubtypes(line.name, pokemonNames);
+  const parentName = EVOLUTION_PARENT[normalizePokemonName(line.name).toLowerCase()];
+  const types = inferPokemonTypes(line.name, deckEnergyTypes);
+  const setCode = normalizeSetCode(line.setCode ?? card.set) ?? card.set;
+
+  return {
+    apiId: card.apiId,
+    name: line.name,
+    supertype: "Pokémon",
+    subtypes,
+    hp: inferHp(subtypes),
+    types,
+    attacks: buildAttacks(card, types),
+    abilities: buildAbilities(card),
+    evolvesFrom:
+      parentName && pokemonNames.has(parentName) ? parentName : undefined,
+    regulationMark: card.regulationMark,
+    set: { id: setCode.toLowerCase(), name: setCode, ptcgoCode: setCode },
+    number: line.number ?? card.number,
+    images: { small: "", large: "" },
+  };
+}
+
+function stubTrainerDefinition(line: ParsedDeckLine): CardDefinition {
+  const setCode = normalizeSetCode(line.setCode ?? "TST") ?? "TST";
+  const apiId = `${setCode}-${line.number ?? line.name}`.toLowerCase().replace(/\s+/g, "-");
+  let subtypes = ["Item"];
+  if (SUPPORTER_NAMES.has(line.name) || line.name.includes("Determination")) {
+    subtypes = ["Supporter"];
+  } else if (STADIUM_NAMES.has(line.name)) {
+    subtypes = ["Stadium"];
+  } else if (/ace spec/i.test(line.name) || line.name === "Unfair Stamp" || line.name === "Night Stretcher") {
+    subtypes = ["Item", "ACE SPEC"];
+  }
+
+  return {
+    apiId,
+    name: line.name,
+    supertype: "Trainer",
+    subtypes,
+    set: { id: setCode.toLowerCase(), name: setCode, ptcgoCode: setCode },
+    number: line.number ?? "1",
+    images: { small: "", large: "" },
+  };
+}
+
+function stubEnergyDefinition(line: ParsedDeckLine): CardDefinition {
+  const setCode = normalizeSetCode(line.setCode ?? "MEE") ?? "MEE";
+  const types = inferEnergyTypes(line.name);
+  const apiId = `${setCode}-${line.number ?? line.name}`.toLowerCase().replace(/\s+/g, "-");
+
+  return {
+    apiId,
+    name: line.name,
+    supertype: "Energy",
+    subtypes: line.name.toLowerCase().includes("energy") ? ["Basic"] : ["Special"],
+    types,
+    set: { id: setCode.toLowerCase(), name: setCode, ptcgoCode: setCode },
+    number: line.number ?? "1",
+    images: { small: "", large: "" },
+  };
+}
+
+function lineToDefinition(
+  line: ParsedDeckLine,
+  pokemonNames: Set<string>,
+  deckEnergyTypes: Set<string>,
+): { definition?: CardDefinition; error?: string } {
+  if (line.section === "Energy") {
+    return { definition: stubEnergyDefinition(line) };
+  }
+  if (line.section === "Trainer") {
+    return { definition: stubTrainerDefinition(line) };
+  }
+
+  if (!line.setCode || !line.number) {
+    return { error: `${line.count} ${line.name} (no set/number)` };
+  }
+  const match = findCorpusCard(line.setCode, line.number, line.name);
+  if (!match) {
+    return { error: `${line.count} ${line.name} ${line.setCode} ${line.number}` };
+  }
+  return {
+    definition: corpusCardToDefinition(match, line, pokemonNames, deckEnergyTypes),
+  };
+}
+
+/**
+ * Build a 60-card deck synchronously from a Limitless list using the Standard corpus
+ * for Pokémon (real attack/ability text) and lightweight stubs for Trainer/Energy lines.
+ */
+export function buildPlaytestDeckFromCorpusText(name: string, text: string): BuiltDeck {
+  const parsed = parseLimitlessDeckList(text);
+  const pokemonNames = new Set(
+    parsed.lines.filter((line) => line.section === "Pokémon").map((line) => line.name),
+  );
+  const deckEnergyTypes = new Set(
+    parsed.lines
+      .filter((line) => line.section === "Energy")
+      .flatMap((line) => inferEnergyTypes(line.name)),
+  );
+
+  const definitions = new Map<string, CardDefinition>();
+  const cards: CardDefinition[] = [];
+  const resolveErrors: string[] = [...parsed.errors];
+
+  for (const line of parsed.lines) {
+    const { definition, error } = lineToDefinition(line, pokemonNames, deckEnergyTypes);
+    if (error) {
+      resolveErrors.push(error);
+      continue;
+    }
+    if (!definition) continue;
+    definitions.set(definition.apiId, definition);
+    for (let i = 0; i < line.count; i += 1) {
+      cards.push(definition);
+    }
+  }
+
+  const validation: DeckValidationResult = validateDeck(cards);
+
+  return {
+    id: `corpus-${name}`,
+    name,
+    text,
+    lines: parsed.lines,
+    cards,
+    definitions,
+    validation,
+    resolveErrors,
+  };
 }

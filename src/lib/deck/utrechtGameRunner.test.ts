@@ -3,7 +3,15 @@ import type { CardDefinition } from "../models/definition";
 import { createCardInstance } from "../models/instance";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
 import { emptyTurnFlags, getPlayer, type EngineState } from "../engine/types";
-import { runEngineAutoPlay } from "./utrechtGameRunner";
+import { getTournamentDeckById, UTRECHT_535_TOP16 } from "./tournamentPresets";
+import { buildPlaytestDeckFromCorpusText } from "./corpusDeckBuilder";
+import {
+  autoSetupEngineState,
+  beginMatchFromBuiltDecks,
+  runEngineAutoPlay,
+  runMatchFromBuiltDecks,
+  runTournamentPresetMatch,
+} from "./utrechtGameRunner";
 
 function mockBasic(
   name: string,
@@ -166,5 +174,65 @@ describe("utrechtGameRunner", () => {
     expect(result.stalled).toBe(true);
     expect(result.state.pendingAction?.type).toBe("DAMAGE_TWO_OPPONENT");
     expect(getPlayer(result.state, PlayerId.P1).active!.attachedEnergy).toHaveLength(2);
+  });
+
+  it("builds a 60-card corpus deck from a Utrecht list", () => {
+    const preset = UTRECHT_535_TOP16.decks[1];
+    const deck = buildPlaytestDeckFromCorpusText(preset.label, preset.text);
+    expect(deck.resolveErrors).toEqual([]);
+    expect(deck.cards).toHaveLength(60);
+    expect(deck.validation.valid).toBe(true);
+    expect(deck.cards.some((card) => card.name === "Dragapult ex")).toBe(true);
+    expect(deck.cards.some((card) => card.name === "Lillie's Determination")).toBe(true);
+  });
+
+  it("auto-setups a match from Utrecht Dragapult mirror decks", () => {
+    const preset = getTournamentDeckById("utrecht-2-hasan-kunukcu")!;
+    const deck = buildPlaytestDeckFromCorpusText(preset.label, preset.text);
+    let state = beginMatchFromBuiltDecks({
+      player1Name: "P1",
+      player2Name: "P2",
+      player1Deck: deck,
+      player2Deck: deck,
+      seed: 42,
+    });
+    state = autoSetupEngineState(state, { seed: 42 });
+    expect(state.phase).toBe(GamePhase.Active);
+    expect(getPlayer(state, PlayerId.P1).active).toBeTruthy();
+    expect(getPlayer(state, PlayerId.P2).active).toBeTruthy();
+    expect(getPlayer(state, PlayerId.P1).prizes).toHaveLength(6);
+    expect(getPlayer(state, PlayerId.P1).deck.length + getPlayer(state, PlayerId.P1).hand.length).toBeGreaterThan(0);
+  });
+
+  it("runs auto-play through setup for Dragapult vs Lopunny", async () => {
+    const dragapult = getTournamentDeckById("utrecht-2-hasan-kunukcu")!;
+    const lopunny = getTournamentDeckById("utrecht-1-miloslav-posledni")!;
+    const result = await runTournamentPresetMatch(dragapult, lopunny, {
+      seed: 7,
+      run: { maxTurns: 15, maxActions: 120 },
+    });
+    expect(result.resolveErrors).toEqual([]);
+    expect(result.setupComplete).toBe(true);
+    expect(result.actionCount).toBeGreaterThan(0);
+    expect(result.state.phase).toBe(GamePhase.Active);
+  });
+
+  it("runs a full mirror match from built corpus decks", () => {
+    const preset = getTournamentDeckById("utrecht-16-fabian-kern")!;
+    const deck = buildPlaytestDeckFromCorpusText(preset.label, preset.text);
+    const result = runMatchFromBuiltDecks(
+      {
+        player1Name: "P1",
+        player2Name: "P2",
+        player1Deck: deck,
+        player2Deck: deck,
+        seed: 99,
+      },
+      {},
+      { maxTurns: 20, maxActions: 160 },
+    );
+    expect(result.setupComplete).toBe(true);
+    expect(result.resolveErrors).toEqual([]);
+    expect(result.actionCount).toBeGreaterThan(0);
   });
 });
