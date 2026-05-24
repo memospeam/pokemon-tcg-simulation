@@ -18,6 +18,7 @@ const TRAINER_IMPLEMENTED_KINDS = new Set<ParsedEffect["kind"]>([
   "trainer_crispin",
   "trainer_hilda",
   "trainer_pokegear",
+  "trainer_search_supporter",
   "trainer_wallys_compassion",
   "trainer_energy_switch",
   "trainer_switch_active_bench",

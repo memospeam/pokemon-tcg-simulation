@@ -183,6 +183,7 @@ export type PendingAction =
         | "BASIC_PSYCHIC_BENCH"
         | "BASIC_ENERGY_HAND"
         | "SUPPORTER_HAND"
+        | "POKEGEAR_TOP7"
         | "POKEMON_NO_RULE_BOX"
         | "POFFIN"
         | "STAGE1_POKEMON_HAND"
