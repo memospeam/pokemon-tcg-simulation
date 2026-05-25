@@ -275,7 +275,7 @@ const STADIUM_PATTERNS: { test: RegExp; kind: ParsedEffect["kind"] }[] = [
     kind: "stadium_battle_cage",
   },
   {
-    test: /whenever any player puts a basic non-\[?d\]? pok[ée]mon onto their bench during their turn, place 2 damage counters on that pok[ée]mon/,
+    test: /whenever any player puts a basic non-(?:\[?d\]?|darkness) pok[ée]mon onto their bench during their turn, place 2 damage counters on that pok[ée]mon/,
     kind: "stadium_risky_ruins",
   },
   {
