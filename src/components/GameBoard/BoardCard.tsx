@@ -2,8 +2,11 @@ import type { CardDefinition } from "@/lib/models/definition";
 import type { CardInstance } from "@/lib/models/instance";
 import { getDefinition, remainingHp } from "@/lib/engine";
 import type { EngineState } from "@/lib/engine";
+import { cardImageSmall } from "@/lib/ui/cardImageUrl";
 
 type BoardCardSize = "hand" | "bench" | "active" | "mini";
+
+const cardImageUrl = cardImageSmall;
 
 interface BoardCardProps {
   state: EngineState;
@@ -41,7 +44,7 @@ export function BoardCard({
         .join(" ")}
       onClick={() => onSelect?.(card)}
     >
-      <img src={def.images.small} alt={def.name} className="board-card__image" loading="lazy" />
+      <img src={cardImageUrl(def)} alt={def.name} className="board-card__image" loading="lazy" />
       {showName && size !== "hand" && <span className="board-card__name">{def.name}</span>}
       {def.supertype === "Pokémon" && size !== "hand" && (
         <span className="board-card__hp">
@@ -55,7 +58,7 @@ export function BoardCard({
             return energyDef ? (
               <img
                 key={energy.instanceId}
-                src={energyDef.images.small}
+                src={cardImageUrl(energyDef)}
                 alt={energyDef.name}
                 className="board-card__energy-icon"
                 title={energyDef.name}
@@ -71,7 +74,7 @@ export function BoardCard({
 export function CardDefinitionBadge({ definition }: { definition: CardDefinition }) {
   return (
     <div className="board-card board-card--mini board-card--badge">
-      <img src={definition.images.small} alt={definition.name} className="board-card__image" />
+      <img src={cardImageUrl(definition)} alt={definition.name} className="board-card__image" />
       <span>{definition.name}</span>
     </div>
   );
