@@ -6,7 +6,7 @@ import { getAttackEffectSummary } from "@/lib/engine/effects";
 import { summarizeAbility } from "@/lib/engine/effects/abilities";
 import { parseAbilityText } from "@/lib/engine/effects/parseText";
 import { getTrainerCategory, getTrainerHint } from "@/lib/ui/trainerHints";
-import { cardImageSmall, cardImageLarge } from "@/lib/ui/cardImageUrl";
+import { useCardImageLarge } from "@/lib/ui/useCardImage";
 import { isBasicPokemon, isSupporter } from "@/lib/models/definition";
 import type { CardAction } from "./CardActionMenu";
 
@@ -46,6 +46,7 @@ export function CardPreviewPanel({
   onClose,
 }: CardPreviewPanelProps) {
   const { play, other } = groupActions(actions);
+  const imageSrc = useCardImageLarge(definition);
 
   return (
     <aside className="card-preview">
@@ -54,7 +55,7 @@ export function CardPreviewPanel({
       </button>
 
       <div className="card-preview__layout">
-        <img src={cardImageLarge(definition) || cardImageSmall(definition)} alt={definition.name} className="card-preview__image" />
+        <img src={imageSrc} alt={definition.name} className="card-preview__image" />
 
         <div className="card-preview__details">
           <span className="card-preview__type">

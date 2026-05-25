@@ -2,11 +2,23 @@ import type { CardDefinition } from "@/lib/models/definition";
 import type { CardInstance } from "@/lib/models/instance";
 import { getDefinition, remainingHp } from "@/lib/engine";
 import type { EngineState } from "@/lib/engine";
-import { cardImageSmall } from "@/lib/ui/cardImageUrl";
+import { useCardImage } from "@/lib/ui/useCardImage";
 
 type BoardCardSize = "hand" | "bench" | "active" | "mini";
 
-const cardImageUrl = cardImageSmall;
+/** Small helper so the hook is always called at the top level of a component. */
+function CardImage({
+  def,
+  className,
+  title,
+}: {
+  def: CardDefinition;
+  className: string;
+  title?: string;
+}) {
+  const src = useCardImage(def);
+  return <img src={src} alt={def.name} className={className} title={title} loading="lazy" />;
+}
 
 interface BoardCardProps {
   state: EngineState;
@@ -44,7 +56,7 @@ export function BoardCard({
         .join(" ")}
       onClick={() => onSelect?.(card)}
     >
-      <img src={cardImageUrl(def)} alt={def.name} className="board-card__image" loading="lazy" />
+      <CardImage def={def} className="board-card__image" />
       {showName && size !== "hand" && <span className="board-card__name">{def.name}</span>}
       {def.supertype === "Pokémon" && size !== "hand" && (
         <span className="board-card__hp">
@@ -56,10 +68,9 @@ export function BoardCard({
           {card.attachedEnergy.map((energy) => {
             const energyDef = getDefinition(state, energy.definitionId);
             return energyDef ? (
-              <img
+              <CardImage
                 key={energy.instanceId}
-                src={cardImageUrl(energyDef)}
-                alt={energyDef.name}
+                def={energyDef}
                 className="board-card__energy-icon"
                 title={energyDef.name}
               />
@@ -72,9 +83,10 @@ export function BoardCard({
 }
 
 export function CardDefinitionBadge({ definition }: { definition: CardDefinition }) {
+  const src = useCardImage(definition);
   return (
     <div className="board-card board-card--mini board-card--badge">
-      <img src={cardImageUrl(definition)} alt={definition.name} className="board-card__image" />
+      <img src={src} alt={definition.name} className="board-card__image" />
       <span>{definition.name}</span>
     </div>
   );
