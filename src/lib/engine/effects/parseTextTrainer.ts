@@ -60,6 +60,10 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_poffin", maxHp: 70, count: 2 }),
   },
   {
+    test: /put a pok[ée]mon or a basic energy card from your discard pile into your hand/,
+    build: () => ({ kind: "trainer_night_stretcher", count: 1 }),
+  },
+  {
     test: /put up to 3 pok[ée]mon from your discard pile into your hand/,
     build: () => ({ kind: "trainer_night_stretcher", count: 3 }),
   },
@@ -78,6 +82,10 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
   {
     test: /if your opponent has 3 or fewer prize cards remaining, they shuffle their hand into their deck and draw 4 cards/,
     build: () => ({ kind: "trainer_unfair_stamp" }),
+  },
+  {
+    test: /search your deck for up to 2 basic energy cards of different types.*put 1 of them into your hand.*attach the other to 1 of your pok[ée]mon/,
+    build: () => ({ kind: "trainer_crispin_sv" }),
   },
   {
     test: /search your deck for a basic energy card and attach it to 1 of your basic pok[ée]mon\. then, shuffle your deck.*you may discard a card.*draw 2 cards/,

@@ -76,13 +76,6 @@ export function buildHandActions(
       actions.push({ label: "Evolve (select target Pokémon next)", action: legal });
     }
 
-    if (
-      legal.type === "ATTACH_ENERGY" &&
-      legal.energyId === card.instanceId &&
-      legal.targetId
-    ) {
-      actions.push({ label: "Attach to selected Pokémon", action: legal });
-    }
   }
 
   if (definition.supertype === "Energy" && game) {
@@ -100,9 +93,8 @@ export function buildHandActions(
           : player.bench.find((entry) => entry.instanceId === legal.targetId);
       if (!target) continue;
       const targetDef = getDefinition(game, target.definitionId);
-      const slot = player.active?.instanceId === legal.targetId ? "Active" : "Bench";
       actions.push({
-        label: `Attach to ${targetDef?.name ?? "Pokémon"} (${slot})`,
+        label: targetDef?.name ?? "Pokémon",
         action: legal,
       });
     }
@@ -120,9 +112,6 @@ export function buildPokemonActions(
   const actions: CardAction[] = [];
 
   for (const legal of legalActions) {
-    if (legal.type === "ATTACH_ENERGY" && "targetId" in legal && legal.targetId === card.instanceId) {
-      actions.push({ label: "Attach selected Energy here", action: legal });
-    }
     if (legal.type === "EVOLVE" && "targetId" in legal && legal.targetId === card.instanceId) {
       actions.push({ label: "Evolve with selected card from hand", action: legal });
     }

@@ -3,10 +3,10 @@ import { buildDeckFromText } from "./builder";
 import { buildPlaytestDeckFromCorpusText } from "./corpusDeckBuilder";
 import type { TournamentDeckPreset } from "./tournamentPresets";
 import { canAffordAttack } from "../engine/energy";
-import { checkMulliganNeeded } from "../engine/rules";
+import { canRareCandyEvolveInto, checkMulliganNeeded } from "../engine/rules";
 import { beginGame, gameReducer, getLegalActions, startActiveGame } from "../engine/reducer";
 import { getDefinitionSafe } from "../engine/rules";
-import { isBasicPokemon, isSupporter } from "../models/definition";
+import { isBasicPokemon, isStage2, isSupporter } from "../models/definition";
 import { GamePhase, PlayerId } from "../models/enums";
 import { getDefinition, getOpponentId, getPlayer, type EngineState, type GameAction } from "../engine/types";
 
@@ -235,6 +235,24 @@ export function runEngineAutoPlay(
       }
     }
 
+    if (!state.pendingAction && !state.turnFlags.attacked) {
+      const basicAction = pickAutoPlayBasicAction(state);
+      if (basicAction) {
+        state = gameReducer(state, basicAction);
+        actionCount += 1;
+        continue;
+      }
+    }
+
+    if (!state.pendingAction && !state.turnFlags.attacked) {
+      const evolveAction = pickAutoEvolveAction(state);
+      if (evolveAction) {
+        state = gameReducer(state, evolveAction);
+        actionCount += 1;
+        continue;
+      }
+    }
+
     if (
       !state.turnFlags.energyAttached &&
       player.active &&
@@ -307,7 +325,7 @@ export function runEngineAutoPlay(
 export { checkMulliganNeeded };
 
 /** Resolve simple optional/target pending actions so corpus playtests can finish. */
-function drainAutoPending(state: EngineState, maxSteps = 12): { state: EngineState; steps: number } {
+export function drainAutoPending(state: EngineState, maxSteps = 12): { state: EngineState; steps: number } {
   let next = state;
   let steps = 0;
   while (
@@ -324,7 +342,7 @@ function drainAutoPending(state: EngineState, maxSteps = 12): { state: EngineSta
   return { state: next, steps };
 }
 
-function isPlayStalled(state: EngineState): boolean {
+export function isPlayStalled(state: EngineState): boolean {
   return (
     state.pendingAction !== null &&
     state.phase === GamePhase.Active &&
@@ -332,7 +350,58 @@ function isPlayStalled(state: EngineState): boolean {
   );
 }
 
-function pickAutoTrainerAction(state: EngineState): Extract<GameAction, { type: "PLAY_TRAINER" }> | null {
+export function pickAutoPlayBasicAction(
+  state: EngineState,
+): Extract<GameAction, { type: "PLAY_BASIC_TO_BENCH" }> | null {
+  const playerId = state.currentPlayerId;
+  const player = getPlayer(state, playerId);
+  if (player.bench.length >= 5) return null;
+
+  const legal = getLegalActions(state).filter(
+    (action): action is Extract<GameAction, { type: "PLAY_BASIC_TO_BENCH" }> =>
+      action.type === "PLAY_BASIC_TO_BENCH",
+  );
+  if (legal.length === 0) return null;
+
+  // Prefer basics that have a higher-stage evolution in hand or deck so we set up the attacker first.
+  const hasHigherEvolution = (instanceId: string): boolean => {
+    const card = player.hand.find((c) => c.instanceId === instanceId);
+    if (!card) return false;
+    const def = getDefinition(state, card.definitionId);
+    if (!def) return false;
+    const name = def.name.toLowerCase();
+    const allCards = [...player.deck, ...player.hand];
+    return allCards.some((c) => {
+      const d = getDefinition(state, c.definitionId);
+      return d?.evolvesFrom?.toLowerCase() === name;
+    });
+  };
+
+  const preferred = legal.find((action) => hasHigherEvolution(action.instanceId));
+  return preferred ?? legal[0] ?? null;
+}
+
+export function pickAutoEvolveAction(state: EngineState): Extract<GameAction, { type: "EVOLVE" }> | null {
+  const playerId = state.currentPlayerId;
+  const player = getPlayer(state, playerId);
+  const legal = getLegalActions(state).filter(
+    (action): action is Extract<GameAction, { type: "EVOLVE" }> => action.type === "EVOLVE",
+  );
+  if (legal.length === 0) return null;
+
+  const scored = legal.map((action) => {
+    const card = player.hand.find((entry) => entry.instanceId === action.evolutionId);
+    const def = card ? getDefinition(state, card.definitionId) : undefined;
+    if (!def) return { action, score: 0 };
+    const stage = isStage2(def) ? 20 : 10;
+    const isActive = player.active?.instanceId === action.targetId;
+    return { action, score: stage + (isActive ? 1 : 0) };
+  }).sort((a, b) => b.score - a.score);
+
+  return scored[0]?.action ?? null;
+}
+
+export function pickAutoTrainerAction(state: EngineState): Extract<GameAction, { type: "PLAY_TRAINER" }> | null {
   const playerId = state.currentPlayerId;
   const player = getPlayer(state, playerId);
   const opponent = getPlayer(state, getOpponentId(playerId));
@@ -397,7 +466,7 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
         return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
       }
       const bench = player.bench[0];
-      if (!bench) return null;
+      if (!bench) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
       return gameReducer(state, {
         type: "SWITCH_WITH_BENCH",
         playerId,
@@ -405,8 +474,7 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
       });
     }
     case "DRAW_UNTIL_HAND":
-      if (!pending.optional) return null;
-      return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      return gameReducer(state, { type: "CONFIRM_DRAW_UNTIL_HAND", playerId });
     case "SEARCH_DECK":
       if (pending.filter === "MEGA_EVOLUTION_EX_HAND" || pending.filter === "SALVATORE_EVOLUTION") {
         if (pending.options.length > 0) {
@@ -432,7 +500,7 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
     case "BOSS_ORDERS": {
       const opponent = getPlayer(state, getOpponentId(playerId));
       const bench = opponent.bench[0];
-      if (!bench) return null;
+      if (!bench || !opponent.active) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
       return gameReducer(state, {
         type: "SWITCH_OPPONENT_ACTIVE",
         playerId,
@@ -453,15 +521,23 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
     }
     case "RARE_CANDY": {
       const player = getPlayer(state, playerId);
-      const basic =
-        player.active && isBasicPokemon(getDefinitionSafe(state, player.active.definitionId))
-          ? player.active
-          : player.bench.find((entry) => isBasicPokemon(getDefinitionSafe(state, entry.definitionId)));
-      if (!basic) return null;
+      const allInPlay = [
+        ...(player.active ? [player.active] : []),
+        ...player.bench,
+      ];
+      const validBasic = allInPlay.find((mon) => {
+        const monDef = getDefinitionSafe(state, mon.definitionId);
+        if (!isBasicPokemon(monDef) || mon.enteredPlayTurn === state.turnNumber) return false;
+        return player.hand.some((card) => {
+          const cardDef = getDefinitionSafe(state, card.definitionId);
+          return isStage2(cardDef) && canRareCandyEvolveInto(state, monDef, cardDef);
+        });
+      });
+      if (!validBasic) return null;
       return gameReducer(state, {
         type: "SELECT_RARE_CANDY_BASIC",
         playerId,
-        targetId: basic.instanceId,
+        targetId: validBasic.instanceId,
       });
     }
     case "CRISPIN_ATTACH": {
@@ -584,6 +660,217 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
         playerId,
         targetId: candidates[0]!.instanceId,
       });
+    }
+    case "IONO_HAND_BOTTOM": {
+      const player = getPlayer(state, playerId);
+      const card = player.hand[0];
+      if (!card) return null;
+      return gameReducer(state, { type: "IONO_SELECT_HAND", playerId, instanceId: card.instanceId });
+    }
+    case "MOVE_ENERGY_TO_BENCH": {
+      const player = getPlayer(state, playerId);
+      const bench = player.bench[0];
+      if (!bench) return null;
+      return gameReducer(state, { type: "MOVE_ENERGY_TO_BENCH", playerId, benchInstanceId: bench.instanceId });
+    }
+    case "SEARCH_EVOLUTION": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "PICK_DECK_CARD", playerId, instanceId: pending.options[0]! });
+    }
+    case "SWITCH_TYPED_BENCH": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "SWITCH_WITH_BENCH", playerId, benchInstanceId: pending.options[0]! });
+    }
+    case "ENERGY_SWITCH": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "SELECT_ENERGY_SWITCH_POKEMON", playerId, pokemonId: pending.options[0]! });
+    }
+    case "ENHANCED_HAMMER": {
+      if (pending.step === "POKEMON") {
+        const opponent = getPlayer(state, getOpponentId(playerId));
+        const mon = [
+          ...(opponent.active ? [opponent.active] : []),
+          ...opponent.bench,
+        ].find((p) => p.attachedEnergy.length > 0);
+        if (!mon) return null;
+        return gameReducer(state, { type: "SELECT_ENHANCED_HAMMER_POKEMON", playerId, pokemonId: mon.instanceId });
+      }
+      if (pending.options.length === 0) return null;
+      const opt = pending.options[0]!;
+      return gameReducer(state, { type: "DISCARD_OPPONENT_ENERGY", playerId, pokemonId: opt.pokemonId, energyId: opt.energyId });
+    }
+    case "WALLYS_COMPASSION": {
+      if (pending.options.length === 0) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      return gameReducer(state, { type: "SELECT_WALLYS_POKEMON", playerId, pokemonId: pending.options[0]! });
+    }
+    case "HILDA": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "PICK_DECK_CARD", playerId, instanceId: pending.options[0]! });
+    }
+    case "DAWN":
+    case "COLRESS":
+    case "RECON_DIRECTIVE": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "PICK_DECK_CARD", playerId, instanceId: pending.options[0]! });
+    }
+    case "GIOVANNI": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "SELECT_GIOVANNI_BENCH", playerId, benchInstanceId: pending.options[0]! });
+    }
+    case "PRIME_CATCHER": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "SELECT_PRIME_CATCHER_BENCH", playerId, benchInstanceId: pending.options[0]! });
+    }
+    case "N_PP_UP": {
+      if (pending.options.length === 0) return null;
+      if (pending.step === "ENERGY") {
+        return gameReducer(state, { type: "SELECT_N_PP_UP_ENERGY", playerId, instanceId: pending.options[0]! });
+      }
+      return gameReducer(state, { type: "SELECT_N_PP_UP_TARGET", playerId, pokemonId: pending.options[0]! });
+    }
+    case "TOOL_SCRAPPER": {
+      if (pending.options.length === 0) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      return gameReducer(state, { type: "SELECT_TOOL_SCRAPPER", playerId, toolInstanceId: pending.options[0]! });
+    }
+    case "ROTO_STICK": {
+      const remaining = pending.options.filter((id) => !pending.pickedIds.includes(id));
+      if (remaining.length === 0) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      return gameReducer(state, { type: "SELECT_ROTO_STICK", playerId, instanceId: remaining[0]! });
+    }
+    case "MIRACLE_HEADSET": {
+      if (pending.pickedIds.length >= pending.maxPicks) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      const remaining = pending.options.filter((id) => !pending.pickedIds.includes(id));
+      if (remaining.length === 0) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      return gameReducer(state, { type: "SELECT_MIRACLE_HEADSET", playerId, instanceId: remaining[0]! });
+    }
+    case "BUG_CATCHING_SET": {
+      if (pending.pickedIds.length >= pending.maxPicks) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      const remaining = pending.options.filter((id) => !pending.pickedIds.includes(id));
+      if (remaining.length === 0) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      return gameReducer(state, { type: "SELECT_BUG_CATCHING", playerId, instanceId: remaining[0]! });
+    }
+    case "SECRET_BOX": {
+      if (pending.options.length === 0) return null;
+      if (pending.step === "DISCARD") {
+        return gameReducer(state, { type: "SELECT_SECRET_BOX_DISCARD", playerId, instanceId: pending.options[0]! });
+      }
+      return gameReducer(state, { type: "SELECT_SECRET_BOX_SEARCH", playerId, instanceId: pending.options[0]! });
+    }
+    case "CIPHERMANIAC": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "SELECT_CIPHERMANIAC_CARD", playerId, instanceId: pending.options[0]! });
+    }
+    case "FIGHTING_GONG": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "SELECT_FIGHTING_GONG", playerId, instanceId: pending.options[0]! });
+    }
+    case "LANAS_AID": {
+      if (pending.pickedIds.length >= 3) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      const remaining = pending.options.filter((id) => !pending.pickedIds.includes(id));
+      if (remaining.length === 0) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      return gameReducer(state, { type: "PICK_DISCARD_POKEMON", playerId, instanceId: remaining[0]! });
+    }
+    case "BROCKS_SCOUTING": {
+      if (pending.step === "MODE") {
+        return gameReducer(state, { type: "SELECT_BROCK_MODE", playerId, mode: "basic" });
+      }
+      if (pending.options.length === 0) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      return gameReducer(state, { type: "PICK_DECK_CARD", playerId, instanceId: pending.options[0]! });
+    }
+    case "ROSAS_ENCOURAGEMENT": {
+      if (pending.step === "TARGET") {
+        if (pending.options.length === 0) return null;
+        return gameReducer(state, { type: "SELECT_ROSA_TARGET", playerId, pokemonId: pending.options[0]! });
+      }
+      const picked = pending.pickedEnergyIds ?? [];
+      if (picked.length >= 2) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      const remaining = pending.options.filter((id) => !picked.includes(id));
+      if (remaining.length === 0) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      return gameReducer(state, { type: "SELECT_ROSA_ENERGY", playerId, instanceId: remaining[0]! });
+    }
+    case "SURFER": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "SELECT_SURFER_BENCH", playerId, benchInstanceId: pending.options[0]! });
+    }
+    case "GRAND_TREE": {
+      if (pending.step === "BASIC") {
+        if (pending.options.length === 0) return null;
+        return gameReducer(state, { type: "SELECT_GRAND_TREE_BASIC", playerId, targetId: pending.options[0]! });
+      }
+      if (pending.step === "STAGE1") {
+        if (pending.options.length === 0) return gameReducer(state, { type: "SKIP_GRAND_TREE_STAGE2", playerId });
+        return gameReducer(state, { type: "SELECT_GRAND_TREE_STAGE1", playerId, instanceId: pending.options[0]! });
+      }
+      if (pending.options.length === 0) return gameReducer(state, { type: "SKIP_GRAND_TREE_STAGE2", playerId });
+      return gameReducer(state, { type: "SELECT_GRAND_TREE_STAGE2", playerId, instanceId: pending.options[0]! });
+    }
+    case "CRUSHING_HAMMER": {
+      if (pending.options.length === 0) return null;
+      const cOpt = pending.options[0]!;
+      return gameReducer(state, { type: "DISCARD_OPPONENT_ENERGY", playerId, pokemonId: cOpt.pokemonId, energyId: cOpt.energyId });
+    }
+    case "DISTRIBUTE_BENCH_DAMAGE": {
+      const opponent = getPlayer(state, getOpponentId(playerId));
+      const bench = opponent.bench[0];
+      if (!bench) return null;
+      return gameReducer(state, { type: "ASSIGN_BENCH_DAMAGE", playerId, targetId: bench.instanceId });
+    }
+    case "MOVE_DAMAGE": {
+      if (pending.step === "SOURCE") {
+        const owner = getPlayer(state, playerId);
+        const mon = [...(owner.active ? [owner.active] : []), ...owner.bench].find(
+          (p) => p.damageCounters > 0,
+        );
+        if (!mon) return null;
+        return gameReducer(state, { type: "MOVE_DAMAGE_SOURCE", playerId, sourceId: mon.instanceId });
+      }
+      const targetPlayerId = pending.targetSide === "opponent" ? getOpponentId(playerId) : playerId;
+      const targetPlayer = getPlayer(state, targetPlayerId);
+      const targetMon = targetPlayer.active ?? targetPlayer.bench[0];
+      if (!targetMon) return null;
+      return gameReducer(state, { type: "MOVE_DAMAGE_TARGET", playerId, targetId: targetMon.instanceId });
+    }
+    case "REDISTRIBUTE_OPPONENT_COUNTERS": {
+      if (pending.step === "SOURCE") {
+        const opponent = getPlayer(state, getOpponentId(playerId));
+        const mon = [...(opponent.active ? [opponent.active] : []), ...opponent.bench].find(
+          (p) => p.damageCounters > 0,
+        );
+        if (!mon) {
+          if (pending.optional) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+          return null;
+        }
+        return gameReducer(state, { type: "SELECT_REDISTRIBUTE_SOURCE", playerId, sourceId: mon.instanceId });
+      }
+      const opponent = getPlayer(state, getOpponentId(playerId));
+      const targetMon = [...(opponent.active ? [opponent.active] : []), ...opponent.bench].find(
+        (p) => p.instanceId !== pending.sourceId,
+      );
+      if (!targetMon) return null;
+      return gameReducer(state, { type: "SELECT_REDISTRIBUTE_TARGET", playerId, targetId: targetMon.instanceId });
+    }
+    case "COPY_BENCH_ATTACK": {
+      if (pending.options.length === 0) return null;
+      const copyOpt = pending.options[0]!;
+      return gameReducer(state, { type: "CHOOSE_BENCH_ATTACK", playerId, benchPokemonId: copyOpt.benchPokemonId, attackName: copyOpt.attackName });
+    }
+    case "ABILITY_DISCARD_HAND": {
+      const player = getPlayer(state, playerId);
+      const card = player.hand[0];
+      if (!card) return null;
+      return gameReducer(state, { type: "SELECT_HAND_DISCARD", playerId, instanceId: card.instanceId });
+    }
+    case "ABILITY_DISCARD_HAND_ENERGY": {
+      const player = getPlayer(state, playerId);
+      const energy = player.hand.find(
+        (card) => getDefinition(state, card.definitionId)?.supertype === "Energy",
+      );
+      if (!energy) return null;
+      return gameReducer(state, { type: "SELECT_HAND_DISCARD", playerId, instanceId: energy.instanceId });
+    }
+    case "CHOOSE_BLOCKED_ATTACK": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "CHOOSE_BLOCKED_ATTACK", playerId, attackName: pending.options[0]! });
     }
     default:
       return null;

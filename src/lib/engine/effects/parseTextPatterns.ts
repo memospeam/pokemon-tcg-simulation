@@ -263,7 +263,7 @@ export function matchBulkClause(clause: string): ParsedEffect[] | null {
   }
 
   match = clause.match(
-    /^this attack does (\d+) damage to 1 of your opponent's pok[ée]mon(?:\. \(don't apply weakness and resistance\))?\.?$/i,
+    /^this attack does (\d+) damage to 1 of your opponent's pok[ée]mon(?:\. \(don't apply weakness and resistance(?: for benched pok[ée]mon)?\.?\))?.?$/i,
   );
   if (match) {
     return [

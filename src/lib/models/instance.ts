@@ -26,6 +26,8 @@ export interface CardInstance {
   blockedAttackNextOpponentTurn?: { name: string; phase: "pending" | "active" };
   /** No Weakness during the opponent's next turn. */
   noWeaknessNextOpponentTurn?: "pending" | "active";
+  /** Enhanced poison counter count applied by attack effect (overrides default 1). */
+  poisonCounters?: number;
 }
 
 export function createInstanceId(): string {

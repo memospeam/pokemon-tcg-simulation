@@ -89,13 +89,16 @@ export function runPokemonCheckup(state: EngineState): void {
     }
     for (const pokemon of allPokemonInPlay(player)) {
       if (!pokemon.statusConditions.includes("Poisoned")) continue;
-      let counters = 1;
-      const def = getDefinitionSafe(state, pokemon.definitionId);
-      for (const ability of def.abilities ?? []) {
-        for (const effect of parseAbilityText(ability).effects) {
-          if (effect.kind === "poison_enhanced_checkup") counters = effect.counters;
+      let counters = pokemon.poisonCounters ?? 1;
+      if (counters === 1) {
+        const def = getDefinitionSafe(state, pokemon.definitionId);
+        for (const ability of def.abilities ?? []) {
+          for (const effect of parseAbilityText(ability).effects) {
+            if (effect.kind === "poison_enhanced_checkup") counters = effect.counters;
+          }
         }
       }
+      const def = getDefinitionSafe(state, pokemon.definitionId);
       pokemon.damageCounters += countersToDamage(counters);
       logMessage(state, `Checkup: ${counters} damage counter(s) on Poisoned ${def.name}.`);
     }

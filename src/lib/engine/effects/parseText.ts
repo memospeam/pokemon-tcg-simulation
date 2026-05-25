@@ -857,6 +857,7 @@ export function parseEffectClauses(text: string): ParsedEffect[] {
 function coalesceSplitEffects(effects: ParsedEffect[], normalized: string): ParsedEffect[] {
   const coinCountMatch = normalized.match(/flip (\d+) coins/);
   const coinCount = coinCountMatch ? parseInt(coinCountMatch[1]!, 10) : null;
+  const noWeaknessRes = /don't apply weakness and resistance|doesn't apply weakness and resistance/.test(normalized);
   const result: ParsedEffect[] = [];
 
   for (const effect of effects) {
@@ -868,6 +869,10 @@ function coalesceSplitEffects(effects: ParsedEffect[], normalized: string): Pars
     }
     if (effect.kind === "coin_multi_damage" && coinCount !== null) {
       result.push({ ...effect, coinCount });
+      continue;
+    }
+    if (effect.kind === "damage_choose_opponent" && noWeaknessRes && effect.applyWeaknessRes) {
+      result.push({ ...effect, applyWeaknessRes: false });
       continue;
     }
     result.push(effect);

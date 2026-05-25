@@ -314,30 +314,45 @@ Energy : 1
     expect(getPlayer(state, PlayerId.P1).hand.some((card) => card.definitionId === froakie.apiId)).toBe(true);
   });
 
-  it("plays Crispin and attaches Basic Energy from deck", () => {
-    const crispin = findDefinition(greninjaDeck, "Crispin");
-    const water = findDefinition(greninjaDeck, "Water Energy");
-    let state = criTrainerScenarioState(greninjaDeck, {
+  it("plays Crispin (CRI) — puts 1 energy to hand; attaches 2nd when 2 types available", () => {
+    // Build a minimal deck that has both Water Energy and Darkness Energy
+    const crispinDeck = buildPlaytestDeckFromCorpusText(
+      "Crispin 2-type test",
+      `Pokémon : 1
+1 Froakie CRI 20
+
+Trainer : 1
+1 Crispin SCR 133
+
+Energy : 2
+1 Water Energy MEE 3
+1 Darkness Energy MEE 5`,
+    );
+    const crispin = findDefinition(crispinDeck, "Crispin");
+    const water = findDefinition(crispinDeck, "Water Energy");
+    const darkness = findDefinition(crispinDeck, "Darkness Energy");
+
+    let state = criTrainerScenarioState(crispinDeck, {
       p1HandTrainer: crispin,
       activeName: "Froakie",
     });
-    getPlayer(state, PlayerId.P1).deck.unshift(
-      createCardInstance(water.apiId, PlayerId.P1, Zone.Deck),
-    );
-    const crispinCard = getPlayer(state, PlayerId.P1).hand[0]!;
+    // Place both energy types at the front of deck so Crispin can find them
+    const deck = getPlayer(state, PlayerId.P1).deck;
+    deck.unshift(createCardInstance(darkness.apiId, PlayerId.P1, Zone.Deck));
+    deck.unshift(createCardInstance(water.apiId, PlayerId.P1, Zone.Deck));
 
+    const crispinCard = getPlayer(state, PlayerId.P1).hand[0]!;
     state = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: crispinCard.instanceId });
-    if (state.pendingAction?.type === "CRISPIN_ATTACH") {
-      state = gameReducer(state, {
-        type: "SELECT_CRISPIN_TARGET",
-        playerId: PlayerId.P1,
-        pokemonId: getPlayer(state, PlayerId.P1).active!.instanceId,
-      });
-    }
-    if (state.pendingAction?.type === "CRISPIN_DISCARD") {
-      state = gameReducer(state, { type: "SKIP_OPTIONAL", playerId: PlayerId.P1 });
-    }
-    expect(getPlayer(state, PlayerId.P1).active!.attachedEnergy).toHaveLength(1);
+
+    const p1 = getPlayer(state, PlayerId.P1);
+    // One energy must be in hand
+    const energyInHand = p1.hand.filter(
+      (card) => card.definitionId === water.apiId || card.definitionId === darkness.apiId,
+    );
+    expect(energyInHand).toHaveLength(1);
+    // One energy must be attached to Active
+    expect(p1.active!.attachedEnergy).toHaveLength(1);
+    expect(state.pendingAction).toBeNull();
   });
 
   it("plays Rare Candy and evolves a Basic Pokémon", () => {

@@ -3,10 +3,11 @@ import { DeckBuilder } from "./components/DeckBuilder/DeckBuilder";
 import { GameBoard } from "./components/GameBoard/GameBoard";
 import { Lobby } from "./components/Lobby/Lobby";
 import { PackOpener } from "./components/PackOpener";
+import { SimPlayback } from "./components/SimPlayback/SimPlayback";
 import { useDeckStore } from "@/stores/deckStore";
 import { useGameStore } from "@/stores/gameStore";
 
-type Tab = "lobby" | "play" | "builder" | "pack";
+type Tab = "lobby" | "play" | "builder" | "pack" | "sim";
 
 export function App() {
   const [tab, setTab] = useState<Tab>("lobby");
@@ -73,6 +74,13 @@ export function App() {
         >
           Open Pack
         </button>
+        <button
+          type="button"
+          className={tab === "sim" ? "tabs__button tabs__button--active" : "tabs__button"}
+          onClick={() => setTab("sim")}
+        >
+          Simulate
+        </button>
       </nav>
 
       <main>
@@ -80,6 +88,7 @@ export function App() {
         {tab === "play" && <GameBoard />}
         {tab === "builder" && <DeckBuilder />}
         {tab === "pack" && <PackOpener />}
+        {tab === "sim" && <SimPlayback />}
       </main>
     </div>
   );

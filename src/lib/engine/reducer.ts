@@ -1,4 +1,4 @@
-import { isBasicPokemon, isAceSpec, isItemTrainer, isProtonSupporter, isStadium, isSupporter, isTeamRocketPokemon, isTool } from "../models/definition";
+import { isBasicPokemon, isAceSpec, isCarmineCard, isItemTrainer, isProtonSupporter, isStadium, isSupporter, isTeamRocketPokemon, isTool } from "../models/definition";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
 import type { CardInstance } from "../models/instance";
 import {
@@ -341,6 +341,7 @@ function startGameIfReady(state: EngineState): EngineState {
     withPrizes.currentPlayerId = withPrizes.firstPlayerId;
     withPrizes.turnFlags = emptyTurnFlags();
     log(withPrizes, "Game started!");
+    drawCards(withPrizes, withPrizes.firstPlayerId, 1);
     return withPrizes;
   }
   return next;
@@ -449,7 +450,7 @@ function handlePlayTrainer(state: EngineState, playerId: PlayerId, instanceId: s
   if (isSupporter(def) && state.turnFlags.supporterPlayed) {
     return state;
   }
-  if (isSupporter(def) && !canPlaySupporterThisTurn(state, playerId) && !isProtonSupporter(def)) {
+  if (isSupporter(def) && !canPlaySupporterThisTurn(state, playerId) && !isProtonSupporter(def) && !isCarmineCard(def)) {
     log(state, "The player who goes first cannot play Supporter cards on their first turn.");
     return state;
   }
@@ -1376,13 +1377,16 @@ function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState
     return state;
   }
 
-  if (pending.type === "SWITCH_WITH_BENCH" && pending.optional) {
-    state.pendingAction = null;
-    log(state, "Optional switch skipped.");
-    if (state.turnFlags.attacked) {
-      return finishAttackAndEffects(state, playerId);
+  if (pending.type === "SWITCH_WITH_BENCH") {
+    const switchPlayer = getPlayer(state, playerId);
+    if (pending.optional || switchPlayer.bench.length === 0) {
+      state.pendingAction = null;
+      log(state, pending.optional ? "Optional switch skipped." : "Switch skipped (no Bench Pokémon).");
+      if (state.turnFlags.attacked) {
+        return finishAttackAndEffects(state, playerId);
+      }
+      return state;
     }
-    return state;
   }
 
   if (pending.type === "REDISTRIBUTE_OPPONENT_COUNTERS" && pending.optional) {
@@ -1414,6 +1418,12 @@ function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState
     if (state.turnFlags.attacked) {
       return finishAttackAndEffects(state, playerId);
     }
+    return state;
+  }
+
+  if (pending.type === "BOSS_ORDERS") {
+    state.pendingAction = null;
+    log(state, "Boss's Orders: no Bench Pokémon to switch — skipped.");
     return state;
   }
 
@@ -1515,7 +1525,7 @@ function handleSelectWallysPokemon(state: EngineState, playerId: PlayerId, pokem
 }
 
 function canPlayTrainerCard(state: EngineState, playerId: PlayerId, def: ReturnType<typeof getDefinitionSafe>): boolean {
-  if (isSupporter(def) && !canPlaySupporterThisTurn(state, playerId) && !isProtonSupporter(def)) {
+  if (isSupporter(def) && !canPlaySupporterThisTurn(state, playerId) && !isProtonSupporter(def) && !isCarmineCard(def)) {
     return false;
   }
   if (!canPlayTrainerCardFromHand(state, playerId, def)) {
@@ -1713,9 +1723,7 @@ function handleEndTurn(state: EngineState): EngineState {
   log(state, `${getPlayer(state, previous).name} ended their turn.`);
 
   const drawingPlayer = getPlayer(state, state.currentPlayerId);
-  if (!(state.turnNumber === 2 && state.currentPlayerId === state.firstPlayerId)) {
-    drawCards(state, state.currentPlayerId, 1);
-  }
+  drawCards(state, state.currentPlayerId, 1);
 
   if (drawingPlayer.active === null && drawingPlayer.bench.length === 0) {
     state.winnerId = getOpponentId(state.currentPlayerId);

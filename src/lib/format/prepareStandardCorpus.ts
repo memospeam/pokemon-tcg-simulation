@@ -63,6 +63,7 @@ export interface StandardCardIndex {
   name: string;
   set: string;
   number: string;
+  hp?: string;
   regulationMark?: string;
   supertype: CardDefinition["supertype"];
   subtypes: string[];
@@ -150,6 +151,7 @@ function buildCorpus(pokemonCards: CardDefinition[], trainerCards: CardDefinitio
       name: card.name,
       set: card.set.ptcgoCode ?? card.set.id,
       number: card.number,
+      hp: card.hp,
       regulationMark: card.regulationMark,
       supertype: card.supertype,
       subtypes: card.subtypes,

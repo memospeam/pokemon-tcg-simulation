@@ -255,7 +255,7 @@ function corpusCardToDefinition(
     name: line.name,
     supertype: "Pokémon",
     subtypes,
-    hp: inferHp(line.name, subtypes),
+    hp: card.hp ?? inferHp(line.name, subtypes),
     types,
     attacks: buildAttacks(card, types),
     abilities: buildAbilities(card),

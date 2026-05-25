@@ -791,6 +791,36 @@ function executeSingleEffect(
       return "complete";
     }
 
+    case "poison_enhanced_checkup": {
+      const opponent = opponentPlayer(state, ctx);
+      if (opponent.active?.statusConditions.includes("Poisoned")) {
+        opponent.active.poisonCounters = effect.counters;
+        logMessage(state, `Poisoned — places ${effect.counters} damage counters during Checkup.`);
+      }
+      return "complete";
+    }
+
+    case "discard_special_energy_opponent_all": {
+      const opponent = opponentPlayer(state, ctx);
+      let discarded = 0;
+      for (const pokemon of allPokemonInPlay(opponent)) {
+        const toDiscard = pokemon.attachedEnergy.filter((e) => {
+          const def = getDefinitionSafe(state, e.definitionId);
+          return def.supertype === "Energy" && !def.subtypes.includes("Basic");
+        });
+        for (const e of toDiscard) {
+          pokemon.attachedEnergy.splice(pokemon.attachedEnergy.indexOf(e), 1);
+          e.zone = Zone.Discard;
+          opponent.discard.push(e);
+          discarded++;
+        }
+      }
+      if (discarded > 0) {
+        logMessage(state, `Discarded ${discarded} Special Energy card(s) from opponent's Pokémon.`);
+      }
+      return "complete";
+    }
+
     case "retaliate_damage_counters": {
       logMessage(state, `Retaliate with ${effect.counters} damage counters when damaged (tracked on attack).`);
       return "complete";
@@ -1196,7 +1226,6 @@ function executeSingleEffect(
     case "reorder_opponent_deck_top":
     case "damage_bonus_if_opponent_stage":
     case "damage_bonus_if_opponent_damaged":
-    case "poison_enhanced_checkup":
     case "damage_bonus_if_self_undamaged":
     case "damage_per_trainer_in_revealed":
     case "attack_fails_if_bench_at_most":
@@ -1208,7 +1237,6 @@ function executeSingleEffect(
     case "damage_per_opponent_hand_size":
     case "damage_bonus_if_stadium":
     case "discard_hand_energy_for_damage":
-    case "discard_special_energy_opponent_all":
     case "blocked_if_go_second_first_turn_only":
     case "cant_retreat_self_next_turn":
     case "coin_multi_discard_energy":
@@ -1325,6 +1353,11 @@ function executeSingleEffect(
     case "return_self_to_hand": {
       returnPokemonToHand(state, ctx.playerId, ctx.sourcePokemon);
       logMessage(state, "Returned this Pokémon to hand.");
+      // If the Active spot is now empty, promote a bench Pokémon.
+      const retPlayer = getPlayer(state, ctx.playerId);
+      if (!retPlayer.active && retPlayer.bench.length > 0) {
+        state.pendingAction = { type: "PROMOTE", playerId: ctx.playerId };
+      }
       return "complete";
     }
 

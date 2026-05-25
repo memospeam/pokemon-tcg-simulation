@@ -94,9 +94,8 @@ export function canPlayTrainerBatch10Kind(
       }
       return { ok: true };
     case "trainer_carmine":
-      if (state.turnNumber !== 1 || state.currentPlayerId !== state.firstPlayerId) {
-        return { ok: false, reason: "Carmine: can only be used on your first turn when going first." };
-      }
+      return { ok: true };
+    case "trainer_crispin_sv":
       return { ok: true };
     case "trainer_janine_secret_art": {
       const darkness = allPokemonInPlay(player).filter((pokemon) =>
@@ -226,6 +225,10 @@ export function applyTrainerBatch10Kind(state: EngineState, playerId: PlayerId, 
       player.hand = [];
       drawCards(state, playerId, 5);
       logMessage(state, `${player.name} discarded their hand and drew 5 cards (Carmine).`);
+      return;
+    }
+    case "trainer_crispin_sv": {
+      applyCrispinSV(state, playerId);
       return;
     }
     case "trainer_janine_secret_art": {
@@ -651,4 +654,67 @@ export function continuePerrinSearchPick(state: EngineState, playerId: PlayerId,
     return;
   }
   finishDeckSearchShuffle(state, playerId, "Perrin");
+}
+
+function applyCrispinSV(state: EngineState, playerId: PlayerId): void {
+  const player = getPlayer(state, playerId);
+
+  // Collect basic energy cards from deck grouped by type
+  const energyByType = new Map<string, CardInstance>();
+  for (const card of player.deck) {
+    const def = getDefinitionSafe(state, card.definitionId);
+    if (!isBasicEnergy(def)) continue;
+    const type = def.types?.[0] ?? "Colorless";
+    if (!energyByType.has(type)) energyByType.set(type, card);
+  }
+
+  const types = [...energyByType.keys()];
+
+  if (types.length === 0) {
+    shufflePlayerDeck(state, playerId);
+    logMessage(state, "Crispin: no Basic Energy found in deck.");
+    return;
+  }
+
+  // Pull one energy from deck → hand
+  const handEnergy = energyByType.get(types[0]!)!;
+  const handIdx = player.deck.indexOf(handEnergy);
+  player.deck.splice(handIdx, 1);
+  handEnergy.zone = Zone.Hand;
+  player.hand.push(handEnergy);
+  logMessage(
+    state,
+    `Crispin: put ${getDefinitionSafe(state, handEnergy.definitionId).name} into hand.`,
+  );
+
+  if (types.length === 1) {
+    // Only one energy type — nothing to attach
+    shufflePlayerDeck(state, playerId);
+    return;
+  }
+
+  // Pull a second energy of a different type → attach to a Pokémon in play
+  const attachEnergy = energyByType.get(types[1]!)!;
+  const attachIdx = player.deck.indexOf(attachEnergy);
+  player.deck.splice(attachIdx, 1);
+
+  const target =
+    player.active ??
+    player.bench.find(() => true) ??
+    null;
+
+  if (!target) {
+    // No Pokémon in play — put in hand instead
+    attachEnergy.zone = Zone.Hand;
+    player.hand.push(attachEnergy);
+    logMessage(state, "Crispin: no Pokémon in play — both energies added to hand.");
+  } else {
+    attachEnergyToPokemon(state, playerId, attachEnergy, target);
+    logMessage(
+      state,
+      `Crispin: attached ${getDefinitionSafe(state, attachEnergy.definitionId).name} to ${getDefinitionSafe(state, target.definitionId).name}.`,
+    );
+  }
+
+  shufflePlayerDeck(state, playerId);
 }

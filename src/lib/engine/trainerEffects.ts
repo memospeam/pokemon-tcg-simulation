@@ -297,8 +297,11 @@ function canPlayTrainerKind(
       }
       return { ok: true };
     case "trainer_night_stretcher":
-      if (discardPokemonInPile(state, playerId).length === 0) {
-        return { ok: false, reason: "Night Stretcher requires a Pokémon in your discard pile." };
+      if (
+        discardPokemonInPile(state, playerId).length === 0 &&
+        !player.discard.some((card) => isBasicEnergy(getDefinitionSafe(state, card.definitionId)))
+      ) {
+        return { ok: false, reason: "Night Stretcher requires a Pokémon or Basic Energy in your discard pile." };
       }
       return { ok: true };
     case "trainer_search_no_rule_box":
@@ -474,6 +477,9 @@ function applyTrainerByKind(state: EngineState, playerId: PlayerId, effect: Pars
     case "trainer_crispin":
       applyCrispin(state, playerId);
       return;
+    case "trainer_crispin_sv":
+      applyTrainerBatch10Kind(state, playerId, effect);
+      return;
     case "trainer_hilda":
       applyHilda(state, playerId);
       return;
@@ -503,7 +509,17 @@ function applyTrainerByKind(state: EngineState, playerId: PlayerId, effect: Pars
 
 function applyNightStretcher(state: EngineState, playerId: PlayerId, maxCount: number): void {
   const player = getPlayer(state, playerId);
-  const options = discardPokemonInPile(state, playerId);
+  const pokemonOptions = discardPokemonInPile(state, playerId);
+  // CRI Night Stretcher (count: 1) allows retrieving Pokémon OR Basic Energy
+  const energyOptions =
+    maxCount === 1
+      ? player.discard.filter((card) => isBasicEnergy(getDefinitionSafe(state, card.definitionId)))
+      : [];
+  const options = [...pokemonOptions, ...energyOptions];
+  if (options.length === 0) {
+    logMessage(state, "Night Stretcher: no eligible card in discard.");
+    return;
+  }
   if (options.length === 1) {
     const card = options[0]!;
     const idx = player.discard.indexOf(card);
@@ -522,7 +538,12 @@ function applyNightStretcher(state: EngineState, playerId: PlayerId, maxCount: n
     options: options.map((entry) => entry.instanceId),
     slotsRemaining: maxCount,
   };
-  logMessage(state, `Night Stretcher: choose up to ${maxCount} Pokémon from your discard pile.`);
+  logMessage(
+    state,
+    maxCount === 1
+      ? "Night Stretcher: choose a Pokémon or Basic Energy from your discard pile."
+      : `Night Stretcher: choose up to ${maxCount} Pokémon from your discard pile.`,
+  );
 }
 
 function applyCrushingHammer(state: EngineState, playerId: PlayerId): void {
