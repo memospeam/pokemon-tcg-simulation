@@ -11,15 +11,23 @@ const pendingFetches = new Set<string>();
 
 async function fetchImagesByName(name: string): Promise<{ small: string; large: string }> {
   const q = `name:"${name.replace(/"/g, '\\"')}"`;
-  const params = new URLSearchParams({ q, pageSize: "1", orderBy: "-set.releaseDate" });
+  // Fetch several results: pokemontcg.io uses substring matching, so
+  // searching "Psychic Energy" can return "Telepathic Psychic Energy" first.
+  // We find the exact-name match ourselves.
+  const params = new URLSearchParams({ q, pageSize: "20", orderBy: "-set.releaseDate" });
   try {
     const res = await fetch(`https://api.pokemontcg.io/v2/cards?${params}`);
     if (!res.ok) return { small: "", large: "" };
     const data = await res.json();
-    const card = data.data?.[0];
+    const lowerName = name.toLowerCase();
+    const exact: { images?: { small?: string; large?: string } } | undefined =
+      (data.data ?? []).find(
+        (c: { name: string }) => c.name.toLowerCase() === lowerName,
+      );
+    if (!exact) return { small: "", large: "" };
     return {
-      small: card?.images?.small ?? "",
-      large: card?.images?.large ?? "",
+      small: exact.images?.small ?? "",
+      large: exact.images?.large ?? "",
     };
   } catch {
     return { small: "", large: "" };
