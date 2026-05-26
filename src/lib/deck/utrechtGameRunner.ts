@@ -483,6 +483,12 @@ export function pickAutoEvolveAction(state: EngineState, ctx?: StrategyContext):
       if (ctx.archetype === "dragapult-dusknoir" && name.includes("drakloak")) score += 10;
       // Lopunny: prioritize Mega Lopunny ex evolution
       if ((ctx.archetype === "lopunny") && name.includes("mega lopunny ex")) score += 50;
+      // Lopunny: Dudunsparce must stay on bench — it uses Run Away Draw from bench position.
+      // The engine does NOT create PROMOTE pending when the ACTIVE Pokémon voluntarily shuffles
+      // back to deck (Run Away Draw from active spot). This would leave P1 with no active Pokémon
+      // and no PROMOTE pending — a broken game state that results in a draw.
+      // Fix: strongly prefer evolving bench Dunsparce → Dudunsparce over active Dunsparce.
+      if (ctx.archetype === "lopunny" && name.includes("dudunsparce") && isActive) score -= 500;
       // Honchkrow: prioritize evolving Murkrow → Honchkrow to start attacking
       if (ctx.archetype === "honchkrow" && name.includes("honchkrow")) score += 40;
       // Ogerpon: keep Teal Mask in play for energy acceleration
@@ -508,6 +514,10 @@ export function pickAutoEvolveAction(state: EngineState, ctx?: StrategyContext):
 
     return { action, score };
   }).sort((a, b) => b.score - a.score);
+
+  // Skip evolve if best candidate has a strongly negative score (e.g. Lopunny blocking
+  // Dudunsparce-on-active evolution to prevent the Run Away Draw active-shuffle engine bug).
+  if ((scored[0]?.score ?? 0) < 0) return null;
 
   return scored[0]?.action ?? null;
 }
@@ -688,18 +698,9 @@ function shouldSkipAttack(state: EngineState, playerId: PlayerId, ctx: StrategyC
     }
   }
 
-  // Lopunny: only attack with Gale Thrust if Lopunny moved from bench this turn
-  if (ctx.archetype === "lopunny") {
-    const def = player.active ? getDefinitionSafe(state, player.active.definitionId) : null;
-    const hasGaleThrust = (def?.attacks ?? []).some(
-      (a) => a.name.toLowerCase().includes("gale thrust"),
-    );
-    if (hasGaleThrust) {
-      const movedIds = state.turnFlags.movedFromBenchToActiveIds ?? [];
-      const lopunnyMoved = player.active && movedIds.includes(player.active.instanceId);
-      if (!lopunnyMoved) return true; // Lopunny didn't move from bench — skip attack
-    }
-  }
+  // Lopunny: Gale Thrust only does +170 bonus when moved from bench.
+  // Do NOT skip all attacks — use Spiky Hopper (160) when Lopunny is already active.
+  // Attack selection is handled by pickBestAttack (Gale Thrust preferred when moved, else Spiky Hopper).
 
   return false;
 }
@@ -811,10 +812,18 @@ export function pickAutoAbilityAction(
 
     } else if (abilityLower.includes("run away draw")) {
       // Draw 3 cards, then shuffle this Pokémon (Dudunsparce) back into the deck.
-      // Only valuable when hand is low AND we have bench Pokémon to promote after shuffle.
-      // Never use with empty bench — PROMOTE would end the game immediately!
+      // CRITICAL SAFETY RULES:
+      // 1. Never fire from the ACTIVE spot: the engine does NOT create PROMOTE pending
+      //    when the active Pokémon voluntarily shuffles back (engine bug). This leaves P1
+      //    with active=null and no PROMOTE, causing a broken draw-game state.
+      // 2. Never fire with empty bench: PROMOTE would fire immediately, and with no bench
+      //    Pokémon, P1 loses the game immediately.
+      const pokemon = allOwn.find((p) => p.instanceId === action.pokemonId);
+      const isActivePosition = player.active?.instanceId === pokemon?.instanceId;
       const hasBench = player.bench.length > 0;
-      if (!hasBench) {
+      if (isActivePosition) {
+        score = 0; // CRITICAL: engine bug — PROMOTE not created if active shuffles itself
+      } else if (!hasBench) {
         score = 0; // CRITICAL: empty bench → game-ending PROMOTE → never trigger
       } else if (player.hand.length <= 2) {
         score = 82; // Empty-ish hand — urgent refuel
@@ -870,8 +879,22 @@ export function pickBestAttack(state: EngineState, playerId: PlayerId, ctx?: Str
     const isKo = dmg >= opponentHp && dmg > 0;
     const isSignature = signatureAttack && attack.name.toLowerCase().includes(signatureAttack);
 
+    // Lopunny special case: Gale Thrust is the signature BUT only gives +170 bonus when Lopunny
+    // moved from bench this turn. Without the bonus, Spiky Hopper (160) is the better attack.
+    // Only apply the signature bonus when Gale Thrust actually has the movement bonus active.
+    let signatureBonus = 0;
+    if (isSignature) {
+      if (ctx?.archetype === "lopunny" && attack.name.toLowerCase().includes("gale thrust")) {
+        const movedIds = state.turnFlags.movedFromBenchToActiveIds ?? [];
+        const lopunnyMoved = player.active && movedIds.includes(player.active.instanceId);
+        signatureBonus = lopunnyMoved ? 500 : 0; // Only prefer Gale Thrust when it has the +170 bonus
+      } else {
+        signatureBonus = 500; // All other signature attacks get the standard bonus
+      }
+    }
+
     let score = isKo ? 10000 + dmg : dmg;
-    if (isSignature) score += 500; // Always prefer signature attack (e.g. Phantom Dive, Gale Thrust)
+    score += signatureBonus;
 
     return { name: attack.name, score };
   }).sort((a, b) => b.score - a.score);
@@ -940,6 +963,16 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
       if (ctx.archetype === "garchomp" && (nameLower.includes("roserade") || nameLower.includes("roselia"))) score -= 80;
       // Greninja: Budew item-locks only — skip energy
       if (ctx.archetype === "greninja" && nameLower.includes("budew")) score -= 100;
+      // Lopunny: prefer BENCH Mega Lopunny ex for energy loading (Gale Thrust loop).
+      // The bench Lopunny will retreat to active next turn — it needs energy BEFORE the retreat.
+      // Exception: if active Lopunny just moved from bench THIS turn, it needs energy to attack NOW.
+      if (ctx.archetype === "lopunny" && nameLower.includes("mega lopunny ex") && !isActive) {
+        const movedIds = state.turnFlags.movedFromBenchToActiveIds ?? [];
+        const activeJustMoved = player.active && movedIds.includes(player.active.instanceId);
+        if (!activeJustMoved) {
+          score += 25; // Load bench Lopunny so it can Gale Thrust when promoted
+        }
+      }
     }
 
     return { id: pokemon.instanceId, score };
