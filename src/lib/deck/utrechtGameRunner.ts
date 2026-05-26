@@ -441,6 +441,11 @@ export function pickAutoPlayBasicAction(
       score += archPriority / 5;
       const benchPrio = ctx.profile.benchPriority.findIndex((s) => name.includes(s.toLowerCase()));
       if (benchPrio !== -1) score += (ctx.profile.benchPriority.length - benchPrio) * 5;
+      // Zoroark: N's Zekrom MUST be on bench — Night Joker copies Rampaging Thunder (250 damage)
+      if (ctx.archetype === "zoroark" && name.includes("n's zekrom")) score += 40;
+      // Honchkrow: TR Murkrow and TR Porygon fill bench for Ariana draw (+2 per TR bench)
+      if (ctx.archetype === "honchkrow" && name.includes("team rocket's murkrow")) score += 20;
+      if (ctx.archetype === "honchkrow" && name.includes("team rocket's porygon")) score += 15;
     }
 
     return { action, score };
@@ -471,12 +476,32 @@ export function pickAutoEvolveAction(state: EngineState, ctx?: StrategyContext):
       if (ctx.archetype === "dragapult" && name.includes("dragapult ex")) score += 50;
       // Dragapult: keep 1+ Drakloak on bench for Recon Directive draw — but still evolve Dreepy → Drakloak
       if (ctx.archetype === "dragapult" && name.includes("drakloak")) score += 10;
+      // Dragapult-Dusknoir: evolve both Dragapult ex AND Dusknoir chain alongside each other
+      if (ctx.archetype === "dragapult-dusknoir" && name.includes("dragapult ex")) score += 50;
+      if (ctx.archetype === "dragapult-dusknoir" && name.includes("dusknoir")) score += 45;
+      if (ctx.archetype === "dragapult-dusknoir" && name.includes("dusclops")) score += 25;
+      if (ctx.archetype === "dragapult-dusknoir" && name.includes("drakloak")) score += 10;
       // Lopunny: prioritize Mega Lopunny ex evolution
       if ((ctx.archetype === "lopunny") && name.includes("mega lopunny ex")) score += 50;
       // Honchkrow: prioritize evolving Murkrow → Honchkrow to start attacking
       if (ctx.archetype === "honchkrow" && name.includes("honchkrow")) score += 40;
       // Ogerpon: keep Teal Mask in play for energy acceleration
       if (ctx.archetype === "ogerpon-box" && name.includes("teal mask")) score += 20;
+      // Greninja: Froakie → Frogadier → Greninja ex is the primary attack chain; Dusknoir secondary
+      if (ctx.archetype === "greninja" && name.includes("greninja ex")) score += 50;
+      if (ctx.archetype === "greninja" && name.includes("frogadier")) score += 25;
+      if (ctx.archetype === "greninja" && name.includes("dusknoir")) score += 40;
+      if (ctx.archetype === "greninja" && name.includes("dusclops")) score += 20;
+      // Hydrapple: evolve Meganium ASAP (Wild Growth energy doubling); Hydrapple ex is primary attacker
+      if (ctx.archetype === "hydrapple" && name.includes("hydrapple ex")) score += 50;
+      if (ctx.archetype === "hydrapple" && name.includes("dipplin")) score += 25;
+      if (ctx.archetype === "hydrapple" && name.includes("meganium")) score += 45;
+      if (ctx.archetype === "hydrapple" && name.includes("bayleef")) score += 20;
+      // Garchomp: Roserade supporter-lock is nearly as important as Garchomp ex attacking
+      if (ctx.archetype === "garchomp" && name.includes("garchomp ex")) score += 50;
+      if (ctx.archetype === "garchomp" && name.includes("gabite")) score += 30;
+      if (ctx.archetype === "garchomp" && name.includes("roserade")) score += 35;
+      if (ctx.archetype === "garchomp" && name.includes("roselia")) score += 15;
       // Archetype search priority bonus
       score += getArchetypeSearchPriority(ctx.archetype, name) / 5;
     }
@@ -779,6 +804,26 @@ export function pickAutoAbilityAction(
       const opponentHp = opponent.active ? remainingHp(state, opponent.active) : 9999;
       score = damage >= opponentHp ? 92 : damage >= 60 ? 60 : damage > 0 ? 40 : 0;
 
+    } else if (abilityLower.includes("recon directive")) {
+      // Look at top 2 of deck, put 1 into hand — exceptional setup card for Dragapult
+      // Drakloak sits on bench passively, triggering this each turn for free card advantage.
+      score = player.deck.length >= 2 ? 78 : 0;
+
+    } else if (abilityLower.includes("run away draw")) {
+      // Draw 3 cards, then shuffle this Pokémon (Dudunsparce) back into the deck.
+      // Only valuable when hand is low AND we have bench Pokémon to promote after shuffle.
+      // Never use with empty bench — PROMOTE would end the game immediately!
+      const hasBench = player.bench.length > 0;
+      if (!hasBench) {
+        score = 0; // CRITICAL: empty bench → game-ending PROMOTE → never trigger
+      } else if (player.hand.length <= 2) {
+        score = 82; // Empty-ish hand — urgent refuel
+      } else if (player.hand.length <= 4) {
+        score = 65; // Low hand — worth refuelling
+      } else {
+        score = 40; // Decent hand but still net positive
+      }
+
     }
     // Unknown ability → skip (do not trigger abilities with unhandled pending states)
 
@@ -886,8 +931,15 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
       if (ctx.archetype === "zoroark" && nameLower.includes("zorua")) score -= 80;
       // Ogerpon: always keep some energy on Teal Mask Ogerpon ex (Teal Dance ability needs Grass)
       if ((ctx.archetype === "ogerpon-box") && nameLower.includes("teal mask ogerpon")) score += 20;
-      // Dusknoir / Munkidori: never attach energy (no energy attacks)
-      if (nameLower === "dusknoir" || nameLower === "munkidori") score -= 60;
+      // Dusknoir / Munkidori / Dusclops: never attach energy (ability-only Pokémon, no energy attacks)
+      if (nameLower.includes("dusknoir") || nameLower.includes("munkidori") || nameLower.includes("dusclops")) score -= 60;
+      // Hydrapple: Meganium only provides energy, doesn't attack — skip energy
+      if (ctx.archetype === "hydrapple" && nameLower.includes("meganium")) score -= 60;
+      if (ctx.archetype === "hydrapple" && nameLower.includes("bayleef")) score -= 30;
+      // Garchomp: Roserade/Roselia are bench-only — never attach energy
+      if (ctx.archetype === "garchomp" && (nameLower.includes("roserade") || nameLower.includes("roselia"))) score -= 80;
+      // Greninja: Budew item-locks only — skip energy
+      if (ctx.archetype === "greninja" && nameLower.includes("budew")) score -= 100;
     }
 
     return { id: pokemon.instanceId, score };
@@ -1104,7 +1156,22 @@ function pickBestSearchDeckCard(
       else if (isBasicPokemon(def)) score = 60;
       if (def.evolvesFrom && inPlayNames.has(def.evolvesFrom.toLowerCase())) score += 15;
       // Archetype-aware: boost key attacker lines
-      if (ctx) score += getArchetypeSearchPriority(ctx.archetype, name);
+      if (ctx) {
+        score += getArchetypeSearchPriority(ctx.archetype, name);
+        // Additional deck-specific search bonuses:
+        // Dragapult-Dusknoir: Dusknoir chain is critical for secondary win condition
+        if (ctx.archetype === "dragapult-dusknoir" && (name.includes("dusknoir") || name.includes("dusclops") || name.includes("duskull"))) score += 20;
+        // Greninja: Dusknoir chain gives precision damage placement
+        if (ctx.archetype === "greninja" && (name.includes("dusknoir") || name.includes("dusclops") || name.includes("duskull"))) score += 20;
+        // Hydrapple: Meganium is the engine — highest priority to find
+        if (ctx.archetype === "hydrapple" && (name.includes("meganium") || name.includes("bayleef") || name.includes("chikorita"))) score += 25;
+        // Garchomp: Roserade supporter-lock is game-deciding
+        if (ctx.archetype === "garchomp" && (name.includes("roserade") || name.includes("roselia"))) score += 20;
+        // Zoroark: Always want N's Zekrom (Rampaging Thunder 250) on bench for Night Joker
+        if (ctx.archetype === "zoroark" && name.includes("n's zekrom")) score += 30;
+        // Honchkrow: TR Murkrow and TR Porygon fill bench for Ariana draw engine
+        if (ctx.archetype === "honchkrow" && (name.includes("team rocket's murkrow") || name.includes("team rocket's porygon"))) score += 15;
+      }
     } else if (def.supertype === "Trainer") {
       if (isSupporter(def)) {
         if (name.includes("iono") || name.includes("professor") || name.includes("lillie") || name.includes("hilda") || name.includes("wally")) score = 50;
@@ -1236,6 +1303,10 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     case "BOSS_ORDERS": {
       const opponent = getPlayer(state, getOpponentId(playerId));
       if (!opponent.bench.length) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      // SWITCH_OPPONENT_ACTIVE requires opponent.active !== null (engine guard at reducer line 699).
+      // If opponent has no active (e.g. Dudunsparce just shuffled itself to deck via Run Away Draw),
+      // skip Boss's Orders — the switch can't legally complete, causing a stall.
+      if (!opponent.active) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
       // Estimate our active Pokémon's best attack damage for KO evaluation
       const selfPlayer = getPlayer(state, playerId);
       const selfActiveDef = selfPlayer.active ? getDefinition(state, selfPlayer.active.definitionId) : undefined;
@@ -1567,11 +1638,57 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     case "COLRESS":
     case "RECON_DIRECTIVE": {
       if (pending.options.length === 0) return null;
-      return gameReducer(state, { type: "PICK_DECK_CARD", playerId, instanceId: pending.options[0]! });
+      // Use smart selection — pick the card that's most valuable from the top 2
+      const bestRDCard = pickBestSearchDeckCard(state, playerId, pending.options, ctx);
+      return gameReducer(state, { type: "PICK_DECK_CARD", playerId, instanceId: bestRDCard });
     }
     case "GIOVANNI": {
       if (pending.options.length === 0) return null;
-      return gameReducer(state, { type: "SELECT_GIOVANNI_BENCH", playerId, benchInstanceId: pending.options[0]! });
+
+      // OPPONENT_BENCH edge case: resolveGiovanniOpponentBench has a guard
+      // `if (!opponent.active) return;` that returns WITHOUT clearing pendingAction.
+      // If opponent's active is null (e.g. just shuffled itself to deck via Run Away Draw),
+      // skip by manually clearing the pending state — the switch can't complete anyway.
+      if (pending.step === "OPPONENT_BENCH") {
+        const giovanniOpponent = getPlayer(state, getOpponentId(playerId));
+        if (!giovanniOpponent.active) {
+          return { ...state, pendingAction: null };
+        }
+        // Smart target: archetype boss-priority > lowest HP (same logic as BOSS_ORDERS)
+        const oppBench = giovanniOpponent.bench.filter((p) => pending.options.includes(p.instanceId));
+        const bestOpp = oppBench.sort((a, b) => {
+          const aName = getDefinition(state, a.definitionId)?.name?.toLowerCase() ?? "";
+          const bName = getDefinition(state, b.definitionId)?.name?.toLowerCase() ?? "";
+          const aPrio = ctx ? getArchetypeBossPriority(ctx.archetype, aName) : 0;
+          const bPrio = ctx ? getArchetypeBossPriority(ctx.archetype, bName) : 0;
+          const aHp = remainingHp(state, a);
+          const bHp = remainingHp(state, b);
+          if (aPrio !== bPrio) return bPrio - aPrio;
+          return aHp - bHp; // lowest HP first = weakest target
+        })[0];
+        return gameReducer(state, {
+          type: "SELECT_GIOVANNI_BENCH",
+          playerId,
+          benchInstanceId: bestOpp?.instanceId ?? pending.options[0]!,
+        });
+      }
+
+      // OWN_BENCH: bring up the best attacker (primary archetype Pokémon with energy)
+      const ownPlayer = getPlayer(state, playerId);
+      const ownBench = ownPlayer.bench.filter((p) => pending.options.includes(p.instanceId));
+      const bestOwn = ownBench.sort((a, b) => {
+        const aName = getDefinition(state, a.definitionId)?.name?.toLowerCase() ?? "";
+        const bName = getDefinition(state, b.definitionId)?.name?.toLowerCase() ?? "";
+        const aPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, aName) : 0;
+        const bPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, bName) : 0;
+        if (aPrio !== bPrio) return bPrio - aPrio;
+        return b.attachedEnergy.length - a.attachedEnergy.length;
+      })[0];
+      return gameReducer(state, {
+        type: "SELECT_GIOVANNI_BENCH",
+        playerId,
+        benchInstanceId: bestOwn?.instanceId ?? pending.options[0]!,
+      });
     }
     case "PRIME_CATCHER": {
       if (pending.options.length === 0) return null;
