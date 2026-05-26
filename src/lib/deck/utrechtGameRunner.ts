@@ -512,6 +512,17 @@ export function pickRetreatAction(
   const activeHp = remainingHp(state, player.active);
   const activeMaxHp = parseInt(activeDef?.hp ?? "100", 10) || 100;
 
+  // Estimate if opponent can KO our active next turn
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  const opponentActiveDef = opponent.active ? getDefinition(state, opponent.active.definitionId) : undefined;
+  const opponentMaxDamage = (opponentActiveDef?.attacks ?? []).reduce((best, atk) => {
+    const d = parseInt(atk.damage, 10) || 0;
+    // Rough estimate for variable attacks: add extra for "+" attacks
+    const estimate = atk.damage.includes("+") ? d + 60 : d;
+    return Math.max(best, estimate);
+  }, 0);
+  const opponentCanKO = opponentMaxDamage > 0 && opponentMaxDamage >= activeHp;
+
   const candidates = player.bench
     .map((bench) => {
       const benchDef = getDefinition(state, bench.definitionId);
@@ -533,7 +544,19 @@ export function pickRetreatAction(
         }
       }
 
-      // ── Survival: active is critically low HP, bench has healthy attacker with energy ──
+      // ── Threat-based survival: retreat before opponent can KO us ──
+      // Saves the active Pokémon from being KO'd if a healthy bench attacker is ready
+      if (opponentCanKO) {
+        const benchHp = remainingHp(state, bench);
+        const hasAttacks = (benchDef?.attacks?.length ?? 0) > 0;
+        const hasEnergy = bench.attachedEnergy.length > 0;
+        // Only retreat if the bench Pokémon is healthier and can attack
+        if (benchHp > activeHp && hasAttacks && hasEnergy) {
+          score = Math.max(score, 120); // High priority: save the active Pokémon!
+        }
+      }
+
+      // ── Survival: active is critically low HP (< 25%), bench has healthy attacker ──
       if (activeHp < activeMaxHp * 0.25) {
         const benchHp = remainingHp(state, bench);
         if (benchHp > 100 && bench.attachedEnergy.length > 0 && (benchDef?.attacks?.length ?? 0) > 0) {
@@ -541,7 +564,7 @@ export function pickRetreatAction(
         }
       }
 
-      // Never retreat to a Pokémon with no energy and no meaningful role
+      // ── Archetype: promote a ready high-priority attacker ──
       const archPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, benchName) : 0;
       if (score === 0 && archPrio > 70 && bench.attachedEnergy.length > 0) {
         score = 40; // Promote a high-priority attacker that is ready
@@ -828,21 +851,28 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
   ];
   if (allPokemon.length === 0) return null;
 
-  // Score each Pokémon: prefer those with most energy already (closer to attacking)
+  // Score each Pokémon: prefer those closest to being able to attack
   const scored = allPokemon.map((pokemon) => {
     const def = getDefinitionSafe(state, pokemon.definitionId);
     const energyCount = pokemon.attachedEnergy.length;
     const isActive = player.active?.instanceId === pokemon.instanceId;
     const hasAttacks = (def.attacks?.length ?? 0) > 0;
 
-    // Check if already can attack (skip - no point adding more)
+    // Check if already can attack (skip — no point adding more)
     const alreadyReady = (def.attacks ?? []).some(
       (atk) => canAffordAttack(state, pokemon, atk),
     );
 
+    // Check if ONE more energy would let it attack ("one-away")
+    const oneAway = !alreadyReady && hasAttacks && (def.attacks ?? []).some((atk) => {
+      const needed = atk.convertedEnergyCost ?? 1;
+      return energyCount === needed - 1;
+    });
+
     // Base score: prefer active, prefer closer to attacking
     let score = energyCount * 10 + (isActive ? 5 : 0) + (hasAttacks ? 2 : 0);
     if (alreadyReady) score -= 50; // Don't pile energy on already-ready Pokémon
+    if (oneAway) score += 25;      // "One-away": strong bonus — enable the next attacker
 
     // Archetype-aware: boost Pokémon that the strategy wants energized
     if (ctx) {
@@ -852,8 +882,12 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
 
       // Dragapult: never attach to Budew (item-locker, has no relevant attacks needing energy)
       if (ctx.archetype === "dragapult" && nameLower.includes("budew")) score -= 100;
-      // Ogerpon: always keep some energy on Teal Mask Ogerpon ex (Teal Dance ability)
+      // Zoroark: never attach to N's Zorua (no attacks worth energizing)
+      if (ctx.archetype === "zoroark" && nameLower.includes("zorua")) score -= 80;
+      // Ogerpon: always keep some energy on Teal Mask Ogerpon ex (Teal Dance ability needs Grass)
       if ((ctx.archetype === "ogerpon-box") && nameLower.includes("teal mask ogerpon")) score += 20;
+      // Dusknoir / Munkidori: never attach energy (no energy attacks)
+      if (nameLower === "dusknoir" || nameLower === "munkidori") score -= 60;
     }
 
     return { id: pokemon.instanceId, score };
@@ -923,14 +957,16 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
         if (opponent.bench.length === 0) {
           score = -1;
         } else {
-          // High priority when a bench target is within KO range of our active
+          // Use estimated attack damage (includes variable-damage attacks like Night Joker)
           const activeDef = player.active ? getDefinition(state, player.active.definitionId) : undefined;
           const maxAtkDmg = (activeDef?.attacks ?? []).reduce((best, atk) => {
-            const d = parseInt(atk.damage, 10);
-            return Number.isNaN(d) ? best : Math.max(best, d);
+            const est = estimateAttackDamage(state, playerId, atk.name, atk.damage);
+            return Math.max(best, est);
           }, 0);
           const hasKOTarget = maxAtkDmg > 0 && opponent.bench.some((b) => remainingHp(state, b) <= maxAtkDmg);
-          score = hasKOTarget ? 68 : (opponent.prizes.length <= 3 ? 55 : 38);
+          // Prize rush: in late game, always Boss to pull the easiest target
+          const prizeRush = opponent.prizes.length <= 2;
+          score = hasKOTarget ? 72 : prizeRush ? 60 : (opponent.prizes.length <= 3 ? 48 : 35);
         }
       } else if (name.includes("crispin") && (player.bench.length > 0 || player.active)) {
         score = 32;
@@ -964,7 +1000,13 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
       } else if (name.includes("buddy-buddy poffin") || name.includes("poffin")) {
         score = player.bench.length < 3 ? 70 : 20;
       } else if (name.includes("ultra ball")) {
-        score = handSize >= 4 ? 62 : 35;
+        // Ultra Ball: best when we have cards to discard (costs 2) and something to search for
+        const hasMissingKeyPokemon = ctx ? ctx.profile.ultraBallKeep.some((key) => {
+          const keyLower = key.toLowerCase();
+          const inPlay = [...(player.active ? [player.active] : []), ...player.bench];
+          return !inPlay.some((p) => (getDefinition(state, p.definitionId)?.name?.toLowerCase() ?? "").includes(keyLower));
+        }) : false;
+        score = handSize >= 4 && hasMissingKeyPokemon ? 72 : handSize >= 4 ? 55 : 30;
       } else if (name.includes("pokégear") || name.includes("pokegear")) {
         score = !state.turnFlags.supporterPlayed && !hasSupporterInLegal ? 60 : 25;
       } else if (name.includes("night stretcher")) {
@@ -973,7 +1015,17 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
         );
         score = hasPokemonInDiscard ? 58 : -1;
       } else if (name.includes("rare candy")) {
-        score = 18;
+        // Rare Candy is only valuable when we have a Stage 2 in hand AND a valid Basic on bench
+        const allInPlay = [...(player.active ? [player.active] : []), ...player.bench];
+        const hasRareCandyTarget = allInPlay.some((mon) => {
+          const monDef = getDefinitionSafe(state, mon.definitionId);
+          if (!isBasicPokemon(monDef) || mon.enteredPlayTurn === state.turnNumber) return false;
+          return player.hand.some((hCard) => {
+            const hDef = getDefinitionSafe(state, hCard.definitionId);
+            return isStage2(hDef) && canRareCandyEvolveInto(state, monDef, hDef);
+          });
+        });
+        score = hasRareCandyTarget ? 72 : 8; // High if ready to use; low if just holding
       } else if (name.includes("crushing hammer")) {
         score = opponent.active && opponent.active.attachedEnergy.length > 0 ? 30 : 15;
       } else if (name.includes("unfair stamp")) {
@@ -991,6 +1043,14 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
       } else if (name.includes("team rocket's factory")) {
         // Honchkrow: TR Factory is critical — play ASAP before drawing
         score = !state.stadium ? 80 : 25; // Very high if no stadium in play
+      } else if (name.includes("mist energy")) {
+        // Mist Energy: blocks Bench attack effects — best on Lopunny bench (prevents Phantom Dive counters)
+        const hasBenchNeedsMist = player.bench.some((p) => !p.toolId &&
+          (getDefinition(state, p.definitionId)?.name?.toLowerCase().includes("lopunny") ?? false));
+        score = hasBenchNeedsMist ? 50 : 20;
+      } else if (name.includes("enriching energy") || name.includes("ignition energy")) {
+        // Special energies: treat as items to attach later
+        score = 15;
       } else if (name.includes("roto-stick")) {
         // Honchkrow: dig for more TR Supporters in top 4 cards
         score = 55;
@@ -1109,13 +1169,19 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
         targetId: bestTarget?.instanceId ?? pending.options[0]!,
       });
     }
-    case "CHOOSE_BENCH_DAMAGE":
+    case "CHOOSE_BENCH_DAMAGE": {
       if (pending.options.length === 0) return null;
+      // Smart targeting: prefer bench Pokémon with lowest remaining HP (set up future KOs)
+      const oppBench = getPlayer(state, getOpponentId(playerId)).bench;
+      const bestBenchTarget = oppBench
+        .filter((p) => pending.options.includes(p.instanceId))
+        .sort((a, b) => remainingHp(state, a) - remainingHp(state, b))[0];
       return gameReducer(state, {
         type: "CHOOSE_BENCH_DAMAGE_TARGET",
         playerId,
-        targetId: pending.options[0]!,
+        targetId: bestBenchTarget?.instanceId ?? pending.options[0]!,
       });
+    }
     case "SWITCH_WITH_BENCH": {
       const player = getPlayer(state, playerId);
       if (pending.optional) {
@@ -1170,7 +1236,14 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     case "BOSS_ORDERS": {
       const opponent = getPlayer(state, getOpponentId(playerId));
       if (!opponent.bench.length) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
-      // Target: combine archetype boss priority + least remaining HP for easiest KO
+      // Estimate our active Pokémon's best attack damage for KO evaluation
+      const selfPlayer = getPlayer(state, playerId);
+      const selfActiveDef = selfPlayer.active ? getDefinition(state, selfPlayer.active.definitionId) : undefined;
+      const ourMaxDmg = (selfActiveDef?.attacks ?? []).reduce((best, atk) => {
+        const est = estimateAttackDamage(state, playerId, atk.name, atk.damage);
+        return Math.max(best, est);
+      }, 0);
+      // Target scoring: KO target > archetype priority > lowest HP
       const target = [...opponent.bench].sort((a, b) => {
         const aDef = getDefinition(state, a.definitionId);
         const bDef = getDefinition(state, b.definitionId);
@@ -1178,9 +1251,14 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
         const bNameLower = bDef?.name?.toLowerCase() ?? "";
         const aArchPrio = ctx ? getArchetypeBossPriority(ctx.archetype, aNameLower) : 0;
         const bArchPrio = ctx ? getArchetypeBossPriority(ctx.archetype, bNameLower) : 0;
-        // Higher archetype priority wins; break ties by lowest HP
+        const aHp = remainingHp(state, a);
+        const bHp = remainingHp(state, b);
+        const aKo = ourMaxDmg > 0 && aHp <= ourMaxDmg ? 1 : 0;
+        const bKo = ourMaxDmg > 0 && bHp <= ourMaxDmg ? 1 : 0;
+        // 1. KO target first; 2. archetype priority; 3. lowest remaining HP
+        if (aKo !== bKo) return bKo - aKo;
         if (aArchPrio !== bArchPrio) return bArchPrio - aArchPrio;
-        return remainingHp(state, a) - remainingHp(state, b);
+        return aHp - bHp;
       })[0];
       if (!target) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
       return gameReducer(state, {
