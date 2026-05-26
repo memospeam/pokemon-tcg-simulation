@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { DeckBuilder } from "./components/DeckBuilder/DeckBuilder";
 import { GameBoard } from "./components/GameBoard/GameBoard";
 import { Lobby } from "./components/Lobby/Lobby";
-import { PackOpener } from "./components/PackOpener";
 import { SimPlayback } from "./components/SimPlayback/SimPlayback";
+import { MetaAnalyzer } from "./components/MetaAnalyzer/MetaAnalyzer";
 import { useDeckStore } from "@/stores/deckStore";
 import { useGameStore } from "@/stores/gameStore";
 
-type Tab = "lobby" | "play" | "builder" | "pack" | "sim";
+type Tab = "lobby" | "play" | "builder" | "sim" | "analyze";
 
 export function App() {
   const [tab, setTab] = useState<Tab>("lobby");
@@ -69,17 +69,17 @@ export function App() {
         </button>
         <button
           type="button"
-          className={tab === "pack" ? "tabs__button tabs__button--active" : "tabs__button"}
-          onClick={() => setTab("pack")}
-        >
-          Open Pack
-        </button>
-        <button
-          type="button"
           className={tab === "sim" ? "tabs__button tabs__button--active" : "tabs__button"}
           onClick={() => setTab("sim")}
         >
           Simulate
+        </button>
+        <button
+          type="button"
+          className={tab === "analyze" ? "tabs__button tabs__button--active" : "tabs__button"}
+          onClick={() => setTab("analyze")}
+        >
+          Analyze
         </button>
       </nav>
 
@@ -87,8 +87,8 @@ export function App() {
         {tab === "lobby" && <Lobby onPlay={handlePlay} />}
         {tab === "play" && <GameBoard />}
         {tab === "builder" && <DeckBuilder />}
-        {tab === "pack" && <PackOpener />}
         {tab === "sim" && <SimPlayback />}
+        {tab === "analyze" && <MetaAnalyzer />}
       </main>
     </div>
   );

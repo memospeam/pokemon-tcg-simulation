@@ -2,13 +2,21 @@ import type { BuiltDeck } from "./builder";
 import { buildDeckFromText } from "./builder";
 import { buildPlaytestDeckFromCorpusText } from "./corpusDeckBuilder";
 import type { TournamentDeckPreset } from "./tournamentPresets";
-import { canAffordAttack } from "../engine/energy";
+import { canAffordAttack, canAffordRetreat } from "../engine/energy";
 import { canRareCandyEvolveInto, checkMulliganNeeded } from "../engine/rules";
 import { beginGame, gameReducer, getLegalActions, startActiveGame } from "../engine/reducer";
 import { getDefinitionSafe } from "../engine/rules";
 import { isBasicPokemon, isStage2, isSupporter } from "../models/definition";
 import { GamePhase, PlayerId } from "../models/enums";
-import { getDefinition, getOpponentId, getPlayer, type EngineState, type GameAction } from "../engine/types";
+import { getDefinition, getOpponentId, getPlayer, remainingHp, type EngineState, type GameAction } from "../engine/types";
+import {
+  buildStrategyContext,
+  getArchetypeBossPriority,
+  getArchetypeEnergyPriority,
+  getArchetypeSearchPriority,
+  getArchetypeTrainerBonus,
+  type StrategyContext,
+} from "./deckStrategy";
 
 export interface GameRunResult {
   state: EngineState;
@@ -182,6 +190,19 @@ export function runEngineAutoPlay(
   let turnCount = 0;
   let actionCount = 0;
 
+  // Build strategy contexts once — identify each player's deck archetype from names in play.
+  const strategyContexts: Partial<Record<PlayerId, StrategyContext>> = {};
+
+  function getStrategyCtx(playerId: PlayerId): StrategyContext {
+    if (!strategyContexts[playerId]) {
+      const player = getPlayer(state, playerId);
+      const allCards = [...player.deck, ...player.hand, ...(player.active ? [player.active] : []), ...player.bench, ...player.discard];
+      const names = allCards.map((c) => getDefinition(state, c.definitionId)?.name ?? "");
+      strategyContexts[playerId] = buildStrategyContext(names);
+    }
+    return strategyContexts[playerId]!;
+  }
+
   while (
     actionCount < maxActions &&
     turnCount < maxTurns &&
@@ -189,7 +210,7 @@ export function runEngineAutoPlay(
     !state.winnerId
   ) {
     if (state.pendingAction) {
-      const drained = drainAutoPending(state);
+      const drained = drainAutoPending(state, 12, getStrategyCtx(state.pendingAction.playerId));
       state = drained.state;
       actionCount += drained.steps;
       if (isPlayStalled(state)) {
@@ -209,14 +230,15 @@ export function runEngineAutoPlay(
 
     const playerId = state.currentPlayerId;
     const player = getPlayer(state, playerId);
+    const ctx = getStrategyCtx(playerId);
     let attacked = false;
 
     if (!state.pendingAction && !state.turnFlags.attacked) {
-      const trainerAction = pickAutoTrainerAction(state);
+      const trainerAction = pickAutoTrainerAction(state, ctx);
       if (trainerAction) {
         state = gameReducer(state, trainerAction);
         actionCount += 1;
-        const drained = drainAutoPending(state);
+        const drained = drainAutoPending(state, 12, ctx);
         state = drained.state;
         actionCount += drained.steps;
         if (isPlayStalled(state)) {
@@ -236,7 +258,7 @@ export function runEngineAutoPlay(
     }
 
     if (!state.pendingAction && !state.turnFlags.attacked) {
-      const basicAction = pickAutoPlayBasicAction(state);
+      const basicAction = pickAutoPlayBasicAction(state, ctx);
       if (basicAction) {
         state = gameReducer(state, basicAction);
         actionCount += 1;
@@ -245,7 +267,7 @@ export function runEngineAutoPlay(
     }
 
     if (!state.pendingAction && !state.turnFlags.attacked) {
-      const evolveAction = pickAutoEvolveAction(state);
+      const evolveAction = pickAutoEvolveAction(state, ctx);
       if (evolveAction) {
         state = gameReducer(state, evolveAction);
         actionCount += 1;
@@ -255,33 +277,67 @@ export function runEngineAutoPlay(
 
     if (
       !state.turnFlags.energyAttached &&
-      player.active &&
       player.hand.some((card) => getDefinition(state, card.definitionId)?.supertype === "Energy")
     ) {
       const energy = player.hand.find(
         (card) => getDefinition(state, card.definitionId)?.supertype === "Energy",
       );
       if (energy) {
-        state = gameReducer(state, {
-          type: "ATTACH_ENERGY",
-          playerId,
-          energyId: energy.instanceId,
-          targetId: player.active.instanceId,
-        });
-        actionCount += 1;
+        const energyTarget = pickBestEnergyTarget(state, playerId, ctx);
+        if (energyTarget) {
+          state = gameReducer(state, {
+            type: "ATTACH_ENERGY",
+            playerId,
+            energyId: energy.instanceId,
+            targetId: energyTarget,
+          });
+          actionCount += 1;
+        }
       }
     }
 
-    if (player.active && !state.turnFlags.attacked) {
-      const def = getDefinitionSafe(state, player.active.definitionId);
-      for (const attack of def.attacks ?? []) {
-        if (!canAffordAttack(state, player.active, attack)) continue;
+    // Use activatable abilities: Cursed Blast, Flip the Script, Adrena-Brain, Trade, Teal Dance, etc.
+    if (!state.pendingAction) {
+      const abilityAction = pickAutoAbilityAction(state, ctx);
+      if (abilityAction) {
+        state = gameReducer(state, abilityAction);
+        actionCount += 1;
+        const drained = drainAutoPending(state, 12, ctx);
+        state = drained.state;
+        actionCount += drained.steps;
+        if (isPlayStalled(state)) {
+          return { state, turnCount, actionCount, stalled: true, winnerId: state.winnerId };
+        }
+        if (state.phase !== GamePhase.Active || state.winnerId) break;
+        continue;
+      }
+    }
+
+    // Retreat to a better attacker (e.g. Lopunny loop) before attacking
+    if (!state.pendingAction && !state.turnFlags.retreated && !state.turnFlags.attacked) {
+      const retreatAction = pickRetreatAction(state, playerId, ctx);
+      if (retreatAction) {
+        state = gameReducer(state, retreatAction);
+        actionCount += 1;
+        continue;
+      }
+    }
+
+    // Only attack if ATTACK is actually a legal action — prevents infinite loops when
+    // the engine blocks attacking (e.g. the first player's turn 1, or post-pendingAction states).
+    const canAttackThisTurn =
+      player.active &&
+      !state.turnFlags.attacked &&
+      getLegalActions(state).some((a) => a.type === "ATTACK");
+    if (canAttackThisTurn) {
+      const bestAttack = pickBestAttack(state, playerId, ctx);
+      if (bestAttack) {
         const beforeTurn = state.turnNumber;
         const beforePlayer = state.currentPlayerId;
-        state = gameReducer(state, { type: "ATTACK", playerId, attackName: attack.name });
+        state = gameReducer(state, { type: "ATTACK", playerId, attackName: bestAttack });
         actionCount += 1;
         attacked = true;
-        const drained = drainAutoPending(state);
+        const drained = drainAutoPending(state, 12, ctx);
         state = drained.state;
         actionCount += drained.steps;
         if (isPlayStalled(state)) {
@@ -299,7 +355,6 @@ export function runEngineAutoPlay(
         if (state.currentPlayerId !== beforePlayer || state.turnNumber > beforeTurn) {
           turnCount += 1;
         }
-        break;
       }
     }
 
@@ -325,7 +380,7 @@ export function runEngineAutoPlay(
 export { checkMulliganNeeded };
 
 /** Resolve simple optional/target pending actions so corpus playtests can finish. */
-export function drainAutoPending(state: EngineState, maxSteps = 12): { state: EngineState; steps: number } {
+export function drainAutoPending(state: EngineState, maxSteps = 12, ctx?: StrategyContext): { state: EngineState; steps: number } {
   let next = state;
   let steps = 0;
   while (
@@ -334,7 +389,7 @@ export function drainAutoPending(state: EngineState, maxSteps = 12): { state: En
     next.phase === GamePhase.Active &&
     !next.winnerId
   ) {
-    const resolved = tryResolveAutoPending(next);
+    const resolved = tryResolveAutoPending(next, ctx);
     if (!resolved) break;
     next = resolved;
     steps += 1;
@@ -352,6 +407,7 @@ export function isPlayStalled(state: EngineState): boolean {
 
 export function pickAutoPlayBasicAction(
   state: EngineState,
+  ctx?: StrategyContext,
 ): Extract<GameAction, { type: "PLAY_BASIC_TO_BENCH" }> | null {
   const playerId = state.currentPlayerId;
   const player = getPlayer(state, playerId);
@@ -363,25 +419,37 @@ export function pickAutoPlayBasicAction(
   );
   if (legal.length === 0) return null;
 
-  // Prefer basics that have a higher-stage evolution in hand or deck so we set up the attacker first.
-  const hasHigherEvolution = (instanceId: string): boolean => {
-    const card = player.hand.find((c) => c.instanceId === instanceId);
-    if (!card) return false;
+  const scored = legal.map((action) => {
+    const card = player.hand.find((c) => c.instanceId === action.instanceId);
+    if (!card) return { action, score: 0 };
     const def = getDefinition(state, card.definitionId);
-    if (!def) return false;
+    if (!def) return { action, score: 0 };
     const name = def.name.toLowerCase();
+
+    // Base: prefer Pokémon that have a higher evolution in hand/deck
+    let score = 10;
     const allCards = [...player.deck, ...player.hand];
-    return allCards.some((c) => {
+    const hasEvolution = allCards.some((c) => {
       const d = getDefinition(state, c.definitionId);
       return d?.evolvesFrom?.toLowerCase() === name;
     });
-  };
+    if (hasEvolution) score += 20;
 
-  const preferred = legal.find((action) => hasHigherEvolution(action.instanceId));
-  return preferred ?? legal[0] ?? null;
+    // Archetype-aware bench priority
+    if (ctx) {
+      const archPriority = getArchetypeEnergyPriority(ctx.archetype, name);
+      score += archPriority / 5;
+      const benchPrio = ctx.profile.benchPriority.findIndex((s) => name.includes(s.toLowerCase()));
+      if (benchPrio !== -1) score += (ctx.profile.benchPriority.length - benchPrio) * 5;
+    }
+
+    return { action, score };
+  }).sort((a, b) => b.score - a.score);
+
+  return scored[0]?.action ?? null;
 }
 
-export function pickAutoEvolveAction(state: EngineState): Extract<GameAction, { type: "EVOLVE" }> | null {
+export function pickAutoEvolveAction(state: EngineState, ctx?: StrategyContext): Extract<GameAction, { type: "EVOLVE" }> | null {
   const playerId = state.currentPlayerId;
   const player = getPlayer(state, playerId);
   const legal = getLegalActions(state).filter(
@@ -393,15 +461,408 @@ export function pickAutoEvolveAction(state: EngineState): Extract<GameAction, { 
     const card = player.hand.find((entry) => entry.instanceId === action.evolutionId);
     const def = card ? getDefinition(state, card.definitionId) : undefined;
     if (!def) return { action, score: 0 };
+    const name = def.name.toLowerCase();
     const stage = isStage2(def) ? 20 : 10;
     const isActive = player.active?.instanceId === action.targetId;
-    return { action, score: stage + (isActive ? 1 : 0) };
+    let score = stage + (isActive ? 1 : 0);
+
+    if (ctx) {
+      // Dragapult: massively prefer evolving to Dragapult ex (Stage 2 via Rare Candy)
+      if (ctx.archetype === "dragapult" && name.includes("dragapult ex")) score += 50;
+      // Dragapult: keep 1+ Drakloak on bench for Recon Directive draw — but still evolve Dreepy → Drakloak
+      if (ctx.archetype === "dragapult" && name.includes("drakloak")) score += 10;
+      // Lopunny: prioritize Mega Lopunny ex evolution
+      if ((ctx.archetype === "lopunny") && name.includes("mega lopunny ex")) score += 50;
+      // Honchkrow: prioritize evolving Murkrow → Honchkrow to start attacking
+      if (ctx.archetype === "honchkrow" && name.includes("honchkrow")) score += 40;
+      // Ogerpon: keep Teal Mask in play for energy acceleration
+      if (ctx.archetype === "ogerpon-box" && name.includes("teal mask")) score += 20;
+      // Archetype search priority bonus
+      score += getArchetypeSearchPriority(ctx.archetype, name) / 5;
+    }
+
+    return { action, score };
   }).sort((a, b) => b.score - a.score);
 
   return scored[0]?.action ?? null;
 }
 
-export function pickAutoTrainerAction(state: EngineState): Extract<GameAction, { type: "PLAY_TRAINER" }> | null {
+/**
+ * Decide whether to retreat and which bench Pokémon to promote.
+ *
+ * Key use-cases:
+ *  • Lopunny loop — bench Mega Lopunny ex must become the active for Gale Thrust
+ *    to receive the movedFromBench +170 bonus.
+ *  • Survival retreats — when the active is critically low HP and a healthy
+ *    attacker with energy sits on the bench.
+ */
+export function pickRetreatAction(
+  state: EngineState,
+  playerId: PlayerId,
+  ctx?: StrategyContext,
+): Extract<GameAction, { type: "RETREAT" }> | null {
+  if (state.turnFlags.retreated) return null;  // Already retreated this turn
+  if (state.turnFlags.attacked) return null;   // Too late to retreat after attacking
+  const player = getPlayer(state, playerId);
+  if (!player.active || player.bench.length === 0) return null;
+  if (!canAffordRetreat(state, player.active)) return null;
+
+  const activeDef = getDefinition(state, player.active.definitionId);
+  const activeName = activeDef?.name?.toLowerCase() ?? "";
+  const activeHp = remainingHp(state, player.active);
+  const activeMaxHp = parseInt(activeDef?.hp ?? "100", 10) || 100;
+
+  const candidates = player.bench
+    .map((bench) => {
+      const benchDef = getDefinition(state, bench.definitionId);
+      const benchName = benchDef?.name?.toLowerCase() ?? "";
+      let score = 0;
+
+      // ── Lopunny: always want a bench Mega Lopunny ex active for Gale Thrust movedFromBench bonus ──
+      // This covers both cases:
+      //   (a) active is NOT Lopunny → bring Lopunny active
+      //   (b) active IS Lopunny + bench also has Lopunny → rotate to fresh one (loop)
+      if (benchName.includes("mega lopunny ex")) {
+        if (!activeName.includes("mega lopunny ex")) {
+          // Active is something else — Lopunny on bench is the main attacker
+          score = bench.attachedEnergy.length > 0 ? 200 : 50;
+        } else {
+          // Active is also Lopunny. Rotate if bench Lopunny has energy (Gale Thrust loop)
+          // Retreating sets movedFromBenchToActiveIds → enables +170 bonus each turn
+          if (bench.attachedEnergy.length > 0) score = 150;
+        }
+      }
+
+      // ── Survival: active is critically low HP, bench has healthy attacker with energy ──
+      if (activeHp < activeMaxHp * 0.25) {
+        const benchHp = remainingHp(state, bench);
+        if (benchHp > 100 && bench.attachedEnergy.length > 0 && (benchDef?.attacks?.length ?? 0) > 0) {
+          score = Math.max(score, 80);
+        }
+      }
+
+      // Never retreat to a Pokémon with no energy and no meaningful role
+      const archPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, benchName) : 0;
+      if (score === 0 && archPrio > 70 && bench.attachedEnergy.length > 0) {
+        score = 40; // Promote a high-priority attacker that is ready
+      }
+
+      return { bench, score };
+    })
+    .filter((c) => c.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (candidates.length === 0) return null;
+  return {
+    type: "RETREAT",
+    playerId,
+    benchInstanceId: candidates[0]!.bench.instanceId,
+  };
+}
+
+/**
+ * Estimate the effective damage of a variable-damage attack given the current game state.
+ * Handles "60×" (multiply) and "60+" (plus-bonus) formats.
+ */
+function estimateAttackDamage(
+  state: EngineState,
+  playerId: PlayerId,
+  attackName: string,
+  rawDamage: string,
+): number {
+  const player = getPlayer(state, playerId);
+  const base = parseInt(rawDamage, 10) || 0;
+  const lower = attackName.toLowerCase();
+
+  // "Rocket Feathers" — 60 × TR Supporters discarded from hand
+  if (lower.includes("rocket feathers") || rawDamage.includes("×")) {
+    const trSupporterCount = player.hand.filter((card) => {
+      const def = getDefinition(state, card.definitionId);
+      return def && isSupporter(def) && def.name.toLowerCase().includes("team rocket's");
+    }).length;
+    return (base || 60) * trSupporterCount;
+  }
+
+  // "Gale Thrust" — 60 + 170 bonus if Lopunny moved from bench this turn
+  if (lower.includes("gale thrust") || (rawDamage.includes("+") && lower.includes("thrust"))) {
+    const movedIds = state.turnFlags.movedFromBenchToActiveIds ?? [];
+    const lopunnyMoved = player.active && movedIds.includes(player.active.instanceId);
+    return base + (lopunnyMoved ? 170 : 0);
+  }
+
+  // "Night Joker" — copies the best attack from a benched N's Pokémon
+  if (lower.includes("night joker")) {
+    let bestDamage = 0;
+    for (const bench of player.bench) {
+      const def = getDefinition(state, bench.definitionId);
+      if (!def?.name?.toLowerCase().startsWith("n's")) continue;
+      for (const atk of (def.attacks ?? [])) {
+        const d = parseInt(atk.damage, 10) || 0;
+        if (d > bestDamage) bestDamage = d;
+      }
+    }
+    return bestDamage;
+  }
+
+  // Generic "X+" → assume full bonus is achievable (conservative estimate)
+  if (rawDamage.includes("+") && base > 0) return base + 60;
+
+  return base;
+}
+
+/**
+ * Returns true if the archetype should skip attacking this turn to keep loading
+ * resources (e.g. Honchkrow loading TR Supporters before firing Rocket Feathers).
+ */
+function shouldSkipAttack(state: EngineState, playerId: PlayerId, ctx: StrategyContext | undefined): boolean {
+  if (!ctx) return false;
+  const player = getPlayer(state, playerId);
+
+  // Honchkrow: only attack with Rocket Feathers when enough TR Supporters are in hand
+  if (ctx.archetype === "honchkrow") {
+    const def = player.active ? getDefinitionSafe(state, player.active.definitionId) : null;
+    const hasRocketFeathers = (def?.attacks ?? []).some(
+      (a) => a.name.toLowerCase().includes("rocket feathers"),
+    );
+    if (hasRocketFeathers) {
+      const trCount = player.hand.filter((card) => {
+        const d = getDefinition(state, card.definitionId);
+        return d && isSupporter(d) && d.name.toLowerCase().includes("team rocket's");
+      }).length;
+      const opponentHp = getPlayer(state, getOpponentId(playerId)).active
+        ? remainingHp(state, getPlayer(state, getOpponentId(playerId)).active!)
+        : 9999;
+      const expectedDamage = trCount * 60;
+      // Attack if: can KO with current count, OR 3+ supporters loaded, OR 2+ and long game, OR desperate
+      const canKO = expectedDamage >= opponentHp;
+      const desperate = player.deck.length <= 10 || state.turnNumber >= 12;
+      if (!canKO && !desperate && trCount < 3) return true; // keep loading hand
+    }
+  }
+
+  // Lopunny: only attack with Gale Thrust if Lopunny moved from bench this turn
+  if (ctx.archetype === "lopunny") {
+    const def = player.active ? getDefinitionSafe(state, player.active.definitionId) : null;
+    const hasGaleThrust = (def?.attacks ?? []).some(
+      (a) => a.name.toLowerCase().includes("gale thrust"),
+    );
+    if (hasGaleThrust) {
+      const movedIds = state.turnFlags.movedFromBenchToActiveIds ?? [];
+      const lopunnyMoved = player.active && movedIds.includes(player.active.instanceId);
+      if (!lopunnyMoved) return true; // Lopunny didn't move from bench — skip attack
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Pick the best activatable ability to use this turn.
+ * Covers: Cursed Blast (Dusknoir), Flip the Script (Fezandipiti ex),
+ * Adrena-Brain (Munkidori), Mortal Shuriken (Mega Greninja ex),
+ * Trade (N's Zoroark ex), Teal Dance (Ogerpon ex), Fan Call (Fan Rotom),
+ * Ripening Charge (Hydrapple ex), R Command (TR Porygon2).
+ */
+export function pickAutoAbilityAction(
+  state: EngineState,
+  ctx?: StrategyContext,
+): Extract<GameAction, { type: "USE_ABILITY" }> | null {
+  const playerId = state.currentPlayerId;
+  const player = getPlayer(state, playerId);
+  const opponent = getPlayer(state, getOpponentId(playerId));
+
+  const abilityActions = getLegalActions(state).filter(
+    (action): action is Extract<GameAction, { type: "USE_ABILITY" }> => action.type === "USE_ABILITY",
+  );
+  if (abilityActions.length === 0) return null;
+
+  const allOwn = [...(player.active ? [player.active] : []), ...player.bench];
+  const allOpponent = [...(opponent.active ? [opponent.active] : []), ...opponent.bench];
+
+  const scored = abilityActions.map((action) => {
+    const pokemon = allOwn.find((p) => p.instanceId === action.pokemonId);
+    const abilityLower = action.abilityName.toLowerCase();
+    let score = 0;
+
+    // === DRAW / SEARCH ABILITIES (almost always beneficial) ===
+
+    if (abilityLower.includes("flip the script")) {
+      // Draw 3 cards when your Pokémon was KO'd last turn (condition enforced by engine)
+      score = 88;
+    } else if (abilityLower.includes("fan call")) {
+      // T1 search: find up to 3 Colorless Pokémon ≤100 HP from deck to hand
+      score = player.bench.length < 3 ? 82 : 35;
+    } else if (abilityLower.includes("teal dance")) {
+      // Attach Basic Grass from hand to any Grass Pokémon + draw 1 card (engine: needs Grass in hand)
+      score = 72;
+    } else if (abilityLower.includes("ripening charge")) {
+      // Attach Basic Grass from hand + heal 30 damage (engine: needs Grass in hand)
+      const hasDamaged = allOwn.some((p) => p.damageCounters > 0);
+      score = hasDamaged ? 72 : 60; // Extra value if healing is relevant
+    } else if (abilityLower.includes("trade")) {
+      // Discard 1 card from hand, draw 2 — net +1 card
+      // Great when hand is large (more dead cards to discard); skip if hand is nearly empty
+      if (player.hand.length >= 5) score = 70;       // Many cards → likely dead draws to discard
+      else if (player.hand.length >= 3) score = 55;  // Moderate hand → probably still worth it
+      else if (player.hand.length === 2) score = 30; // Risky: discarding one of only two cards
+      // else score = 0: hand ≤ 1 — can't afford to discard
+    }
+
+    // === DAMAGE ABILITIES (value scales with KO potential) ===
+
+    else if (abilityLower.includes("cursed blast")) {
+      // Place 13 damage counters on any opponent Pokémon, then Dusknoir KOs itself
+      // Only worth it if we get meaningful value — never sacrifice Dusknoir casually
+      const dusknoirHp = pokemon ? remainingHp(state, pokemon) : 9999;
+      const dusknoirDying = dusknoirHp <= 130; // Will be KO'd by opponent soon anyway
+      const canKONow = allOpponent.some((p) => remainingHp(state, p) <= 130);
+      // Set-up KO: Cursed Blast 130 + Phantom Dive active 120 = 250 on active
+      //            Cursed Blast 130 + Phantom Dive bench 50 = 180 on bench
+      const setsUpActiveKO = opponent.active != null && remainingHp(state, opponent.active) <= 250;
+      const setsUpBenchKO = opponent.bench.some((p) => remainingHp(state, p) <= 180);
+      const setsUpKO = setsUpActiveKO || setsUpBenchKO;
+      if (canKONow) score = 95;                   // Immediate KO — always worth the sacrifice
+      else if (dusknoirDying && setsUpKO) score = 85; // Dying anyway; secure the KO setup
+      else if (dusknoirDying) score = 72;         // Dying anyway — put 13 counters somewhere
+      else if (setsUpKO) score = 65;              // Healthy Dusknoir, but sets up a KO next turn
+      // else: score stays 0 — don't sacrifice Dusknoir without meaningful outcome
+
+    } else if (abilityLower.includes("mortal shuriken")) {
+      // Discard Basic Water Energy, place 6 damage counters on any opponent Pokémon
+      const canKOTarget = allOpponent.some((p) => remainingHp(state, p) <= 60);
+      score = canKOTarget ? 90 : 50; // High if KO, medium for spread
+
+    } else if (abilityLower.includes("adrena-brain")) {
+      // Move up to 3 damage counters from ONE opponent Pokémon to ANOTHER opponent Pokémon
+      // Source = opponent's Pokémon with excess counters; Target = opponent's Pokémon nearest to KO
+      const opponentDamagedList = allOpponent.filter((p) => p.damageCounters >= 3);
+      const canConsolidateKO = allOpponent.some((p) => {
+        const hp = remainingHp(state, p);
+        // Can we finish off a Pokémon by moving 3 counters (30 damage) onto it?
+        return hp <= 30 && opponentDamagedList.some((src) => src.instanceId !== p.instanceId);
+      });
+      const hasSpreadDamage = opponentDamagedList.length >= 2; // Two damaged Pokémon → consolidate
+      if (canConsolidateKO) score = 88;      // Move 30 damage to KO a near-dead Pokémon
+      else if (hasSpreadDamage) score = 55;  // Redistribute to consolidate for future KO
+      // else score = 0 — nothing to move, don't waste the ability
+
+    } else if (abilityLower.includes("r command")) {
+      // Deal 20 damage × TR Supporters in own discard pile
+      const trDiscardCount = player.discard.filter((card) => {
+        const d = getDefinition(state, card.definitionId);
+        return d && isSupporter(d) && d.name.toLowerCase().includes("team rocket's");
+      }).length;
+      const damage = trDiscardCount * 20;
+      const opponentHp = opponent.active ? remainingHp(state, opponent.active) : 9999;
+      score = damage >= opponentHp ? 92 : damage >= 60 ? 60 : damage > 0 ? 40 : 0;
+
+    }
+    // Unknown ability → skip (do not trigger abilities with unhandled pending states)
+
+    return { action, score };
+  })
+    .filter((e) => e.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  return scored[0]?.action ?? null;
+}
+
+/**
+ * Pick the best attack for the active Pokémon.
+ * - Prefers attacks that KO the opponent
+ * - Estimates variable damage (60×, 60+) from game context
+ * - Gates strategy-specific attacks (Rocket Feathers, Gale Thrust) on preconditions
+ * - Boosts the archetype's signature attack
+ */
+export function pickBestAttack(state: EngineState, playerId: PlayerId, ctx?: StrategyContext): string | null {
+  const player = getPlayer(state, playerId);
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  if (!player.active) return null;
+
+  // Strategy gate: skip attacking if the deck needs to load resources first
+  if (shouldSkipAttack(state, playerId, ctx)) return null;
+
+  const def = getDefinitionSafe(state, player.active.definitionId);
+  const affordableAttacks = (def.attacks ?? []).filter(
+    (attack) => canAffordAttack(state, player.active!, attack),
+  );
+  if (affordableAttacks.length === 0) return null;
+
+  const opponentHp = opponent.active ? remainingHp(state, opponent.active) : 9999;
+  const signatureAttack = ctx?.profile.signatureAttack?.toLowerCase();
+
+  const scored = affordableAttacks.map((attack) => {
+    let dmg = estimateAttackDamage(state, playerId, attack.name, attack.damage);
+    // Fallback: some attacks have damage:""  but list a number in the text
+    // e.g. "This attack does 120 damage to 2 of your opponent's Pokémon."
+    if (dmg === 0 && attack.text) {
+      const textMatch = attack.text.match(/\b(\d{2,3})\s*damage\b/i);
+      if (textMatch) dmg = parseInt(textMatch[1]!, 10);
+    }
+    const isKo = dmg >= opponentHp && dmg > 0;
+    const isSignature = signatureAttack && attack.name.toLowerCase().includes(signatureAttack);
+
+    let score = isKo ? 10000 + dmg : dmg;
+    if (isSignature) score += 500; // Always prefer signature attack (e.g. Phantom Dive, Gale Thrust)
+
+    return { name: attack.name, score };
+  }).sort((a, b) => b.score - a.score);
+
+  // Only attack if expected damage > 0 (don't waste Rocket Feathers with empty hand)
+  if ((scored[0]?.score ?? 0) <= 0) return null;
+
+  return scored[0]?.name ?? null;
+}
+
+/**
+ * Pick the best Pokémon to attach energy to:
+ * 1. Active, if it could attack with this energy (one energy away from cost)
+ * 2. Bench Pokémon with the most energy already toward attack cost
+ * 3. Active as fallback
+ */
+export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx?: StrategyContext): string | null {
+  const player = getPlayer(state, playerId);
+  const allPokemon = [
+    ...(player.active ? [player.active] : []),
+    ...player.bench,
+  ];
+  if (allPokemon.length === 0) return null;
+
+  // Score each Pokémon: prefer those with most energy already (closer to attacking)
+  const scored = allPokemon.map((pokemon) => {
+    const def = getDefinitionSafe(state, pokemon.definitionId);
+    const energyCount = pokemon.attachedEnergy.length;
+    const isActive = player.active?.instanceId === pokemon.instanceId;
+    const hasAttacks = (def.attacks?.length ?? 0) > 0;
+
+    // Check if already can attack (skip - no point adding more)
+    const alreadyReady = (def.attacks ?? []).some(
+      (atk) => canAffordAttack(state, pokemon, atk),
+    );
+
+    // Base score: prefer active, prefer closer to attacking
+    let score = energyCount * 10 + (isActive ? 5 : 0) + (hasAttacks ? 2 : 0);
+    if (alreadyReady) score -= 50; // Don't pile energy on already-ready Pokémon
+
+    // Archetype-aware: boost Pokémon that the strategy wants energized
+    if (ctx) {
+      const nameLower = def.name.toLowerCase();
+      const archPriority = getArchetypeEnergyPriority(ctx.archetype, nameLower);
+      score += archPriority;
+
+      // Dragapult: never attach to Budew (item-locker, has no relevant attacks needing energy)
+      if (ctx.archetype === "dragapult" && nameLower.includes("budew")) score -= 100;
+      // Ogerpon: always keep some energy on Teal Mask Ogerpon ex (Teal Dance ability)
+      if ((ctx.archetype === "ogerpon-box") && nameLower.includes("teal mask ogerpon")) score += 20;
+    }
+
+    return { id: pokemon.instanceId, score };
+  }).sort((a, b) => b.score - a.score);
+
+  return scored[0]?.id ?? (player.active?.instanceId ?? null);
+}
+
+export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext): Extract<GameAction, { type: "PLAY_TRAINER" }> | null {
   const playerId = state.currentPlayerId;
   const player = getPlayer(state, playerId);
   const opponent = getPlayer(state, getOpponentId(playerId));
@@ -410,25 +871,140 @@ export function pickAutoTrainerAction(state: EngineState): Extract<GameAction, {
   );
   if (legal.length === 0) return null;
 
+  const handSize = player.hand.length;
+  const hasSupporterInLegal = legal.some((action) => {
+    const card = player.hand.find((entry) => entry.instanceId === action.instanceId);
+    const def = card ? getDefinition(state, card.definitionId) : undefined;
+    return def && isSupporter(def);
+  });
+
   const scored = legal
     .map((action) => {
       const card = player.hand.find((entry) => entry.instanceId === action.instanceId);
       const def = card ? getDefinition(state, card.definitionId) : undefined;
       if (!def) return { action, score: -1 };
       const name = def.name.toLowerCase();
+      const supporter = isSupporter(def);
+
+      // Never play a second Supporter (engine already blocks, but skip scoring)
+      if (supporter && state.turnFlags.supporterPlayed) return { action, score: -1 };
+
       let score = 0;
-      if (name.includes("lillie")) score = player.hand.length >= 4 ? 90 : 45;
-      else if (name.includes("professor")) score = player.hand.length >= 3 ? 85 : 40;
-      else if (name.includes("judge")) score = 70;
-      else if (name.includes("poffin") && player.bench.length < 4) score = 65;
-      else if (name.includes("night stretcher") && player.discard.some((entry) => getDefinition(state, entry.definitionId)?.supertype === "Pokémon")) {
-        score = 60;
-      } else if (name.includes("ultra ball") && player.hand.length >= 4) score = 55;
-      else if (name.includes("boss") && opponent.bench.length > 0) score = 35;
-      else if (name.includes("crispin") && player.bench.length > 0) score = 30;
-      else if (name.includes("rare candy")) score = 20;
-      else if (!isSupporter(def)) score = 15;
-      else if (!state.turnFlags.supporterPlayed) score = 10;
+
+      // === SUPPORTERS ===
+      if (name.includes("lillie's determination") || name.includes("lillie")) {
+        score = handSize >= 4 ? 95 : 50;
+      } else if (name.includes("iono") && opponent.prizes.length <= 3) {
+        score = 90;
+      } else if (name.includes("iono")) {
+        score = handSize <= 3 ? 75 : 55;
+      } else if (name.includes("professor's research") || name.includes("professor sada") || name.includes("professor turo")) {
+        score = handSize >= 3 ? 88 : 45;
+      } else if (name.includes("hilda")) {
+        score = 85;
+      } else if (name.includes("judge")) {
+        score = opponent.hand.length >= 5 ? 80 : 65;
+      } else if (name.includes("wally's compassion")) {
+        // Wally's Compassion: heal ALL damage from Mega Evolution Pokémon ex; energy returns to hand.
+        // Pokémon stays in play — safe to play any time a Mega Lopunny ex (or other Mega ex) has damage.
+        const damagedMega = [...player.bench, ...(player.active ? [player.active] : [])].find(
+          (mon) => {
+            const d = getDefinition(state, mon.definitionId);
+            return d?.name?.toLowerCase().includes("mega") && d?.name?.toLowerCase().includes("ex") && mon.damageCounters > 0;
+          },
+        );
+        // Use -1000 so even the archetype bonus (+25) cannot bring the score above 0 when no target
+        score = damagedMega ? 105 : -1000;
+      } else if (name.includes("arven")) {
+        score = 72;
+      } else if (name.includes("cyrano")) {
+        score = 70;
+      } else if (name.includes("boss's orders") || name.includes("boss")) {
+        if (opponent.bench.length === 0) {
+          score = -1;
+        } else {
+          // High priority when a bench target is within KO range of our active
+          const activeDef = player.active ? getDefinition(state, player.active.definitionId) : undefined;
+          const maxAtkDmg = (activeDef?.attacks ?? []).reduce((best, atk) => {
+            const d = parseInt(atk.damage, 10);
+            return Number.isNaN(d) ? best : Math.max(best, d);
+          }, 0);
+          const hasKOTarget = maxAtkDmg > 0 && opponent.bench.some((b) => remainingHp(state, b) <= maxAtkDmg);
+          score = hasKOTarget ? 68 : (opponent.prizes.length <= 3 ? 55 : 38);
+        }
+      } else if (name.includes("crispin") && (player.bench.length > 0 || player.active)) {
+        score = 32;
+      } else if (name.includes("rosa")) {
+        score = 28;
+      // === TEAM ROCKET SUPPORTERS (specific scoring for Honchkrow archetype) ===
+      } else if (name.includes("team rocket's transceiver")) {
+        // Grab a TR Supporter from deck — critical for Rocket Feathers setup
+        score = 70;
+      } else if (name.includes("team rocket's ariana")) {
+        // Draws to 8 if all Pokémon in play are TR — enormous hand refresh
+        score = 65;
+      } else if (name.includes("team rocket's proton")) {
+        // T1 bench fill: search 3 Basic TR Pokémon from deck
+        score = player.bench.length < 2 ? 68 : 22;
+      } else if (name.includes("team rocket's giovanni")) {
+        // Boss pull: opponent's best bench Pokémon goes active
+        score = opponent.bench.length > 0 ? 58 : 20;
+      } else if (name.includes("team rocket's archer")) {
+        // Both players shuffle hands; you draw 5, opponent draws 3 — great reload
+        score = 75;
+      } else if (name.includes("team rocket's")) {
+        // Generic TR Supporter (Petrel, etc.) — better than generic fallback
+        score = 30;
+      } else if (supporter && !state.turnFlags.supporterPlayed) {
+        score = 12; // generic Supporter fallback
+
+      // === ITEMS ===
+      } else if (name.includes("poké pad") || name.includes("poke pad")) {
+        score = player.bench.length < 3 && player.deck.length > 0 ? 75 : 50;
+      } else if (name.includes("buddy-buddy poffin") || name.includes("poffin")) {
+        score = player.bench.length < 3 ? 70 : 20;
+      } else if (name.includes("ultra ball")) {
+        score = handSize >= 4 ? 62 : 35;
+      } else if (name.includes("pokégear") || name.includes("pokegear")) {
+        score = !state.turnFlags.supporterPlayed && !hasSupporterInLegal ? 60 : 25;
+      } else if (name.includes("night stretcher")) {
+        const hasPokemonInDiscard = player.discard.some(
+          (entry) => getDefinition(state, entry.definitionId)?.supertype === "Pokémon",
+        );
+        score = hasPokemonInDiscard ? 58 : -1;
+      } else if (name.includes("rare candy")) {
+        score = 18;
+      } else if (name.includes("crushing hammer")) {
+        score = opponent.active && opponent.active.attachedEnergy.length > 0 ? 30 : 15;
+      } else if (name.includes("unfair stamp")) {
+        score = opponent.prizes.length <= 3 ? 45 : 10;
+      } else if (name.includes("air balloon")) {
+        // Lopunny: Air Balloon on Lopunny enables Gale Thrust retreat cycle
+        const lopunnyNeedsBalloon = (player.active && !player.active.toolId &&
+          getDefinition(state, player.active.definitionId)?.name?.toLowerCase().includes("lopunny")) ||
+          player.bench.some((p) => !p.toolId && getDefinition(state, p.definitionId)?.name?.toLowerCase().includes("lopunny"));
+        score = lopunnyNeedsBalloon ? 65 : (player.active && !player.active.toolId ? 22 : -1);
+      } else if (name.includes("energy switch")) {
+        score = player.bench.length > 0 ? 28 : -1;
+      } else if (name.includes("battle cage")) {
+        score = 35;
+      } else if (name.includes("team rocket's factory")) {
+        // Honchkrow: TR Factory is critical — play ASAP before drawing
+        score = !state.stadium ? 80 : 25; // Very high if no stadium in play
+      } else if (name.includes("roto-stick")) {
+        // Honchkrow: dig for more TR Supporters in top 4 cards
+        score = 55;
+      } else if (name.includes("risky ruins") || name.includes("area zero") || name.includes("watchtower") || name.includes("team rocket's watchtower")) {
+        score = 30;
+      } else if (!supporter) {
+        score = 14;
+      }
+
+      // Apply archetype-specific bonus from strategy knowledge
+      if (ctx) {
+        score += getArchetypeTrainerBonus(ctx.archetype, name);
+      }
+
       return { action, score };
     })
     .filter((entry) => entry.score > 0)
@@ -437,22 +1013,102 @@ export function pickAutoTrainerAction(state: EngineState): Extract<GameAction, {
   return scored[0]?.action ?? null;
 }
 
-function tryResolveAutoPending(state: EngineState): EngineState | null {
+/**
+ * Pick the best card from deck search options.
+ * Priority: Stage 2 attacker > Stage 1 evolution > Basic ex/V > draw supporter > item > basic energy
+ */
+function pickBestSearchDeckCard(
+  state: EngineState,
+  playerId: PlayerId,
+  options: string[],
+  ctx?: StrategyContext,
+): string {
+  const player = getPlayer(state, playerId);
+  const inPlayNames = new Set([
+    ...(player.active ? [getDefinition(state, player.active.definitionId)?.name?.toLowerCase() ?? ""] : []),
+    ...player.bench.map((p) => getDefinition(state, p.definitionId)?.name?.toLowerCase() ?? ""),
+  ]);
+
+  const scored = options.map((instanceId) => {
+    const card = player.deck.find((c) => c.instanceId === instanceId);
+    if (!card) return { instanceId, score: 0 };
+    const def = getDefinition(state, card.definitionId);
+    if (!def) return { instanceId, score: 0 };
+    const name = def.name.toLowerCase();
+
+    let score = 10;
+    if (def.supertype === "Pokémon") {
+      if (isStage2(def)) score = 90;
+      else if (def.subtypes.includes("Stage 1")) score = 80;
+      else if (name.includes(" ex") || def.subtypes.includes("ex")) score = 75;
+      else if (isBasicPokemon(def)) score = 60;
+      if (def.evolvesFrom && inPlayNames.has(def.evolvesFrom.toLowerCase())) score += 15;
+      // Archetype-aware: boost key attacker lines
+      if (ctx) score += getArchetypeSearchPriority(ctx.archetype, name);
+    } else if (def.supertype === "Trainer") {
+      if (isSupporter(def)) {
+        if (name.includes("iono") || name.includes("professor") || name.includes("lillie") || name.includes("hilda") || name.includes("wally")) score = 50;
+        else score = 40;
+      } else {
+        score = 30;
+      }
+    } else if (def.supertype === "Energy") {
+      score = 15;
+    }
+    return { instanceId, score };
+  }).sort((a, b) => b.score - a.score);
+
+  return scored[0]?.instanceId ?? options[0]!;
+}
+
+function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): EngineState | null {
   const pending = state.pendingAction;
   if (!pending) return null;
   const playerId = pending.playerId;
 
   switch (pending.type) {
     case "DISCARD_BASIC_ENERGY_FOR_DAMAGE":
-    case "DISCARD_NAMED_SUPPORTERS_FOR_DAMAGE":
+      // SKIP_OPTIONAL correctly routes through finishDiscardEnergyForAttack
+      // which handles removal of attached energies for attacks like Mirage Barrage.
       return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
-    case "CHOOSE_OPPONENT_POKEMON_DAMAGE":
+    case "DISCARD_NAMED_SUPPORTERS_FOR_DAMAGE": {
+      // Rocket Feathers: discard ALL TR Supporters from hand for 60 damage each.
+      const player = getPlayer(state, playerId);
+      const discardable = player.hand.find((card) => {
+        const def = getDefinition(state, card.definitionId);
+        return def && isSupporter(def) && def.name.toLowerCase().includes(pending.nameFilter.toLowerCase());
+      });
+      if (discardable) {
+        return gameReducer(state, {
+          type: "DISCARD_HAND_SUPPORTER_FOR_ATTACK",
+          playerId,
+          instanceId: discardable.instanceId,
+        });
+      }
+      // No more matching Supporters — finish the attack
+      return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+    }
+    case "CHOOSE_OPPONENT_POKEMON_DAMAGE": {
       if (pending.options.length === 0) return null;
+      // Pick best target: prefer KO'd by this damage, then most damaged (closest to KO)
+      const damage = (pending.amount ?? 13) * 10;
+      const opponent = getPlayer(state, getOpponentId(playerId));
+      const allOppInPlay = [...(opponent.active ? [opponent.active] : []), ...opponent.bench];
+      const validTargets = allOppInPlay.filter((p) => pending.options.includes(p.instanceId));
+      const bestTarget = validTargets.sort((a, b) => {
+        const aHp = remainingHp(state, a);
+        const bHp = remainingHp(state, b);
+        const aKo = aHp <= damage ? 1 : 0;
+        const bKo = bHp <= damage ? 1 : 0;
+        if (aKo !== bKo) return bKo - aKo; // prefer KO
+        return aHp - bHp; // else target most damaged (lowest remaining HP)
+      })[0];
       return gameReducer(state, {
         type: "CHOOSE_OPPONENT_POKEMON_DAMAGE_TARGET",
         playerId,
-        targetId: pending.options[0]!,
+        targetId: bestTarget?.instanceId ?? pending.options[0]!,
       });
+    }
     case "CHOOSE_BENCH_DAMAGE":
       if (pending.options.length === 0) return null;
       return gameReducer(state, {
@@ -465,12 +1121,24 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
       if (pending.optional) {
         return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
       }
-      const bench = player.bench[0];
-      if (!bench) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      if (!player.bench.length) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      // Pick best bench Pokémon to promote: prefer energized attackers, then archetype primary
+      const bestBench = [...player.bench].sort((a, b) => {
+        const aDef = getDefinition(state, a.definitionId);
+        const bDef = getDefinition(state, b.definitionId);
+        const aName = aDef?.name?.toLowerCase() ?? "";
+        const bName = bDef?.name?.toLowerCase() ?? "";
+        // 1. Archetype priority (primary attacker first)
+        const aArchPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, aName) : 0;
+        const bArchPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, bName) : 0;
+        if (aArchPrio !== bArchPrio) return bArchPrio - aArchPrio;
+        // 2. Tie-break: more energy attached (closer to attacking)
+        return b.attachedEnergy.length - a.attachedEnergy.length;
+      })[0];
       return gameReducer(state, {
         type: "SWITCH_WITH_BENCH",
         playerId,
-        benchInstanceId: bench.instanceId,
+        benchInstanceId: bestBench!.instanceId,
       });
     }
     case "DRAW_UNTIL_HAND":
@@ -486,25 +1154,39 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
         }
         return null;
       }
-      if (pending.slotsRemaining !== undefined && pending.slotsRemaining > 1) {
-        return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
-      }
+      // NOTE: do NOT skip multi-slot searches (slotsRemaining > 1).
+      // Buddy-Buddy Poffin / Proton etc. create a new SEARCH_DECK(slotsRemaining-1) after each pick.
+      // Skipping here ends the ENTIRE search early (0 picks instead of 2).
       if (pending.options.length > 0) {
+        // Pick best card: prefer evolutions/attackers over basic energy/items
+        const bestSearchCard = pickBestSearchDeckCard(state, playerId, pending.options, ctx);
         return gameReducer(state, {
           type: "PICK_DECK_CARD",
           playerId,
-          instanceId: pending.options[0]!,
+          instanceId: bestSearchCard,
         });
       }
       return null;
     case "BOSS_ORDERS": {
       const opponent = getPlayer(state, getOpponentId(playerId));
-      const bench = opponent.bench[0];
-      if (!bench || !opponent.active) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      if (!opponent.bench.length) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      // Target: combine archetype boss priority + least remaining HP for easiest KO
+      const target = [...opponent.bench].sort((a, b) => {
+        const aDef = getDefinition(state, a.definitionId);
+        const bDef = getDefinition(state, b.definitionId);
+        const aNameLower = aDef?.name?.toLowerCase() ?? "";
+        const bNameLower = bDef?.name?.toLowerCase() ?? "";
+        const aArchPrio = ctx ? getArchetypeBossPriority(ctx.archetype, aNameLower) : 0;
+        const bArchPrio = ctx ? getArchetypeBossPriority(ctx.archetype, bNameLower) : 0;
+        // Higher archetype priority wins; break ties by lowest HP
+        if (aArchPrio !== bArchPrio) return bArchPrio - aArchPrio;
+        return remainingHp(state, a) - remainingHp(state, b);
+      })[0];
+      if (!target) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
       return gameReducer(state, {
         type: "SWITCH_OPPONENT_ACTIVE",
         playerId,
-        benchInstanceId: bench.instanceId,
+        benchInstanceId: target.instanceId,
       });
     }
     case "ULTRA_BALL_DISCARD": {
@@ -513,10 +1195,34 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
         (card) => !pending.selectedIds.includes(card.instanceId),
       );
       if (discardCandidates.length === 0) return null;
+      // Build set of names to protect from discard based on archetype strategy.
+      // Keep: cards in ultraBallKeep list AND archetype-specific "ammo" cards.
+      const keepSet = new Set(ctx ? ctx.profile.ultraBallKeep.map((s) => s.toLowerCase()) : []);
+      // Honchkrow: TR Supporters are ammo for Rocket Feathers — never discard them
+      const isHonchkrow = ctx?.archetype === "honchkrow";
+      // Prefer discarding: Energy > duplicate Basics > Supporters > Items > key Pokémon
+      const scoredCandidates = discardCandidates.map((card) => {
+        const def = getDefinition(state, card.definitionId);
+        if (!def) return { card, score: 50 };
+        const nameLower = def.name.toLowerCase();
+        // Never discard protected cards
+        if (keepSet.has(nameLower) || keepSet.size > 0 && [...keepSet].some((k) => nameLower.includes(k))) {
+          return { card, score: -10 };
+        }
+        if (def.supertype === "Energy") return { card, score: 90 }; // discard energy first
+        if (def.supertype === "Pokémon" && isBasicPokemon(def)) return { card, score: 70 };
+        if (def.supertype === "Trainer" && isSupporter(def)) {
+          // Honchkrow keeps TR Supporters as Rocket Feathers ammo
+          if (isHonchkrow && nameLower.includes("team rocket's")) return { card, score: -5 };
+          return { card, score: 60 };
+        }
+        if (def.supertype === "Trainer") return { card, score: 40 };
+        return { card, score: 30 };
+      }).sort((a, b) => b.score - a.score);
       return gameReducer(state, {
         type: "SELECT_HAND_DISCARD",
         playerId,
-        instanceId: discardCandidates[0]!.instanceId,
+        instanceId: scoredCandidates[0]!.card.instanceId,
       });
     }
     case "RARE_CANDY": {
@@ -620,17 +1326,31 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
         instanceId: pending.options[0]!,
       });
     case "ATTACH_HAND_ENERGY": {
+      // energyId is pre-selected by the engine; pick the best target Pokémon
+      const { energyId, targetIds } = pending;
+      if (!energyId || targetIds.length === 0) return null;
       const player = getPlayer(state, playerId);
-      const energy = player.hand.find(
-        (card) => getDefinition(state, card.definitionId)?.supertype === "Energy",
-      );
-      const targetId = pending.targetIds[0];
-      if (!energy || !targetId) return null;
+      const allOwn = [...(player.active ? [player.active] : []), ...player.bench];
+      // Pick target that needs energy most (fewest attached, prefer primary attacker)
+      const bestTarget = targetIds.reduce((best, id) => {
+        const p = allOwn.find((m) => m.instanceId === id);
+        const bestP = allOwn.find((m) => m.instanceId === best);
+        if (!p || !bestP) return best;
+        const pDef = getDefinition(state, p.definitionId);
+        const bestDef = getDefinition(state, bestP.definitionId);
+        const pName = pDef?.name?.toLowerCase() ?? "";
+        const bestName = bestDef?.name?.toLowerCase() ?? "";
+        const pArchPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, pName) : 0;
+        const bestArchPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, bestName) : 0;
+        if (pArchPrio !== bestArchPrio) return pArchPrio > bestArchPrio ? id : best;
+        // Tie-break: fewer energy attached = needs it more
+        return p.attachedEnergy.length <= bestP.attachedEnergy.length ? id : best;
+      }, targetIds[0]!);
       return gameReducer(state, {
         type: "ATTACH_HAND_ENERGY_TO_POKEMON",
         playerId,
-        pokemonId: targetId,
-        energyId: energy.instanceId,
+        pokemonId: bestTarget,
+        energyId,
       });
     }
     case "PROMOTE": {
@@ -683,7 +1403,48 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
     }
     case "ENERGY_SWITCH": {
       if (pending.options.length === 0) return null;
-      return gameReducer(state, { type: "SELECT_ENERGY_SWITCH_POKEMON", playerId, pokemonId: pending.options[0]! });
+      const esPlayer = getPlayer(state, playerId);
+      const allEsMons = [...(esPlayer.active ? [esPlayer.active] : []), ...esPlayer.bench];
+
+      if (pending.step === "SOURCE") {
+        // Take energy FROM the Pokémon least in need of it right now
+        const scored = pending.options
+          .map((id) => {
+            const mon = allEsMons.find((p) => p.instanceId === id);
+            const def = mon ? getDefinition(state, mon.definitionId) : undefined;
+            const name = def?.name?.toLowerCase() ?? "";
+            let score = 0;
+            // Ogerpon: Teal Mask generates energy — happy to donate to main attacker
+            if (name.includes("teal mask ogerpon")) score = 80;
+            // Bench Pokémon that already has excess energy
+            if (mon && mon.attachedEnergy.length >= 3) score = Math.max(score, 60);
+            // Don't strip the active attacker
+            if (esPlayer.active?.instanceId === id) score -= 30;
+            return { id, score };
+          })
+          .sort((a, b) => b.score - a.score);
+        return gameReducer(state, { type: "SELECT_ENERGY_SWITCH_POKEMON", playerId, pokemonId: scored[0]?.id ?? pending.options[0]! });
+      } else {
+        // Move energy TO the Pokémon that needs it most (about to attack)
+        const scored = pending.options
+          .map((id) => {
+            const mon = allEsMons.find((p) => p.instanceId === id);
+            const def = mon ? getDefinition(state, mon.definitionId) : undefined;
+            const name = def?.name?.toLowerCase() ?? "";
+            let score = 0;
+            // Active attacker is top priority
+            if (esPlayer.active?.instanceId === id) score = 50;
+            // Archetype-preferred attackers get bonus
+            if (ctx) score += getArchetypeEnergyPriority(ctx.archetype, name);
+            // Ogerpon: Wellspring / Lillie's Clefairy / Kangaskhan are primary attackers
+            if (name.includes("wellspring")) score = Math.max(score, 90);
+            if (name.includes("lillie's clefairy")) score = Math.max(score, 85);
+            if (name.includes("mega kangaskhan")) score = Math.max(score, 75);
+            return { id, score };
+          })
+          .sort((a, b) => b.score - a.score);
+        return gameReducer(state, { type: "SELECT_ENERGY_SWITCH_POKEMON", playerId, pokemonId: scored[0]?.id ?? pending.options[0]! });
+      }
     }
     case "ENHANCED_HAMMER": {
       if (pending.step === "POKEMON") {
@@ -701,7 +1462,24 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
     }
     case "WALLYS_COMPASSION": {
       if (pending.options.length === 0) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
-      return gameReducer(state, { type: "SELECT_WALLYS_POKEMON", playerId, pokemonId: pending.options[0]! });
+      // Prefer healing the most-damaged Mega Lopunny ex on the bench/active
+      const player = getPlayer(state, playerId);
+      const allPokemon = [...(player.active ? [player.active] : []), ...player.bench];
+      const bestHealTarget = pending.options
+        .map((id) => {
+          const mon = allPokemon.find((p) => p.instanceId === id);
+          if (!mon) return { id, score: 0 };
+          const def = getDefinition(state, mon.definitionId);
+          const isLopunny = def?.name?.toLowerCase().includes("mega lopunny") ?? false;
+          const dmg = mon.damageCounters;
+          return { id, score: (isLopunny ? 1000 : 0) + dmg };
+        })
+        .sort((a, b) => b.score - a.score)[0];
+      return gameReducer(state, {
+        type: "SELECT_WALLYS_POKEMON",
+        playerId,
+        pokemonId: bestHealTarget?.id ?? pending.options[0]!,
+      });
     }
     case "HILDA": {
       if (pending.options.length === 0) return null;
@@ -810,61 +1588,149 @@ function tryResolveAutoPending(state: EngineState): EngineState | null {
       return gameReducer(state, { type: "DISCARD_OPPONENT_ENERGY", playerId, pokemonId: cOpt.pokemonId, energyId: cOpt.energyId });
     }
     case "DISTRIBUTE_BENCH_DAMAGE": {
+      // Snowball: put bench damage on the Pokémon that's already closest to KO
       const opponent = getPlayer(state, getOpponentId(playerId));
-      const bench = opponent.bench[0];
-      if (!bench) return null;
-      return gameReducer(state, { type: "ASSIGN_BENCH_DAMAGE", playerId, targetId: bench.instanceId });
+      const bestBench = [...opponent.bench]
+        .map((b) => {
+          const def = getDefinition(state, b.definitionId);
+          const maxHp = parseInt(def?.hp ?? "100", 10) || 100;
+          return { b, pct: b.damageCounters / maxHp };
+        })
+        .sort((a, b) => b.pct - a.pct)[0];
+      const target = bestBench?.b ?? opponent.bench[0];
+      if (!target) return null;
+      return gameReducer(state, { type: "ASSIGN_BENCH_DAMAGE", playerId, targetId: target.instanceId });
     }
     case "MOVE_DAMAGE": {
       if (pending.step === "SOURCE") {
+        // Move damage AWAY from our most valuable Pokémon (main attacker / high-priority bench)
         const owner = getPlayer(state, playerId);
-        const mon = [...(owner.active ? [owner.active] : []), ...owner.bench].find(
-          (p) => p.damageCounters > 0,
-        );
-        if (!mon) return null;
-        return gameReducer(state, { type: "MOVE_DAMAGE_SOURCE", playerId, sourceId: mon.instanceId });
+        const sourceMon = [...(owner.active ? [owner.active] : []), ...owner.bench]
+          .filter((p) => p.damageCounters > 0)
+          .map((p) => {
+            const def = getDefinition(state, p.definitionId);
+            const name = def?.name?.toLowerCase() ?? "";
+            const isPrimary = ctx?.profile.primaryAttacker && name.includes(ctx.profile.primaryAttacker.toLowerCase());
+            // Negative score for primary attacker (keep them healthy), positive for bench filler
+            return { p, score: p.damageCounters - (isPrimary ? 1000 : 0) };
+          })
+          .sort((a, b) => b.score - a.score)[0];
+        if (!sourceMon) return null;
+        return gameReducer(state, { type: "MOVE_DAMAGE_SOURCE", playerId, sourceId: sourceMon.p.instanceId });
       }
+      // TARGET: move damage TO opponent's Pokémon closest to KO threshold
       const targetPlayerId = pending.targetSide === "opponent" ? getOpponentId(playerId) : playerId;
       const targetPlayer = getPlayer(state, targetPlayerId);
-      const targetMon = targetPlayer.active ?? targetPlayer.bench[0];
+      const allTargets = [...(targetPlayer.active ? [targetPlayer.active] : []), ...targetPlayer.bench];
+      const bestTarget = allTargets
+        .map((p) => {
+          const def = getDefinition(state, p.definitionId);
+          const maxHp = parseInt(def?.hp ?? "100", 10) || 100;
+          const remaining = remainingHp(state, p);
+          return { p, score: (maxHp - remaining) / maxHp }; // Most damaged = closest to KO
+        })
+        .sort((a, b) => b.score - a.score)[0];
+      const targetMon = bestTarget?.p ?? targetPlayer.active ?? targetPlayer.bench[0];
       if (!targetMon) return null;
       return gameReducer(state, { type: "MOVE_DAMAGE_TARGET", playerId, targetId: targetMon.instanceId });
     }
     case "REDISTRIBUTE_OPPONENT_COUNTERS": {
       if (pending.step === "SOURCE") {
+        // Dusknoir / Munkidori: take counters from opponent's least-important Pokémon
         const opponent = getPlayer(state, getOpponentId(playerId));
-        const mon = [...(opponent.active ? [opponent.active] : []), ...opponent.bench].find(
-          (p) => p.damageCounters > 0,
-        );
-        if (!mon) {
+        const allOpponent = [...(opponent.active ? [opponent.active] : []), ...opponent.bench];
+        const source = allOpponent
+          .filter((p) => p.damageCounters > 0)
+          .map((p) => {
+            const def = getDefinition(state, p.definitionId);
+            const maxHp = parseInt(def?.hp ?? "100", 10) || 100;
+            const remaining = remainingHp(state, p);
+            // Prefer taking from Pokémon with most "excess" damage (already near KO — harvest overflow)
+            // or from support Pokémon (low max HP = less important)
+            const isEx = def?.subtypes?.includes("ex") || def?.subtypes?.includes("V");
+            return { p, score: p.damageCounters + (isEx ? 0 : 50) - remaining };
+          })
+          .sort((a, b) => b.score - a.score)[0]?.p;
+        if (!source) {
           if (pending.optional) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
           return null;
         }
-        return gameReducer(state, { type: "SELECT_REDISTRIBUTE_SOURCE", playerId, sourceId: mon.instanceId });
+        return gameReducer(state, { type: "SELECT_REDISTRIBUTE_SOURCE", playerId, sourceId: source.instanceId });
       }
+      // TARGET: pile counters onto opponent's Pokémon nearest to KO (consolidate for KO)
       const opponent = getPlayer(state, getOpponentId(playerId));
-      const targetMon = [...(opponent.active ? [opponent.active] : []), ...opponent.bench].find(
-        (p) => p.instanceId !== pending.sourceId,
-      );
+      const allOpponent = [...(opponent.active ? [opponent.active] : []), ...opponent.bench];
+      const targetMon = allOpponent
+        .filter((p) => p.instanceId !== pending.sourceId)
+        .map((p) => {
+          const def = getDefinition(state, p.definitionId);
+          const maxHp = parseInt(def?.hp ?? "100", 10) || 100;
+          const remaining = remainingHp(state, p);
+          const isEx = def?.subtypes?.includes("ex") || def?.subtypes?.includes("V");
+          // Priority: Pokémon within exactly 30 HP of KO (3 counters will finish it)
+          const willKO = remaining <= 30 ? 100 : 0;
+          return { p, score: willKO + p.damageCounters / maxHp + (isEx ? 0.5 : 0) };
+        })
+        .sort((a, b) => b.score - a.score)[0]?.p
+        ?? allOpponent.find((p) => p.instanceId !== pending.sourceId);
       if (!targetMon) return null;
       return gameReducer(state, { type: "SELECT_REDISTRIBUTE_TARGET", playerId, targetId: targetMon.instanceId });
     }
     case "COPY_BENCH_ATTACK": {
       if (pending.options.length === 0) return null;
-      const copyOpt = pending.options[0]!;
-      return gameReducer(state, { type: "CHOOSE_BENCH_ATTACK", playerId, benchPokemonId: copyOpt.benchPokemonId, attackName: copyOpt.attackName });
+      const player = getPlayer(state, playerId);
+      const opponent = getPlayer(state, getOpponentId(playerId));
+      const opponentHp = opponent.active ? remainingHp(state, opponent.active) : 9999;
+      // Pick the copied attack that best KOs the opponent:
+      // prefer attack whose damage >= opponent HP (KO), then highest raw damage
+      const bestOpt = [...pending.options].sort((a, b) => {
+        const aBenchDef = getDefinition(state, player.bench.find((p) => p.instanceId === a.benchPokemonId)?.definitionId ?? "");
+        const bBenchDef = getDefinition(state, player.bench.find((p) => p.instanceId === b.benchPokemonId)?.definitionId ?? "");
+        const aAtk = aBenchDef?.attacks?.find((atk) => atk.name === a.attackName);
+        const bAtk = bBenchDef?.attacks?.find((atk) => atk.name === b.attackName);
+        const aDmg = parseInt(aAtk?.damage ?? "0", 10) || 0;
+        const bDmg = parseInt(bAtk?.damage ?? "0", 10) || 0;
+        const aKo = aDmg >= opponentHp && aDmg > 0 ? 1 : 0;
+        const bKo = bDmg >= opponentHp && bDmg > 0 ? 1 : 0;
+        if (aKo !== bKo) return bKo - aKo; // prefer KO attack
+        return bDmg - aDmg; // else pick highest damage
+      })[0]!;
+      return gameReducer(state, { type: "CHOOSE_BENCH_ATTACK", playerId, benchPokemonId: bestOpt.benchPokemonId, attackName: bestOpt.attackName });
     }
     case "ABILITY_DISCARD_HAND": {
+      // Discard least valuable card (for Trade, N's Zoroark, etc.)
       const player = getPlayer(state, playerId);
-      const card = player.hand[0];
-      if (!card) return null;
-      return gameReducer(state, { type: "SELECT_HAND_DISCARD", playerId, instanceId: card.instanceId });
+      if (player.hand.length === 0) return null;
+      const keepSet = new Set(ctx ? ctx.profile.ultraBallKeep.map((s) => s.toLowerCase()) : []);
+      const worst = [...player.hand].sort((a, b) => {
+        const aDef = getDefinition(state, a.definitionId);
+        const bDef = getDefinition(state, b.definitionId);
+        const aName = aDef?.name?.toLowerCase() ?? "";
+        const bName = bDef?.name?.toLowerCase() ?? "";
+        // Protected cards: never discard
+        const aProtected = keepSet.size > 0 && [...keepSet].some((k) => aName.includes(k));
+        const bProtected = keepSet.size > 0 && [...keepSet].some((k) => bName.includes(k));
+        if (aProtected && !bProtected) return 1;
+        if (!aProtected && bProtected) return -1;
+        // Prefer discarding: duplicates of energy, then items, then basics
+        if (aDef?.supertype === "Energy" && bDef?.supertype !== "Energy") return -1;
+        if (aDef?.supertype !== "Energy" && bDef?.supertype === "Energy") return 1;
+        return 0;
+      })[0];
+      if (!worst) return null;
+      return gameReducer(state, { type: "SELECT_HAND_DISCARD", playerId, instanceId: worst.instanceId });
     }
     case "ABILITY_DISCARD_HAND_ENERGY": {
+      // Discard a specific energy type from hand (e.g. Water for Mortal Shuriken)
       const player = getPlayer(state, playerId);
-      const energy = player.hand.find(
-        (card) => getDefinition(state, card.definitionId)?.supertype === "Energy",
-      );
+      const { energyType } = pending;
+      const energy = player.hand.find((card) => {
+        const d = getDefinition(state, card.definitionId);
+        if (!d || d.supertype !== "Energy") return false;
+        // Match by type array first, then name fallback
+        return d.types?.some((t) => t.toLowerCase() === energyType.toLowerCase())
+          ?? d.name.toLowerCase().includes(energyType.toLowerCase());
+      }) ?? player.hand.find((card) => getDefinition(state, card.definitionId)?.supertype === "Energy");
       if (!energy) return null;
       return gameReducer(state, { type: "SELECT_HAND_DISCARD", playerId, instanceId: energy.instanceId });
     }

@@ -4,6 +4,7 @@ import {
   isBasicPokemon,
   isEnergyCard,
   isEvolutionPokemon,
+  isMegaEvolutionEx,
   isPokemonWithoutRuleBox,
   isStage2,
   isSupporter,
@@ -318,11 +319,8 @@ function canPlayTrainerKind(
       }
       return { ok: true };
     case "trainer_unfair_stamp":
-      if (state.turnNumber <= 1) {
-        return { ok: false, reason: "Unfair Stamp cannot be used on the first turn." };
-      }
-      if (opponent.prizes.length > 3) {
-        return { ok: false, reason: "Unfair Stamp: opponent has more than 3 Prize cards remaining." };
+      if (!state.ownPokemonKnockedOutOpponentLastTurn[playerId]) {
+        return { ok: false, reason: "Unfair Stamp: none of your Pokémon were Knocked Out during your opponent's last turn." };
       }
       return { ok: true };
     case "trainer_switch_active_bench":
@@ -359,11 +357,16 @@ function canPlayTrainerKind(
       if (!pokegearCheck.ok) return pokegearCheck;
       return { ok: true };
     }
-    case "trainer_wallys_compassion":
-      if (allPokemonInPlay(player).length === 0) {
-        return { ok: false, reason: "Wally's Compassion requires a Pokémon in play." };
+    case "trainer_wallys_compassion": {
+      const megaTarget = allPokemonInPlay(player).some((mon) => {
+        const monDef = getDefinitionSafe(state, mon.definitionId);
+        return isMegaEvolutionEx(monDef);
+      });
+      if (!megaTarget) {
+        return { ok: false, reason: "Wally's Compassion requires a Mega Evolution Pokémon ex in play." };
       }
       return { ok: true };
+    }
     default: {
       const batch10Check = canPlayTrainerBatch10Kind(state, playerId, kind);
       if (!batch10Check.ok) return batch10Check;
@@ -572,24 +575,40 @@ function applyCrushingHammer(state: EngineState, playerId: PlayerId): void {
 }
 
 function applyUnfairStamp(state: EngineState, playerId: PlayerId): void {
+  const player = getPlayer(state, playerId);
   const opponent = getPlayer(state, getOpponentId(playerId));
-  const returned = [...opponent.hand];
-  opponent.hand = [];
-  for (const card of returned) {
+  // Both players shuffle their hands into their decks
+  for (const card of [...player.hand]) {
+    card.zone = Zone.Deck;
+    player.deck.push(card);
+  }
+  player.hand = [];
+  shufflePlayerDeck(state, playerId);
+  for (const card of [...opponent.hand]) {
     card.zone = Zone.Deck;
     opponent.deck.push(card);
   }
+  opponent.hand = [];
   shufflePlayerDeck(state, getOpponentId(playerId));
-  drawCards(state, getOpponentId(playerId), 4);
+  // Player draws 5, opponent draws 2
+  drawCards(state, playerId, 5);
+  drawCards(state, getOpponentId(playerId), 2);
   logMessage(
     state,
-    `${opponent.name}'s hand was shuffled into their deck and they drew 4 cards (Unfair Stamp).`,
+    `Unfair Stamp: both players shuffled their hands. ${player.name} drew 5 cards, ${opponent.name} drew 2 cards.`,
   );
 }
 
 function applyWallysCompassionEffect(state: EngineState, playerId: PlayerId): void {
   const player = getPlayer(state, playerId);
-  const options = allPokemonInPlay(player);
+  // Only Mega Evolution Pokémon ex are valid targets
+  const options = allPokemonInPlay(player).filter((mon) =>
+    isMegaEvolutionEx(getDefinitionSafe(state, mon.definitionId)),
+  );
+  if (options.length === 0) {
+    logMessage(state, "Wally's Compassion: no Mega Evolution Pokémon ex in play.");
+    return;
+  }
   if (options.length === 1) {
     applyWallysCompassion(state, playerId, options[0]!.instanceId);
     return;
@@ -599,7 +618,7 @@ function applyWallysCompassionEffect(state: EngineState, playerId: PlayerId): vo
     playerId,
     options: options.map((entry) => entry.instanceId),
   };
-  logMessage(state, "Wally's Compassion: choose a Pokémon to heal and shuffle into your deck.");
+  logMessage(state, "Wally's Compassion: choose a Mega Evolution Pokémon ex to heal all damage from.");
 }
 
 function executeParsedTrainerEffects(
@@ -685,11 +704,8 @@ function canPlayLegacyTrainerEffect(
   }
 
   if (matchesTrainer(def, "unfair stamp")) {
-    if (state.turnNumber <= 1) {
-      return { ok: false, reason: "Unfair Stamp cannot be used on the first turn." };
-    }
-    if (opponent.prizes.length > 3) {
-      return { ok: false, reason: "Unfair Stamp: opponent has more than 3 Prize cards remaining." };
+    if (!state.ownPokemonKnockedOutOpponentLastTurn[playerId]) {
+      return { ok: false, reason: "Unfair Stamp: none of your Pokémon were Knocked Out during your opponent's last turn." };
     }
   }
 
@@ -725,8 +741,12 @@ function canPlayLegacyTrainerEffect(
   }
 
   if (matchesTrainer(def, "wally's compassion")) {
-    if (allPokemonInPlay(player).length === 0) {
-      return { ok: false, reason: "Wally's Compassion requires a Pokémon in play." };
+    const hasMega = allPokemonInPlay(player).some((mon) => {
+      const monDef = getDefinitionSafe(state, mon.definitionId);
+      return isMegaEvolutionEx(monDef);
+    });
+    if (!hasMega) {
+      return { ok: false, reason: "Wally's Compassion requires a Mega Evolution Pokémon ex in play." };
     }
   }
 
@@ -1142,16 +1162,7 @@ function applyLegacyTrainerEffect(
   }
 
   if (matchesTrainer(def, "unfair stamp")) {
-    const opponent = getPlayer(state, getOpponentId(playerId));
-    const returned = [...opponent.hand];
-    opponent.hand = [];
-    for (const card of returned) {
-      card.zone = Zone.Deck;
-      opponent.deck.push(card);
-    }
-    shufflePlayerDeck(state, getOpponentId(playerId));
-    drawCards(state, getOpponentId(playerId), 4);
-    logMessage(state, `${opponent.name}'s hand was shuffled into their deck and they drew 4 cards (Unfair Stamp).`);
+    applyUnfairStamp(state, playerId);
     return;
   }
 
@@ -1195,17 +1206,7 @@ function applyLegacyTrainerEffect(
   }
 
   if (matchesTrainer(def, "wally's compassion")) {
-    const options = allPokemonInPlay(player);
-    if (options.length === 1) {
-      applyWallysCompassion(state, playerId, options[0]!.instanceId);
-      return;
-    }
-    state.pendingAction = {
-      type: "WALLYS_COMPASSION",
-      playerId,
-      options: options.map((entry) => entry.instanceId),
-    };
-    logMessage(state, "Wally's Compassion: choose a Pokémon to heal and shuffle into your deck.");
+    applyWallysCompassionEffect(state, playerId);
     return;
   }
 }
@@ -1474,29 +1475,24 @@ export function applyWallysCompassion(state: EngineState, playerId: PlayerId, po
   if (!pokemon) return;
 
   const def = getDefinitionSafe(state, pokemon.definitionId);
-  pokemon.damageCounters = Math.max(0, pokemon.damageCounters - 60);
-  logMessage(state, `${def.name} healed 60 damage (Wally's Compassion).`);
+  const hadDamage = pokemon.damageCounters > 0;
 
-  for (const energy of pokemon.attachedEnergy) {
-    energy.zone = Zone.Deck;
-    player.deck.push(energy);
-  }
-  pokemon.attachedEnergy = [];
-
-  if (player.active?.instanceId === pokemonId) {
-    player.active = null;
-  } else {
-    const benchIndex = player.bench.findIndex((entry) => entry.instanceId === pokemonId);
-    if (benchIndex >= 0) player.bench.splice(benchIndex, 1);
-  }
-
-  pokemon.zone = Zone.Deck;
+  // Heal ALL damage (not just 60)
   pokemon.damageCounters = 0;
-  pokemon.enteredPlayTurn = undefined;
-  player.deck.push(pokemon);
-  shufflePlayerDeck(state, playerId);
+  logMessage(state, `${def.name} healed all damage (Wally's Compassion).`);
+
+  // If any damage was healed, put all attached Energy into the player's hand
+  if (hadDamage && pokemon.attachedEnergy.length > 0) {
+    for (const energy of pokemon.attachedEnergy) {
+      energy.zone = Zone.Hand;
+      player.hand.push(energy);
+    }
+    pokemon.attachedEnergy = [];
+    logMessage(state, `All Energy attached to ${def.name} was put into ${player.name}'s hand.`);
+  }
+
+  // Pokémon stays in play — do NOT shuffle it into the deck
   state.pendingAction = null;
-  logMessage(state, `${def.name} and its attached cards were shuffled into ${player.name}'s deck.`);
 }
 
 function applyCrispin(state: EngineState, playerId: PlayerId): void {

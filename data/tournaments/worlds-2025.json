@@ -1,0 +1,72 @@
+{
+  "tournamentId": 490,
+  "name": "World Championships 2025",
+  "date": "2025-08-15",
+  "sourceUrl": "https://limitlesstcg.com/tournaments/490",
+  "decks": [
+    {
+      "placement": 1,
+      "player": "Tord Reklev",
+      "deckName": "Dragapult",
+      "text": "Pokémon: 18\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Munkidori TWM 95\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n1 Budew ASC 16\n1 Dunsparce JTG 120\n1 Dudunsparce TEF 129\n\nTrainer: 33\n4 Lillie's Determination MEG 119\n4 Boss's Orders MEG 114\n3 Crispin SCR 133\n2 Judge POR 76\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n4 Ultra Ball MEG 131\n4 Crushing Hammer POR 71\n2 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n1 Risky Ruins MEG 127\n\nEnergy: 9\n4 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n2 Darkness Energy MEE 7",
+      "id": "worlds25-1-tord-reklev",
+      "label": "#1 Tord Reklev — Dragapult"
+    },
+    {
+      "placement": 2,
+      "player": "Gustavo Wada",
+      "deckName": "Lopunny Dudunsparce",
+      "text": "Pokémon: 16\n3 Buneary PFL 83\n3 Mega Lopunny ex PFL 84\n2 Dunsparce TEF 128\n2 Dunsparce JTG 120\n3 Dudunsparce TEF 129\n1 Fan Rotom SCR 118\n1 Abra TWM 80\n1 Moltres PFL 14\n\nTrainer: 36\n4 Hilda WHT 84\n4 Wally's Compassion MEG 132\n4 Boss's Orders MEG 114\n3 Lillie's Determination MEG 119\n4 Pokégear 3.0 SVI 186\n4 Ultra Ball MEG 131\n4 Poké Pad POR 81\n3 Buddy-Buddy Poffin TEF 144\n3 Air Balloon ASC 181\n3 Battle Cage PFL 85\n\nEnergy: 8\n4 Mist Energy TEF 161\n3 Fire Energy MEE 2\n1 Enriching Energy SSP 191",
+      "id": "worlds25-2-gustavo-wada",
+      "label": "#2 Gustavo Wada — Lopunny Dudunsparce"
+    },
+    {
+      "placement": 3,
+      "player": "Robin Schulz",
+      "deckName": "Rocket's Honchkrow",
+      "text": "Pokémon: 12\n4 Team Rocket's Murkrow DRI 127\n3 Team Rocket's Honchkrow ASC 127\n2 Team Rocket's Porygon DRI 153\n1 Team Rocket's Porygon2 DRI 154\n2 Team Rocket's Articuno DRI 51\n\nTrainer: 40\n4 Team Rocket's Ariana DRI 171\n4 Team Rocket's Archer DRI 170\n4 Team Rocket's Giovanni DRI 174\n4 Team Rocket's Proton DRI 177\n4 Team Rocket's Petrel DRI 176\n4 Poké Pad POR 81\n4 Team Rocket's Transceiver DRI 178\n4 Roto-Stick PRE 127\n3 Night Stretcher ASC 196\n1 Ultra Ball MEG 131\n1 Miracle Headset SSP 183\n3 Team Rocket's Factory DRI 173\n\nEnergy: 8\n4 Team Rocket's Energy DRI 182\n4 Ignition Energy WHT 86",
+      "id": "worlds25-3-robin-schulz",
+      "label": "#3 Robin Schulz — Rocket's Honchkrow"
+    },
+    {
+      "placement": 4,
+      "player": "Azul Garcia Griego",
+      "deckName": "Ogerpon Box",
+      "text": "Pokémon: 18\n3 Meowth ex POR 62\n2 Mega Kangaskhan ex MEG 104\n2 Teal Mask Ogerpon ex TWM 25\n2 Wellspring Mask Ogerpon ex TWM 64\n2 Lillie's Clefairy ex JTG 56\n2 Latias ex SSP 76\n1 Fezandipiti ex ASC 142\n1 Iron Leaves ex TEF 25\n1 Passimian SSP 111\n1 Chien-Pao SSP 56\n\nTrainer: 30\n4 Crispin SCR 133\n3 Cyrano SSP 170\n3 Boss's Orders MEG 114\n2 Ciphermaniac's Codebreaking TEF 145\n1 Brock's Scouting JTG 146\n4 Energy Switch MEG 115\n4 Ultra Ball MEG 131\n2 Night Stretcher ASC 196\n1 Tool Scrapper ASC 212\n1 Unfair Stamp TWM 165\n2 Lillie's Pearl JTG 151\n3 Area Zero Underdepths SCR 131\n\nEnergy: 12\n5 Grass Energy MEE 1\n3 Prism Energy ASC 216\n2 Psychic Energy MEE 5\n1 Water Energy MEE 3\n1 Fighting Energy MEE 6",
+      "id": "worlds25-4-azul-garcia-griego",
+      "label": "#4 Azul Garcia Griego — Ogerpon Box"
+    },
+    {
+      "placement": 5,
+      "player": "Xander Pero",
+      "deckName": "Dragapult Dusknoir",
+      "text": "Pokémon: 21\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Duskull PRE 35\n1 Dusclops PRE 36\n1 Dusknoir PRE 37\n2 Budew ASC 16\n2 Munkidori TWM 95\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n\nTrainer: 30\n4 Lillie's Determination MEG 119\n3 Boss's Orders MEG 114\n2 Crispin SCR 133\n1 Judge POR 76\n1 Rosa's Encouragement POR 84\n4 Buddy-Buddy Poffin TEF 144\n4 Ultra Ball MEG 131\n4 Poké Pad POR 81\n2 Night Stretcher ASC 196\n2 Rare Candy MEG 125\n1 Unfair Stamp TWM 165\n2 Team Rocket's Watchtower DRI 180\n\nEnergy: 9\n4 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n2 Darkness Energy MEE 7",
+      "id": "worlds25-5-xander-pero",
+      "label": "#5 Xander Pero — Dragapult Dusknoir"
+    },
+    {
+      "placement": 6,
+      "player": "Rahul Reddy",
+      "deckName": "Dragapult",
+      "text": "Pokémon: 19\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Munkidori TWM 95\n1 Dunsparce JTG 120\n1 Dudunsparce TEF 129\n1 Meowth ex POR 62\n1 Fezandipiti ex ASC 142\n1 Budew ASC 16\n1 Yveltal MEG 88\n\nTrainer: 32\n4 Lillie's Determination MEG 119\n3 Crispin SCR 133\n3 Boss's Orders MEG 114\n1 Judge POR 76\n4 Poké Pad POR 81\n4 Buddy-Buddy Poffin TEF 144\n4 Ultra Ball MEG 131\n4 Crushing Hammer POR 71\n2 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n2 Risky Ruins MEG 127\n\nEnergy: 9\n3 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n3 Darkness Energy MEE 7",
+      "id": "worlds25-6-rahul-reddy",
+      "label": "#6 Rahul Reddy — Dragapult"
+    },
+    {
+      "placement": 7,
+      "player": "Sam Chen",
+      "deckName": "Dragapult",
+      "text": "Pokémon: 18\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Munkidori TWM 95\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n1 Budew ASC 16\n1 Bloodmoon Ursaluna ex TWM 141\n1 Latias ex SSP 76\n\nTrainer: 33\n4 Lillie's Determination MEG 119\n4 Boss's Orders MEG 114\n3 Crispin SCR 133\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n4 Ultra Ball MEG 131\n3 Rare Candy MEG 125\n2 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n2 Area Zero Underdepths SCR 131\n2 Risky Ruins MEG 127\n\nEnergy: 9\n4 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n2 Darkness Energy MEE 7",
+      "id": "worlds25-7-sam-chen",
+      "label": "#7 Sam Chen — Dragapult"
+    },
+    {
+      "placement": 8,
+      "player": "Natalie Millar",
+      "deckName": "Lopunny Dudunsparce",
+      "text": "Pokémon: 17\n3 Buneary PFL 83\n3 Mega Lopunny ex PFL 84\n2 Dunsparce TEF 128\n2 Dunsparce JTG 120\n3 Dudunsparce TEF 129\n1 Fan Rotom SCR 118\n1 Abra TWM 80\n1 Fezandipiti ex ASC 142\n1 Moltres PFL 14\n\nTrainer: 35\n4 Hilda WHT 84\n4 Wally's Compassion MEG 132\n4 Boss's Orders MEG 114\n3 Lillie's Determination MEG 119\n3 Pokégear 3.0 SVI 186\n4 Ultra Ball MEG 131\n4 Poké Pad POR 81\n3 Buddy-Buddy Poffin TEF 144\n3 Air Balloon ASC 181\n3 Battle Cage PFL 85\n\nEnergy: 8\n4 Mist Energy TEF 161\n3 Fire Energy MEE 2\n1 Enriching Energy SSP 191",
+      "id": "worlds25-8-natalie-millar",
+      "label": "#8 Natalie Millar — Lopunny Dudunsparce"
+    }
+  ]
+}

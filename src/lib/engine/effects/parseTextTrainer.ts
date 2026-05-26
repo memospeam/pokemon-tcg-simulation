@@ -80,7 +80,8 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_rare_candy" }),
   },
   {
-    test: /if your opponent has 3 or fewer prize cards remaining, they shuffle their hand into their deck and draw 4 cards/,
+    // Unfair Stamp (TWM 165): play only if own Pokémon KO'd last turn; both shuffle, player +5, opponent +2
+    test: /you can use this card only if any of your pok[ée]mon were knocked out during your opponent's last turn\.\s*each player shuffles their hand into their deck\. then, you draw 5 cards, and your opponent draws 2 cards/,
     build: () => ({ kind: "trainer_unfair_stamp" }),
   },
   {
@@ -104,7 +105,8 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_search_supporter" }),
   },
   {
-    test: /heal 60 damage from 1 of your pok[ée]mon\. then, shuffle that pok[ée]mon and all attached cards into your deck/,
+    // Wally's Compassion (MEG 132): heal ALL damage; if healed, put energy into hand; Pokémon stays in play
+    test: /heal all damage from 1 of your mega evolution pok[ée]mon ex\. if you healed any damage in this way, put all energy attached to that pok[ée]mon into your hand/,
     build: () => ({ kind: "trainer_wallys_compassion" }),
   },
   {
@@ -244,7 +246,8 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_surfer" }),
   },
   {
-    test: /shuffle 5 pok[ée]mon from your discard pile into your deck/,
+    // Sacred Ash: "shuffle up to 5 Pokémon" — "up to" is optional in text
+    test: /shuffle (?:up to )?5 pok[ée]mon from your discard pile into your deck/,
     build: () => ({ kind: "trainer_sacred_ash", count: 5 }),
   },
   {

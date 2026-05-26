@@ -324,10 +324,20 @@ describe("trainerEffects", () => {
     expect(player.hand.some((card) => card.definitionId === fireEnergy.apiId)).toBe(true);
   });
 
-  it("Wally's Compassion heals and shuffles Pokémon into deck", () => {
+  it("Wally's Compassion heals ALL damage and puts energy into hand; Pokémon stays in play", () => {
     const wally = mockTrainer("Wally's Compassion", ["Supporter"]);
-    const dreepy = mockBasic("Dreepy");
-    const cards = [dreepy, wally, ...Array.from({ length: 58 }, (_, i) => mockEnergy(`E${i}`))];
+    const lopunny: CardDefinition = {
+      apiId: "Mega Lopunny ex",
+      name: "Mega Lopunny ex",
+      supertype: "Pokémon",
+      subtypes: ["Basic", "ex"],
+      hp: "330",
+      set: { id: "test", name: "Test" },
+      number: "1",
+      images: { small: "", large: "" },
+    };
+    const fireEnergy = mockEnergy("Fire Energy");
+    const cards = [lopunny, wally, ...Array.from({ length: 58 }, (_, i) => mockEnergy(`E${i}`))];
     const state = createInitialGame({
       player1Name: "A",
       player2Name: "B",
@@ -336,12 +346,57 @@ describe("trainerEffects", () => {
     });
     state.phase = GamePhase.Active;
     const player = getPlayer(state, PlayerId.P1);
-    player.active = createCardInstance(dreepy.apiId, PlayerId.P1, Zone.Active);
-    player.active!.damageCounters = 80;
+    const lopunnyInstance = createCardInstance(lopunny.apiId, PlayerId.P1, Zone.Active);
+    lopunnyInstance.damageCounters = 160;
+    // Attach an energy to verify it goes to hand
+    const energyInst = createCardInstance(fireEnergy.apiId, PlayerId.P1, Zone.Active);
+    lopunnyInstance.attachedEnergy = [energyInst];
+    player.active = lopunnyInstance;
 
-    applyWallysCompassion(state, PlayerId.P1, player.active!.instanceId);
-    expect(player.active).toBeNull();
-    expect(player.deck.some((card) => card.definitionId === dreepy.apiId)).toBe(true);
+    applyWallysCompassion(state, PlayerId.P1, lopunnyInstance.instanceId);
+
+    // Pokémon stays in play (not shuffled to deck)
+    expect(player.active).not.toBeNull();
+    expect(player.active!.instanceId).toBe(lopunnyInstance.instanceId);
+    // ALL damage healed
+    expect(player.active!.damageCounters).toBe(0);
+    // Energy went to hand (not deck)
+    expect(player.active!.attachedEnergy).toHaveLength(0);
+    expect(player.hand.some((c) => c.instanceId === energyInst.instanceId)).toBe(true);
+  });
+
+  it("Wally's Compassion on undamaged Pokémon: heals nothing, energy stays attached", () => {
+    const lopunny: CardDefinition = {
+      apiId: "Mega Lopunny ex",
+      name: "Mega Lopunny ex",
+      supertype: "Pokémon",
+      subtypes: ["Basic", "ex"],
+      hp: "330",
+      set: { id: "test", name: "Test" },
+      number: "1",
+      images: { small: "", large: "" },
+    };
+    const fireEnergy = mockEnergy("Fire Energy");
+    const cards = [lopunny, ...Array.from({ length: 59 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    const player = getPlayer(state, PlayerId.P1);
+    const lopunnyInstance = createCardInstance(lopunny.apiId, PlayerId.P1, Zone.Active);
+    lopunnyInstance.damageCounters = 0; // no damage
+    const energyInst = createCardInstance(fireEnergy.apiId, PlayerId.P1, Zone.Active);
+    lopunnyInstance.attachedEnergy = [energyInst];
+    player.active = lopunnyInstance;
+
+    applyWallysCompassion(state, PlayerId.P1, lopunnyInstance.instanceId);
+
+    // Pokémon stays, energy stays (no damage was healed)
+    expect(player.active).not.toBeNull();
+    expect(player.active!.attachedEnergy).toHaveLength(1);
   });
 
   it("Judge shuffles both hands and draws 4", () => {

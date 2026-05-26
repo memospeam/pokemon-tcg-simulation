@@ -70,14 +70,30 @@ const EVOLUTION_PARENT: Record<string, string> = {
   alakazam: "Kadabra",
   "mega lopunny ex": "Buneary",
   froslass: "Snorunt",
+  glalie: "Snorunt",
+  "mega froslass ex": "Froslass",
   frogadier: "Froakie",
+  "greninja ex": "Frogadier",
   "mega greninja ex": "Frogadier",
   "mega pyroar ex": "Litleo",
   "mega dragalge ex": "Skrelp",
   "mega gallade ex": "Kirlia",
   "team rocket's honchkrow": "Team Rocket's Murkrow",
   "team rocket's porygon2": "Team Rocket's Porygon",
-  "team rocket's articuno": "Team Rocket's Murkrow",
+  // Note: Team Rocket's Articuno is a Basic Pokémon — NOT an evolution of Murkrow
+  // Cynthia's Garchomp chain
+  "cynthia's roserade": "Cynthia's Roselia",
+  "cynthia's gabite": "Cynthia's Gible",
+  "cynthia's garchomp ex": "Cynthia's Gabite",
+  // N's Zoroark chain
+  "n's zoroark ex": "N's Zorua",
+  "n's darmanitan": "N's Darumaka",
+  // Hydrapple chain
+  dipplin: "Applin",
+  "hydrapple ex": "Dipplin",
+  // Meganium chain
+  bayleef: "Chikorita",
+  meganium: "Bayleef",
 };
 
 const SUPPORTER_NAMES = new Set([
@@ -92,6 +108,7 @@ const SUPPORTER_NAMES = new Set([
   "Team Rocket's Giovanni",
   "Team Rocket's Proton",
   "Team Rocket's Petrel",
+  "Team Rocket's Transceiver",
   "Rosa's Encouragement",
 ]);
 

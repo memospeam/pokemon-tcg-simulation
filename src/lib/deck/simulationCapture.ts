@@ -9,11 +9,14 @@ import {
   pickAutoTrainerAction,
   pickAutoPlayBasicAction,
   pickAutoEvolveAction,
+  pickBestAttack,
+  pickBestEnergyTarget,
+  pickRetreatAction,
 } from "./utrechtGameRunner";
-import { gameReducer } from "../engine/reducer";
-import { canAffordAttack } from "../engine/energy";
+import { buildStrategyContext, type StrategyContext } from "./deckStrategy";
+import { gameReducer, getLegalActions } from "../engine/reducer";
 import { getDefinition, getPlayer, type EngineState } from "../engine/types";
-import { GamePhase } from "../models/enums";
+import { GamePhase, PlayerId } from "../models/enums";
 
 export interface SimFrame {
   state: EngineState;
@@ -36,9 +39,10 @@ function applyAction(
 function drainAndCapture(
   state: EngineState,
   frames: SimFrame[],
+  ctx?: StrategyContext,
 ): { state: EngineState; steps: number; stalled: boolean } {
   const logBefore = state.log.length;
-  const drained = drainAutoPending(state);
+  const drained = drainAutoPending(state, 12, ctx);
   if (drained.steps > 0) {
     const newEntries = drained.state.log.slice(logBefore);
     frames.push({ state: drained.state, label: newEntries.at(-1) ?? "Resolve" });
@@ -70,6 +74,23 @@ export function captureSimulationFrames(
   state = autoSetupEngineState(state, { placeBenchBasics: true, maxMulligans: 40 });
   frames.push({ state, label: "Game start" });
 
+  // Build strategy contexts once per player from their deck card names
+  const strategyContexts: Partial<Record<PlayerId, StrategyContext>> = {};
+  function getCtx(playerId: PlayerId): StrategyContext {
+    if (!strategyContexts[playerId]) {
+      const player = getPlayer(state, playerId);
+      const names = [
+        ...player.deck,
+        ...player.hand,
+        ...(player.active ? [player.active] : []),
+        ...player.bench,
+        ...player.discard,
+      ].map((c) => getDefinition(state, c.definitionId)?.name ?? "");
+      strategyContexts[playerId] = buildStrategyContext(names);
+    }
+    return strategyContexts[playerId]!;
+  }
+
   let turnCount = 0;
   let actionCount = 0;
   let prevTurnNumber = state.turnNumber;
@@ -88,7 +109,8 @@ export function captureSimulationFrames(
     }
 
     if (state.pendingAction) {
-      const drained = drainAndCapture(state, frames);
+      const ctx = getCtx(state.pendingAction.playerId);
+      const drained = drainAndCapture(state, frames, ctx);
       state = drained.state;
       actionCount += drained.steps;
       if (drained.stalled || state.phase !== GamePhase.Active || state.winnerId) break;
@@ -97,15 +119,17 @@ export function captureSimulationFrames(
 
     const playerId = state.currentPlayerId;
     const player = getPlayer(state, playerId);
+    const ctx = getCtx(playerId);
     let attacked = false;
 
+    // 1. Trainers (supporters first, then items) — strategy-aware
     if (!state.turnFlags.attacked && trainersThisTurn < MAX_TRAINERS_PER_TURN) {
-      const trainerAction = pickAutoTrainerAction(state);
+      const trainerAction = pickAutoTrainerAction(state, ctx);
       if (trainerAction) {
         state = applyAction(state, trainerAction, frames, "Play trainer");
         actionCount += 1;
         trainersThisTurn += 1;
-        const drained = drainAndCapture(state, frames);
+        const drained = drainAndCapture(state, frames, ctx);
         state = drained.state;
         actionCount += drained.steps;
         if (drained.stalled || state.phase !== GamePhase.Active || state.winnerId) break;
@@ -113,8 +137,9 @@ export function captureSimulationFrames(
       }
     }
 
+    // 2. Bench basics (archetype-aware priority)
     if (!state.turnFlags.attacked) {
-      const basicAction = pickAutoPlayBasicAction(state);
+      const basicAction = pickAutoPlayBasicAction(state, ctx);
       if (basicAction) {
         state = applyAction(state, basicAction, frames, "Place basic");
         actionCount += 1;
@@ -122,8 +147,9 @@ export function captureSimulationFrames(
       }
     }
 
+    // 3. Evolve (archetype-aware priority)
     if (!state.turnFlags.attacked) {
-      const evolveAction = pickAutoEvolveAction(state);
+      const evolveAction = pickAutoEvolveAction(state, ctx);
       if (evolveAction) {
         state = applyAction(state, evolveAction, frames, "Evolve");
         actionCount += 1;
@@ -131,41 +157,58 @@ export function captureSimulationFrames(
       }
     }
 
-    if (!state.turnFlags.energyAttached && player.active) {
+    // 4. Attach energy to the best target (not always active)
+    if (!state.turnFlags.energyAttached) {
       const energy = player.hand.find(
         (card) => getDefinition(state, card.definitionId)?.supertype === "Energy",
       );
       if (energy) {
-        state = applyAction(
-          state,
-          { type: "ATTACH_ENERGY", playerId, energyId: energy.instanceId, targetId: player.active.instanceId },
-          frames,
-          "Attach energy",
-        );
-        actionCount += 1;
+        const energyTarget = pickBestEnergyTarget(state, playerId, ctx);
+        if (energyTarget) {
+          state = applyAction(
+            state,
+            { type: "ATTACH_ENERGY", playerId, energyId: energy.instanceId, targetId: energyTarget },
+            frames,
+            "Attach energy",
+          );
+          actionCount += 1;
+        }
       }
     }
 
-    if (player.active && !state.turnFlags.attacked) {
-      const def = getDefinition(state, player.active.definitionId);
-      for (const attack of def?.attacks ?? []) {
-        if (!canAffordAttack(state, player.active, attack)) continue;
+    // 5. Retreat to a better attacker (e.g. Lopunny loop)
+    if (!state.turnFlags.retreated && !state.turnFlags.attacked) {
+      const retreatAction = pickRetreatAction(state, playerId, ctx);
+      if (retreatAction) {
+        state = applyAction(state, retreatAction, frames, "Retreat");
+        actionCount += 1;
+        continue;
+      }
+    }
+
+    // 6. Attack — strategy-aware, gated on legality to prevent turn-1 infinite loops
+    const canAttackThisTurn =
+      player.active &&
+      !state.turnFlags.attacked &&
+      getLegalActions(state).some((a) => a.type === "ATTACK");
+    if (canAttackThisTurn) {
+      const bestAttack = pickBestAttack(state, playerId, ctx);
+      if (bestAttack) {
         const beforeTurn = state.turnNumber;
         const beforePlayer = state.currentPlayerId;
         state = applyAction(
           state,
-          { type: "ATTACK", playerId, attackName: attack.name },
+          { type: "ATTACK", playerId, attackName: bestAttack },
           frames,
-          `Attack: ${attack.name}`,
+          `Attack: ${bestAttack}`,
         );
         actionCount += 1;
         attacked = true;
-        const drained = drainAndCapture(state, frames);
+        const drained = drainAndCapture(state, frames, ctx);
         state = drained.state;
         actionCount += drained.steps;
         if (drained.stalled || state.phase !== GamePhase.Active || state.winnerId) break outer;
         if (state.currentPlayerId !== beforePlayer || state.turnNumber > beforeTurn) turnCount += 1;
-        break;
       }
     }
 

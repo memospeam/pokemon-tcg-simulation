@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { capturePresetSimulation } from "@/lib/deck/simulationCapture";
-import { UTRECHT_535_TOP16 } from "@/lib/deck/tournamentPresets";
+import { ALL_TOURNAMENTS } from "@/lib/deck/tournamentPresets";
 import { useSimStore } from "@/stores/simStore";
 import { getOpponentId, getPlayer } from "@/lib/engine";
 import { PlayerId } from "@/lib/models/enums";
@@ -16,7 +16,7 @@ interface SimResult {
   stalled: boolean;
 }
 
-const DECKS = UTRECHT_535_TOP16.decks;
+const DEFAULT_TOURNAMENT = ALL_TOURNAMENTS[0]!;
 const SPEEDS = [
   { label: "0.5×", ms: 2000 },
   { label: "1×", ms: 1000 },
@@ -30,13 +30,23 @@ export function SimPlayback() {
   const { frames, currentIndex, isPlaying, speedMs, load, stepTo, stepDelta, play, pause, setSpeed } =
     useSimStore();
 
-  const [p1Id, setP1Id] = useState(DECKS[1]?.id ?? "");
-  const [p2Id, setP2Id] = useState(DECKS[7]?.id ?? "");
+  const [tournament, setTournament] = useState(DEFAULT_TOURNAMENT);
+  const decks = tournament.decks;
+  const [p1Id, setP1Id] = useState(decks[1]?.id ?? "");
+  const [p2Id, setP2Id] = useState(decks[7]?.id ?? "");
   const [seed, setSeed] = useState(42);
   const [noLimit, setNoLimit] = useState(false);
   const [running, setRunning] = useState(false);
   const [viewingId, setViewingId] = useState<PlayerId>(PlayerId.P1);
   const [result, setResult] = useState<SimResult | null>(null);
+
+  const handleTournamentChange = useCallback((id: string) => {
+    const t = ALL_TOURNAMENTS.find((t) => String(t.tournamentId) === id) ?? DEFAULT_TOURNAMENT;
+    setTournament(t);
+    setP1Id(t.decks[1]?.id ?? t.decks[0]?.id ?? "");
+    setP2Id(t.decks[7]?.id ?? t.decks[t.decks.length - 1]?.id ?? "");
+    setResult(null);
+  }, []);
 
   // auto-advance timer
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -55,8 +65,8 @@ export function SimPlayback() {
   }, [isPlaying, currentIndex, speedMs, frames.length, stepDelta, pause]);
 
   const handleRun = useCallback(() => {
-    const p1Preset = DECKS.find((d) => d.id === p1Id);
-    const p2Preset = DECKS.find((d) => d.id === p2Id);
+    const p1Preset = decks.find((d) => d.id === p1Id);
+    const p2Preset = decks.find((d) => d.id === p2Id);
     if (!p1Preset || !p2Preset) return;
     setRunning(true);
     // run synchronously in next microtask so React can show the loading state
@@ -93,8 +103,21 @@ export function SimPlayback() {
     <div className="sim-screen">
       {/* Setup bar */}
       <div className="sim-setup">
+        <select
+          value={String(tournament.tournamentId)}
+          onChange={(e) => handleTournamentChange(e.target.value)}
+          className="sim-setup__tournament"
+          title="Tournament"
+        >
+          {ALL_TOURNAMENTS.map((t) => (
+            <option key={t.tournamentId} value={String(t.tournamentId)}>
+              {t.name} ({t.date})
+            </option>
+          ))}
+        </select>
+
         <select value={p1Id} onChange={(e) => setP1Id(e.target.value)} className="sim-setup__select">
-          {DECKS.map((d) => (
+          {decks.map((d) => (
             <option key={d.id} value={d.id}>
               {d.deckName} ({d.placement}th)
             </option>
@@ -104,7 +127,7 @@ export function SimPlayback() {
         <span className="sim-setup__vs">vs</span>
 
         <select value={p2Id} onChange={(e) => setP2Id(e.target.value)} className="sim-setup__select">
-          {DECKS.map((d) => (
+          {decks.map((d) => (
             <option key={d.id} value={d.id}>
               {d.deckName} ({d.placement}th)
             </option>

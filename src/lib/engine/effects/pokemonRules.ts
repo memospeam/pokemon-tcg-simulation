@@ -3,6 +3,7 @@ import type { CardInstance } from "../../models/instance";
 import { PlayerId, Zone } from "../../models/enums";
 import { getDefinitionSafe } from "../rules";
 import { shouldBlockBenchEffectDamage } from "./stadiumEffects";
+import { hasMistEnergyAttached } from "../energy";
 import type { EngineState } from "../types";
 
 export function hasTeraBenchProtection(def: CardDefinition): boolean {
@@ -26,5 +27,7 @@ export function canReceiveBenchAttackDamage(
   if (sourcePlayerId !== undefined && shouldBlockBenchEffectDamage(state, pokemon, sourcePlayerId)) {
     return false;
   }
+  // Mist Energy prevents attack effects (including bench counter placement from Phantom Dive etc.)
+  if (hasMistEnergyAttached(state, pokemon)) return false;
   return true;
 }
