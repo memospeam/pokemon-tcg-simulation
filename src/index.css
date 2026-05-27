@@ -1361,7 +1361,133 @@ button {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Compact layout overrides — make everything fit the viewport ── */
+
+.sim-screen .play-screen__mat {
+  flex: 1;
+  min-height: 0;
+  padding: 0 0.5rem;
+  gap: 0.25rem;
+  overflow: hidden;
+}
+
+.sim-screen .play-screen__center {
+  padding: 0.2rem 0;
+  gap: 0.25rem;
+}
+
+.sim-screen .play-log {
+  max-height: 64px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+
+.sim-screen .player-mat {
+  padding: 0.4rem 0.6rem;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sim-screen .player-mat__header {
+  margin-bottom: 0.25rem;
+  gap: 0.5rem;
+}
+
+.sim-screen .player-mat__header h3 {
+  font-size: 0.82rem;
+}
+
+.sim-screen .player-mat__turn-chip {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+}
+
+.sim-screen .player-mat__layout {
+  flex: 1;
+  min-height: 0;
+  gap: 0.5rem;
+}
+
+.sim-screen .player-mat__bench-slot,
+.sim-screen .player-mat__empty-slot {
+  width: 54px;
+  height: 76px;
+}
+
+.sim-screen .player-mat__active-empty {
+  width: 72px;
+  height: 100px;
+}
+
+.sim-screen .board-card--bench {
+  width: 54px;
+}
+
+.sim-screen .board-card--active {
+  width: 74px;
+}
+
+.sim-screen .board-card--hand {
+  width: 64px;
+}
+
+.sim-screen .board-card__name,
+.sim-screen .board-card__hp {
+  font-size: 0.55rem;
+}
+
+.sim-screen .hand-bar {
+  margin: 0;
+  padding: 0.35rem 0.75rem 0.3rem;
+}
+
+.sim-screen .hand-bar--opponent {
+  margin: 0;
+}
+
+.sim-screen .hand-bar__label {
+  font-size: 0.7rem;
+  margin-bottom: 0.2rem;
+}
+
+.sim-screen .hand-bar__cards {
+  min-height: 92px;
+  gap: 0.3rem;
+  padding: 0 0.25rem 0.15rem;
+}
+
+.sim-screen .turn-banner {
+  margin: 0.3rem 0.75rem 0.3rem;
+  padding: 0.4rem 0.85rem;
+}
+
+.sim-screen .turn-banner__main {
+  gap: 0.4rem 0.75rem;
+}
+
+.sim-screen .turn-banner__label {
+  font-size: 0.7rem;
+}
+
+.sim-screen .turn-banner__prompt {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+}
+
+.sim-screen .turn-banner__flags {
+  margin-top: 0.3rem;
+  gap: 0.35rem;
+}
+
+.sim-screen .turn-banner__flags span {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
 }
 
 /* ── Analysis panel ───────────────────────────────────────────── */
