@@ -224,9 +224,20 @@ function inferSubtypes(name: string, pokemonNames: Set<string>): string[] {
 function buildAttacks(card: StandardCardIndex, types: string[]): CardAttack[] {
   const primaryType = types[0] ?? "Colorless";
   return card.attacks.map((attack) => {
-    // First: use the curated override table when we have authoritative data.
-    // This is the only source of accurate multi-energy costs (the corpus
-    // index doesn't preserve them).
+    // Priority 1: the indexed cost from the Pokémon TCG API — the canonical
+    // source. Present once the corpus is rebuilt with cost preserved.
+    if (attack.cost && attack.cost.length >= 0 && Array.isArray(attack.cost)) {
+      return {
+        name: attack.name,
+        cost: [...attack.cost],
+        convertedEnergyCost: attack.convertedEnergyCost ?? attack.cost.length,
+        damage: attack.damage,
+        text: attack.text,
+      };
+    }
+
+    // Priority 2: hand-curated override for older index builds without cost
+    // data. See knownAttackCosts.ts for the rationale.
     const known = lookupAttackCost(card.name, attack.name);
     if (known) {
       return {
@@ -237,9 +248,10 @@ function buildAttacks(card: StandardCardIndex, types: string[]): CardAttack[] {
         text: attack.text,
       };
     }
-    // Fallback for unknown cards: assume 1 energy of the primary type, except
-    // for Discard-Energy attacks which are treated as "no fixed cost" so the
-    // engine can still simulate them at all.
+
+    // Priority 3 (last resort): 1 energy of the inferred primary type.
+    // Zero-cost for Discard-Energy attacks so the engine can still simulate
+    // them when the cost is dynamic.
     const cost = attack.text.includes("Discard") && attack.text.includes("Energy")
       ? []
       : [primaryType];

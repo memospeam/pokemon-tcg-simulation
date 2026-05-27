@@ -67,7 +67,15 @@ export interface StandardCardIndex {
   regulationMark?: string;
   supertype: CardDefinition["supertype"];
   subtypes: string[];
-  attacks: { name: string; damage: string; text: string; textId: string }[];
+  attacks: {
+    name: string;
+    damage: string;
+    text: string;
+    textId: string;
+    /** Authoritative cost from the Pokémon TCG API (may be missing for older indexes). */
+    cost?: string[];
+    convertedEnergyCost?: number;
+  }[];
   abilities: { name: string; text: string; textId: string }[];
   trainerRules?: { text: string; textId: string };
 }
@@ -161,7 +169,20 @@ function buildCorpus(pokemonCards: CardDefinition[], trainerCards: CardDefinitio
 
     for (const attack of card.attacks ?? []) {
       const id = textId("attack", attack.text);
-      entry.attacks.push({ name: attack.name, damage: attack.damage, text: attack.text, textId: id });
+      // Preserve the authoritative cost and converted cost from the API.
+      // These were dropped in earlier index builds, forcing corpusDeckBuilder
+      // to invent a 1-of-primary-type fallback (see knownAttackCosts.ts).
+      // Once the corpus is rebuilt with these fields, the fallback becomes
+      // a per-card fallback only — Phantom Dive, Powerful Hand, Dark Frost,
+      // etc. all resolve to their real costs automatically.
+      entry.attacks.push({
+        name: attack.name,
+        damage: attack.damage,
+        text: attack.text,
+        textId: id,
+        cost: attack.cost,
+        convertedEnergyCost: attack.convertedEnergyCost,
+      });
 
       const parsedEffects = parseAttackText(attack.text);
       const { parseCoverage, unknownClauses, stubClauses, implementationCoverage } =
