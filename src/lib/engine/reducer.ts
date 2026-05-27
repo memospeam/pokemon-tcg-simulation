@@ -523,6 +523,10 @@ function handleEvolve(
     const targetDef = getDefinitionSafe(state, target.definitionId);
     if (!canEvolveInto(targetDef, evoDef)) return false;
     transferPokemonStateOntoEvolution(target, evolution, playerId);
+    // Mark the evolved form as having entered play this turn so it
+    // cannot itself be evolved again in the same turn
+    // (prevents Dreepy → Drakloak → Dragapult chains in one turn).
+    evolution.enteredPlayTurn = state.turnNumber;
     return true;
   };
 
