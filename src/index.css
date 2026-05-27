@@ -1372,6 +1372,13 @@ button {
   display: none;
 }
 
+/* Stop flex from squeezing the mat below its content height —
+   without this, play-screen__mat (min-height: 0) collapses and the
+   active/bench cards spill out over the hand bar below it. */
+.sim-board-area > * {
+  flex-shrink: 0;
+}
+
 /* ── Analysis panel ───────────────────────────────────────────── */
 
 .sim-analysis {
