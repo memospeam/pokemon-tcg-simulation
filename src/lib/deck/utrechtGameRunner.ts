@@ -1098,12 +1098,21 @@ export function pickAutoAbilityAction(
       score = 60;
 
     } else if (abilityLower.includes("teleporter")) {
-      // DISABLED: Abra Teleporter shuffles Abra from Active back into the deck.
-      // The engine does NOT create PROMOTE pending when the active Pokémon voluntarily shuffles
-      // itself back (same engine bug as Dudunsparce's Run Away Draw from Active). This leaves
-      // active=null with no PROMOTE pending → broken/stalled game state.
-      // Safe to re-enable once the engine correctly creates PROMOTE after active self-shuffle.
-      score = 0;
+      // Abra Teleporter: shuffle Abra (Active) + attached cards into deck, then PROMOTE fires.
+      // Guards: bench must be non-empty (or PROMOTE has nothing to promote → game loss),
+      // and a better attacker (Kadabra or Alakazam) should be on the bench to make the switch
+      // worthwhile.
+      const hasBench = player.bench.length > 0;
+      const hasBetterAttacker = player.bench.some((b) => {
+        const bDef = getDefinition(state, b.definitionId);
+        const bName = bDef?.name?.toLowerCase() ?? "";
+        return bName.includes("kadabra") || bName.includes("alakazam");
+      });
+      if (!hasBench || !hasBetterAttacker) {
+        score = 0; // No bench or no attacker to promote — never shuffle
+      } else {
+        score = 65; // Upgrade the Active spot from Abra to a real attacker
+      }
 
     }
     // Unknown ability → skip (do not trigger abilities with unhandled pending states)

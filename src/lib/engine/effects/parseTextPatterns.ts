@@ -324,6 +324,10 @@ export function matchBulkClause(clause: string): ParsedEffect[] | null {
     return [{ kind: "knock_out_self_on_ability_use" }];
   }
 
+  if (/^if this pok[ée]mon is in the active spot, you may shuffle it and all attached cards into your deck\.?$/i.test(clause)) {
+    return [{ kind: "ability_only_while_active" }, { kind: "shuffle_self_active_to_deck" }];
+  }
+
   if (/^if this pok[ée]mon is in the active spot, you may use this ability\.?$/i.test(clause)) {
     return [{ kind: "ability_only_while_active" }];
   }

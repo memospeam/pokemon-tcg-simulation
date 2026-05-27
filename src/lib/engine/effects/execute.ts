@@ -1361,6 +1361,18 @@ function executeSingleEffect(
       return "complete";
     }
 
+    case "shuffle_self_active_to_deck": {
+      // Abra's Teleporter: shuffle the active Pokémon and all attached cards into the deck,
+      // then promote a Bench Pokémon to fill the empty Active spot.
+      shufflePokemonAndAttachmentsToDeck(state, ctx.playerId, ctx.sourcePokemon);
+      logMessage(state, "Shuffled this Pokémon and all attached cards into the deck.");
+      const shufflePlayer = getPlayer(state, ctx.playerId);
+      if (!shufflePlayer.active && shufflePlayer.bench.length > 0) {
+        state.pendingAction = { type: "PROMOTE", playerId: ctx.playerId };
+      }
+      return "complete";
+    }
+
     case "shuffle_self_to_deck_if_drew": {
       if ((ctx.cardsDrawnThisSequence ?? 0) > 0) {
         shufflePokemonAndAttachmentsToDeck(state, ctx.playerId, ctx.sourcePokemon);

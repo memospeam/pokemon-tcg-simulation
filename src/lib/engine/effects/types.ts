@@ -290,6 +290,7 @@ export type ParsedEffect =
   | { kind: "mill_both_decks"; count: number }
   | { kind: "self_attack_bonus_next_turn"; amount: number }
   | { kind: "shuffle_self_bench_to_deck" }
+  | { kind: "shuffle_self_active_to_deck" }
   | { kind: "damage_bonus_if_shared_type"; amount: number }
   | { kind: "block_opponent_supporters_next_turn" }
   | { kind: "damage_bonus_if_opponent_has_tool"; amount: number }
