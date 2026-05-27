@@ -126,17 +126,17 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     archetype: "dragapult-dusknoir",
     displayName: "Dragapult ex / Dusknoir",
     winCondition:
-      "Combine Dragapult ex bench spread with Dusknoir's Cursed Blast (move damage counters to any Pokémon). More precise counter control than pure Dragapult.",
+      "Dragapult ex Phantom Dive spreads 50 damage to all bench Pokémon. Dusknoir Cursed Blast moves 13 damage counters for precision multi-KO. Team Rocket's Watchtower disables opponent Colorless abilities (Dudunsparce, Munkidori, etc.).",
     playstyle: "spread",
     signatureCards: ["dragapult ex", "dusknoir", "dreepy"],
     primaryAttacker: "Dragapult ex",
     signatureAttack: "Phantom Dive",
     preferGoingSecond: true,
     gamePlan: [
-      "T1: Bench Dreepy (×3) + Duskull. Use Poffin/Poké Pad. Lead Budew if going second.",
-      "T2: Rare Candy Dreepy → Dragapult ex. Evolve Duskull → Dusclops (if possible).",
-      "T3: Phantom Dive. Dusknoir Cursed Blast moves 3 damage counters to any target. Boss damaged Pokémon.",
-      "Late: Dusknoir gives precise counter placement — target their most dangerous attacker.",
+      "T1: Bench Dreepy ×3 + Duskull. Poffin/Poké Pad. Lead Budew if going second for item-lock.",
+      "T2: Rare Candy Dreepy → Dragapult ex (primary). Crispin energises Dragapult ex fast. Drakloak Recon Directive draws cards.",
+      "T3: Phantom Dive (120 + 50 to each bench). Dusknoir Cursed Blast precision placement. TR Watchtower disables Dudunsparce Run Away Draw.",
+      "Late: Boss's Orders pull low-HP bench targets. Munkidori Adrena-Brain moves counters for KO. Dusknoir Cursed Blast consolidates for multi-prize turn.",
     ],
     trainerScoreAdjust: {
       "rare candy": 30,
@@ -144,6 +144,7 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
       "rosa's encouragement": 10,
       "boss's orders": 10,
       "buddy-buddy poffin": 15,
+      "team rocket's watchtower": 18, // Blocks opponent Colorless abilities (Dudunsparce, etc.)
     },
     attackerRoles: [
       { pokemonName: "Dragapult ex", role: "primary", energyPriority: 95, benchFirst: false },
@@ -385,33 +386,37 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     archetype: "greninja",
     displayName: "Greninja ex / Froslass",
     winCondition:
-      "Greninja ex Water Shuriken places damage counters on multiple targets. Dusknoir Cursed Blast moves counters for multi-KO. Mega Froslass ex delivers burst damage finishers. Budew item-locks on T1.",
+      "Greninja ex Shinobi Blade hits for 170 and searches any card. Mirage Barrage does 120 to 2 targets. Dusknoir Cursed Blast moves damage counters for precision KOs. Mega Froslass ex Resentful Refrain (50× opponent hand) delivers burst finishers.",
     playstyle: "spread",
     signatureCards: ["greninja ex", "froakie", "frogadier", "mega froslass ex", "snorunt"],
     primaryAttacker: "Greninja ex",
-    signatureAttack: "Water Shuriken",
+    signatureAttack: "Shinobi Blade",
     preferGoingSecond: true,
     gamePlan: [
-      "T1 (going 2nd): Budew item-lock. Bench Froakie ×2 + Snorunt + Duskull.",
-      "T2: Evolve Froakie → Frogadier → Greninja ex. Attach energy. Duskull → Dusclops.",
-      "T3: Greninja ex Water Shuriken spread damage. Dusknoir Cursed Blast moves counters. Mega Froslass ex finishes multi-damaged targets.",
-      "Late: Boss's Orders to pull weakened bench targets for cheap prizes.",
+      "T1 (going 2nd): Budew item-lock. Bench Froakie ×2 + Snorunt + Duskull. Poffin/Poké Pad for bench.",
+      "T2: Frogadier Summoning Jutsu → search Greninja ex + Dusknoir + Mega Froslass ex. Rare Candy or Grand Tree to evolve Froakie → Greninja ex.",
+      "T3: Greninja ex Shinobi Blade (170) + search for next piece. Dusknoir Cursed Blast consolidates counters. Colress's Tenacity finds Stadium + Water Energy.",
+      "Late: Mega Froslass ex Resentful Refrain when opponent has 6+ cards (300–350 damage). Glalie Damage Beat capitalises on accumulated counters. Boss's Orders to pull weakened bench targets.",
     ],
     trainerScoreAdjust: {
-      "rare candy": 30,              // Froakie → Greninja ex
+      "rare candy": 30,              // Froakie → Greninja ex (Stage 2)
+      "grand tree": 25,              // Fast-evolve full chain from deck
+      "colress's tenacity": 15,      // Search Stadium + Water Energy
       "boss's orders": 12,
       "buddy-buddy poffin": 15,      // Get Froakie + Budew
       "night stretcher": 10,
       "ultra ball": 8,
-      "iono": 8,
+      "surfer": 10,                  // Switch + draw to 5 for attacker rotation
     },
     attackerRoles: [
       { pokemonName: "Greninja ex", role: "primary", energyPriority: 95, benchFirst: false },
       { pokemonName: "Mega Froslass ex", role: "secondary", energyPriority: 70, benchFirst: true },
+      { pokemonName: "Glalie", role: "tech", energyPriority: 30, benchFirst: true },
       { pokemonName: "Dusknoir", role: "setup", energyPriority: 0, benchFirst: true },
       { pokemonName: "Frogadier", role: "setup", energyPriority: 30, benchFirst: true },
       { pokemonName: "Froakie", role: "setup", energyPriority: 20, benchFirst: true },
       { pokemonName: "Budew", role: "tech", energyPriority: 0, benchFirst: true },
+      { pokemonName: "Latias ex", role: "tech", energyPriority: 0, benchFirst: true },
     ],
     benchPriority: ["froakie", "snorunt", "duskull", "budew", "meowth ex"],
     bossPriority: ["manaphy", "dudunsparce", "fan rotom", "fezandipiti ex"],

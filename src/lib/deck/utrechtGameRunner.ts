@@ -6,6 +6,7 @@ import { canAffordAttack, canAffordRetreat } from "../engine/energy";
 import { canRareCandyEvolveInto, checkMulliganNeeded } from "../engine/rules";
 import { beginGame, gameReducer, getLegalActions, startActiveGame } from "../engine/reducer";
 import { getDefinitionSafe } from "../engine/rules";
+import { getStadiumKind } from "../engine/effects/stadiumEffects";
 import { isBasicPokemon, isStage2, isSupporter } from "../models/definition";
 import { GamePhase, PlayerId } from "../models/enums";
 import { getDefinition, getOpponentId, getPlayer, remainingHp, type EngineState, type GameAction } from "../engine/types";
@@ -279,17 +280,43 @@ export function runEngineAutoPlay(
       !state.turnFlags.energyAttached &&
       player.hand.some((card) => getDefinition(state, card.definitionId)?.supertype === "Energy")
     ) {
-      const energy = player.hand.find(
-        (card) => getDefinition(state, card.definitionId)?.supertype === "Energy",
-      );
-      if (energy) {
-        const energyTarget = pickBestEnergyTarget(state, playerId, ctx);
-        if (energyTarget) {
+      // Smart energy selection: use pickBestEnergyTarget for WHERE to attach,
+      // then pick the BEST energy from hand for that target (prefer type-matching energy).
+      // Avoids attaching Psychic energy to a Water-type Pokémon, etc.
+      const primaryTarget = pickBestEnergyTarget(state, playerId, ctx);
+      if (primaryTarget) {
+        const targetMon = [...(player.active ? [player.active] : []), ...player.bench]
+          .find((p) => p.instanceId === primaryTarget);
+        const targetTypes: string[] = targetMon
+          ? (getDefinition(state, targetMon.definitionId)?.types ?? ["Colorless"])
+          : ["Colorless"];
+
+        // Find best energy from hand: prefer one that matches the target's type.
+        // Match rules:
+        // 1. Colorless energy → matches any Pokémon (can pay any attack cost)
+        // 2. Colorless-type Pokémon → any energy matches (attack costs are Colorless)
+        // 3. Same type (e.g. Psychic energy → Psychic Pokémon) → match
+        const energiesInHand = player.hand.filter(
+          (card) => getDefinition(state, card.definitionId)?.supertype === "Energy",
+        );
+        const targetIsColorless = targetTypes.includes("Colorless");
+        const bestEnergyForTarget = energiesInHand.sort((a, b) => {
+          const aTypes = getDefinition(state, a.definitionId)?.types ?? ["Colorless"];
+          const bTypes = getDefinition(state, b.definitionId)?.types ?? ["Colorless"];
+          // Energy matches target if: energy is Colorless, target is Colorless, or types overlap
+          const aMatches = (aTypes.includes("Colorless") || targetIsColorless ||
+            aTypes.some((t) => targetTypes.includes(t))) ? 1 : 0;
+          const bMatches = (bTypes.includes("Colorless") || targetIsColorless ||
+            bTypes.some((t) => targetTypes.includes(t))) ? 1 : 0;
+          return bMatches - aMatches; // prefer matching energy first
+        })[0];
+
+        if (bestEnergyForTarget) {
           state = gameReducer(state, {
             type: "ATTACH_ENERGY",
             playerId,
-            energyId: energy.instanceId,
-            targetId: energyTarget,
+            energyId: bestEnergyForTarget.instanceId,
+            targetId: primaryTarget,
           });
           actionCount += 1;
         }
@@ -448,6 +475,16 @@ export function pickAutoPlayBasicAction(
       if (ctx.archetype === "honchkrow" && name.includes("team rocket's porygon")) score += 15;
     }
 
+    // Risky Ruins penalty: when opponent has Risky Ruins in play, benching non-Darkness Pokémon
+    // immediately deals 20 damage to it. This can be lethal for low-HP basics (Dreepy=70 HP).
+    // Reduce eagerness to bench non-Darkness Pokémon; still do it if evolution is critical.
+    if (getStadiumKind(state) === "risky_ruins") {
+      const pokemonTypes = def.types ?? ["Colorless"];
+      if (!pokemonTypes.includes("Darkness")) {
+        score -= 20; // Take damage immediately — only bench if highly beneficial (score still positive)
+      }
+    }
+
     return { action, score };
   }).sort((a, b) => b.score - a.score);
 
@@ -476,11 +513,12 @@ export function pickAutoEvolveAction(state: EngineState, ctx?: StrategyContext):
       if (ctx.archetype === "dragapult" && name.includes("dragapult ex")) score += 50;
       // Dragapult: keep 1+ Drakloak on bench for Recon Directive draw — but still evolve Dreepy → Drakloak
       if (ctx.archetype === "dragapult" && name.includes("drakloak")) score += 10;
-      // Dragapult-Dusknoir: evolve both Dragapult ex AND Dusknoir chain alongside each other
+      // Dragapult-Dusknoir: Dragapult ex is the primary attacker and must be set up first.
+      // Dusknoir is secondary (1 copy only) — build it AFTER Dragapult ex is attacking.
       if (ctx.archetype === "dragapult-dusknoir" && name.includes("dragapult ex")) score += 50;
-      if (ctx.archetype === "dragapult-dusknoir" && name.includes("dusknoir")) score += 45;
-      if (ctx.archetype === "dragapult-dusknoir" && name.includes("dusclops")) score += 25;
-      if (ctx.archetype === "dragapult-dusknoir" && name.includes("drakloak")) score += 10;
+      if (ctx.archetype === "dragapult-dusknoir" && name.includes("drakloak")) score += 12;
+      if (ctx.archetype === "dragapult-dusknoir" && name.includes("dusknoir")) score += 22; // lowered from 45
+      if (ctx.archetype === "dragapult-dusknoir" && name.includes("dusclops")) score += 10; // lowered from 25
       // Lopunny: prioritize Mega Lopunny ex evolution
       if ((ctx.archetype === "lopunny") && name.includes("mega lopunny ex")) score += 50;
       // Lopunny: Dudunsparce must stay on bench — it uses Run Away Draw from bench position.
@@ -493,11 +531,15 @@ export function pickAutoEvolveAction(state: EngineState, ctx?: StrategyContext):
       if (ctx.archetype === "honchkrow" && name.includes("honchkrow")) score += 40;
       // Ogerpon: keep Teal Mask in play for energy acceleration
       if (ctx.archetype === "ogerpon-box" && name.includes("teal mask")) score += 20;
-      // Greninja: Froakie → Frogadier → Greninja ex is the primary attack chain; Dusknoir secondary
+      // Greninja: Froakie → Frogadier → Greninja ex is the primary attack chain; Dusknoir secondary;
+      // Snorunt → Froslass → Mega Froslass ex is the burst finisher chain; Glalie is a tech attacker.
       if (ctx.archetype === "greninja" && name.includes("greninja ex")) score += 50;
       if (ctx.archetype === "greninja" && name.includes("frogadier")) score += 25;
       if (ctx.archetype === "greninja" && name.includes("dusknoir")) score += 40;
       if (ctx.archetype === "greninja" && name.includes("dusclops")) score += 20;
+      if (ctx.archetype === "greninja" && name.includes("mega froslass ex")) score += 35;
+      if (ctx.archetype === "greninja" && name.includes("froslass")) score += 18;
+      if (ctx.archetype === "greninja" && name.includes("glalie")) score += 12;
       // Hydrapple: evolve Meganium ASAP (Wild Growth energy doubling); Hydrapple ex is primary attacker
       if (ctx.archetype === "hydrapple" && name.includes("hydrapple ex")) score += 50;
       if (ctx.archetype === "hydrapple" && name.includes("dipplin")) score += 25;
@@ -629,16 +671,49 @@ function estimateAttackDamage(
   rawDamage: string,
 ): number {
   const player = getPlayer(state, playerId);
+  const opponent = getPlayer(state, getOpponentId(playerId));
   const base = parseInt(rawDamage, 10) || 0;
   const lower = attackName.toLowerCase();
 
-  // "Rocket Feathers" — 60 × TR Supporters discarded from hand
-  if (lower.includes("rocket feathers") || rawDamage.includes("×")) {
+  // "Rocket Feathers" — 60 × TR Supporters discarded from hand (ONLY for Rocket Feathers)
+  if (lower.includes("rocket feathers")) {
     const trSupporterCount = player.hand.filter((card) => {
       const def = getDefinition(state, card.definitionId);
       return def && isSupporter(def) && def.name.toLowerCase().includes("team rocket's");
     }).length;
     return (base || 60) * trSupporterCount;
+  }
+
+  // "Resentful Refrain" (Mega Froslass ex) — 50 × opponent's hand size
+  if (lower.includes("resentful refrain")) {
+    return 50 * opponent.hand.length;
+  }
+
+  // "Damage Beat" (Glalie) — 20 × damage counters on opponent's active
+  if (lower.includes("damage beat")) {
+    return 20 * (opponent.active?.damageCounters ?? 0);
+  }
+
+  // "Mirage Barrage" (Greninja ex) — 120 damage to 2 of opponent's Pokémon (costs 2 energy)
+  // Only worth using if Greninja ex has enough energy to spend; otherwise Shinobi Blade (170) is better.
+  if (lower.includes("mirage barrage")) {
+    const energyOnActive = player.active?.attachedEnergy.length ?? 0;
+    if (energyOnActive >= 3) return 240; // 120×2 targets — double value vs Shinobi Blade (170)
+    return 0; // Discards 2 energies with only 1 attached → not worth it (can't re-attack next turn)
+  }
+
+  // Other "×" attacks (R Command) — base × relevant count
+  if (rawDamage.includes("×")) {
+    // R Command (TR Porygon2): 20 × TR Supporters in discard
+    if (lower.includes("r command")) {
+      const trDiscardCount = player.discard.filter((card) => {
+        const def = getDefinition(state, card.definitionId);
+        return def && isSupporter(def) && def.name.toLowerCase().includes("team rocket's");
+      }).length;
+      return (base || 20) * trDiscardCount;
+    }
+    // Generic ×: fallback to 0 (unknown scaling)
+    return 0;
   }
 
   // "Gale Thrust" — 60 + 170 bonus if Lopunny moved from bench this turn
@@ -760,20 +835,22 @@ export function pickAutoAbilityAction(
     // === DAMAGE ABILITIES (value scales with KO potential) ===
 
     else if (abilityLower.includes("cursed blast")) {
-      // Place 13 damage counters on any opponent Pokémon, then Dusknoir KOs itself
-      // Only worth it if we get meaningful value — never sacrifice Dusknoir casually
+      // Place 13 damage counters on any opponent Pokémon, then Dusknoir KOs itself.
+      // Only worth it if we get meaningful value — never sacrifice Dusknoir casually.
+      // Dusknoir (PRE 37): 150 HP. "Dying" = ≤ 70 HP remaining (≥80 damage taken).
+      // This is conservative — only sacrifice when truly at risk of being KO'd next turn.
       const dusknoirHp = pokemon ? remainingHp(state, pokemon) : 9999;
-      const dusknoirDying = dusknoirHp <= 130; // Will be KO'd by opponent soon anyway
+      const dusknoirDying = dusknoirHp <= 70; // ≥80 damage taken — opponent likely KOs next turn
       const canKONow = allOpponent.some((p) => remainingHp(state, p) <= 130);
       // Set-up KO: Cursed Blast 130 + Phantom Dive active 120 = 250 on active
       //            Cursed Blast 130 + Phantom Dive bench 50 = 180 on bench
       const setsUpActiveKO = opponent.active != null && remainingHp(state, opponent.active) <= 250;
       const setsUpBenchKO = opponent.bench.some((p) => remainingHp(state, p) <= 180);
       const setsUpKO = setsUpActiveKO || setsUpBenchKO;
-      if (canKONow) score = 95;                   // Immediate KO — always worth the sacrifice
+      if (canKONow) score = 95;                       // Immediate KO — always worth the sacrifice
       else if (dusknoirDying && setsUpKO) score = 85; // Dying anyway; secure the KO setup
-      else if (dusknoirDying) score = 72;         // Dying anyway — put 13 counters somewhere
-      else if (setsUpKO) score = 65;              // Healthy Dusknoir, but sets up a KO next turn
+      else if (dusknoirDying) score = 72;             // Dying anyway — put 13 counters somewhere
+      else if (setsUpKO) score = 65;                  // Healthy Dusknoir, sets up a KO next turn
       // else: score stays 0 — don't sacrifice Dusknoir without meaningful outcome
 
     } else if (abilityLower.includes("mortal shuriken")) {
@@ -876,6 +953,34 @@ export function pickBestAttack(state: EngineState, playerId: PlayerId, ctx?: Str
       const textMatch = attack.text.match(/\b(\d{2,3})\s*damage\b/i);
       if (textMatch) dmg = parseInt(textMatch[1]!, 10);
     }
+
+    // Setup attacks: 0-damage attacks with search/bench effects that move the game forward.
+    // The AI normally skips 0-damage attacks, but these are valuable for setup turns.
+    if (dmg === 0 && attack.text && ctx) {
+      const atkLower = attack.name.toLowerCase();
+      // Frogadier "Summoning Jutsu" — search up to 3 Pokémon from deck to hand.
+      // Essential for finding Greninja ex + Dusknoir + Mega Froslass ex in one attack.
+      if (ctx.archetype === "greninja" && atkLower.includes("summoning jutsu")) {
+        const allInPlay = [...(player.active ? [player.active] : []), ...player.bench];
+        const inPlayNames = allInPlay.map((p) => getDefinition(state, p.definitionId)?.name?.toLowerCase() ?? "");
+        const keyPokemon = ["greninja ex", "dusknoir", "mega froslass ex"];
+        const missingKeys = keyPokemon.filter((k) =>
+          !inPlayNames.some((n) => n.includes(k)) &&
+          !player.hand.some((c) => (getDefinition(state, c.definitionId)?.name?.toLowerCase() ?? "").includes(k)),
+        );
+        if (missingKeys.length > 0) dmg = 40 + missingKeys.length * 15; // Setup value scales with missing pieces
+      }
+      // Froakie "Flock" — search up to 2 Froakies from deck to bench.
+      // Useful T1–T2 when bench needs more Froakies for evolution chain.
+      if (ctx.archetype === "greninja" && atkLower.includes("flock")) {
+        const froakiesOnBench = player.bench.filter((p) =>
+          (getDefinition(state, p.definitionId)?.name?.toLowerCase() ?? "").includes("froakie"),
+        ).length;
+        const froakiesNeeded = Math.max(0, 2 - froakiesOnBench);
+        if (froakiesNeeded > 0 && player.bench.length < 4) dmg = 25 + froakiesNeeded * 10;
+      }
+    }
+
     const isKo = dmg >= opponentHp && dmg > 0;
     const isSignature = signatureAttack && attack.name.toLowerCase().includes(signatureAttack);
 
@@ -963,6 +1068,14 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
       if (ctx.archetype === "garchomp" && (nameLower.includes("roserade") || nameLower.includes("roselia"))) score -= 80;
       // Greninja: Budew item-locks only — skip energy
       if (ctx.archetype === "greninja" && nameLower.includes("budew")) score -= 100;
+      // Greninja: Froakie/Snorunt/Duskull/Dusclops/Latias ex are support-only — deprioritise energy
+      if (ctx.archetype === "greninja" && (nameLower.includes("froakie") || nameLower.includes("snorunt") || nameLower.includes("latias ex"))) score -= 60;
+      // Greninja: Frogadier is staging attacker — gets some energy to use Summoning Jutsu/Aqua Edge
+      if (ctx.archetype === "greninja" && nameLower.includes("frogadier")) score += 10;
+      // Greninja: Mega Froslass ex is secondary attacker — needs at least 1 energy for Resentful Refrain
+      // Don't over-load Froslass; Greninja ex (energyPriority 95) takes priority first.
+      // When Greninja ex already has enough energy (alreadyReady), the -50 penalty balances this.
+      if (ctx.archetype === "greninja" && nameLower.includes("mega froslass ex")) score += 15;
       // Lopunny: prefer BENCH Mega Lopunny ex for energy loading (Gale Thrust loop).
       // The bench Lopunny will retreat to active next turn — it needs energy BEFORE the retreat.
       // Exception: if active Lopunny just moved from bench THIS turn, it needs energy to attack NOW.
@@ -1034,6 +1147,28 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
         );
         // Use -1000 so even the archetype bonus (+25) cannot bring the score above 0 when no target
         score = damagedMega ? 105 : -1000;
+      } else if (name.includes("colress's tenacity") || name.includes("colress")) {
+        // Colress's Tenacity: search deck for 1 Stadium + 1 Energy (both to hand), then shuffle.
+        // Essential for Greninja: finds Grand Tree + Water Energy.
+        score = 55;
+      } else if (name.includes("surfer")) {
+        // Surfer: switch YOUR Active with a Bench Pokémon, then draw until you have 5 cards.
+        // Only play when bench has a higher-priority attacker than current active.
+        if (player.bench.length === 0) {
+          score = -1;
+        } else {
+          const activeArchPrio = ctx && player.active
+            ? getArchetypeEnergyPriority(ctx.archetype, (getDefinition(state, player.active.definitionId)?.name ?? "").toLowerCase())
+            : 0;
+          const bestBenchArchPrio = player.bench.reduce((best, b) => {
+            const bName = (getDefinition(state, b.definitionId)?.name ?? "").toLowerCase();
+            const prio = ctx ? getArchetypeEnergyPriority(ctx.archetype, bName) : 0;
+            return Math.max(best, prio);
+          }, 0);
+          // Play Surfer when bench has a better attacker (by ≥25 priority gap) OR hand is small
+          const worthSwitching = bestBenchArchPrio > activeArchPrio + 25;
+          score = worthSwitching ? 50 : (handSize <= 3 ? 30 : 10);
+        }
       } else if (name.includes("arven")) {
         score = 72;
       } else if (name.includes("cyrano")) {
@@ -1054,7 +1189,24 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
           score = hasKOTarget ? 72 : prizeRush ? 60 : (opponent.prizes.length <= 3 ? 48 : 35);
         }
       } else if (name.includes("crispin") && (player.bench.length > 0 || player.active)) {
-        score = 32;
+        // Crispin: attach 2 Basic Energy from discard to any Basic Pokémon (or evolve into one).
+        // Urgently prioritize when primary attacker is in play with 0-1 energy (needs acceleration).
+        const allInPlay = [...(player.active ? [player.active] : []), ...player.bench];
+        const primaryNeedsEnergy = allInPlay.some((p) => {
+          const pName = (getDefinition(state, p.definitionId)?.name ?? "").toLowerCase();
+          const archPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, pName) : 0;
+          return archPrio >= 80 && p.attachedEnergy.length <= 1; // Primary attacker with ≤1 energy
+        });
+        const hasTwoEnergyInDiscard = player.discard.filter(
+          (c) => getDefinition(state, c.definitionId)?.supertype === "Energy",
+        ).length >= 2;
+        if (primaryNeedsEnergy && hasTwoEnergyInDiscard) {
+          score = 78; // Urgent energy acceleration — prioritise over draw supporters
+        } else if (primaryNeedsEnergy) {
+          score = 55; // Attacker needs energy but fewer than 2 in discard
+        } else {
+          score = 32;
+        }
       } else if (name.includes("rosa")) {
         score = 28;
       // === TEAM ROCKET SUPPORTERS (specific scoring for Honchkrow archetype) ===
@@ -1111,6 +1263,17 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
           });
         });
         score = hasRareCandyTarget ? 72 : 8; // High if ready to use; low if just holding
+      } else if (name.includes("grand tree")) {
+        // Grand Tree: stadium that lets you evolve a full chain from deck (Basic → Stage 1 → Stage 2).
+        // Critically valuable for Stage 2 decks (Greninja, Dragapult, etc.) — prioritise playing it early.
+        // Check if we have a Basic in play that could be evolved. Score lower so other trainers aren't crowded out.
+        const allInPlay2 = [...(player.active ? [player.active] : []), ...player.bench];
+        const hasEvolutionTarget = allInPlay2.some((mon) => {
+          const monDef = getDefinitionSafe(state, mon.definitionId);
+          if (!isBasicPokemon(monDef)) return false;
+          return true;
+        });
+        score = hasEvolutionTarget ? 68 : 35;
       } else if (name.includes("crushing hammer")) {
         score = opponent.active && opponent.active.attachedEnergy.length > 0 ? 30 : 15;
       } else if (name.includes("unfair stamp")) {
@@ -1140,7 +1303,23 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
         // Honchkrow: dig for more TR Supporters in top 4 cards
         score = 55;
       } else if (name.includes("risky ruins") || name.includes("area zero") || name.includes("watchtower") || name.includes("team rocket's watchtower")) {
-        score = 30;
+        // Watchtower: if opponent has Risky Ruins (damages our non-Darkness bench Pokémon),
+        // play Watchtower immediately to replace it — this is the primary counter-play.
+        const opponentHasRiskyRuins = getStadiumKind(state) === "risky_ruins";
+        const isWatchtower = name.includes("watchtower") || name.includes("team rocket's watchtower");
+        if (isWatchtower && opponentHasRiskyRuins) {
+          score = 95; // Urgently replace Risky Ruins — it's destroying our bench Pokémon
+        } else if (isWatchtower) {
+          // Watchtower disables non-Rule Box Colorless abilities (Dudunsparce Run Away Draw, etc.)
+          // Score high if opponent has Dudunsparce or similar Colorless ability Pokémon on bench.
+          const opponentHasDudunsparce = opponent.bench.some((p) => {
+            const pName = (getDefinition(state, p.definitionId)?.name ?? "").toLowerCase();
+            return pName.includes("dudunsparce") || pName.includes("fan rotom") || pName.includes("manaphy");
+          });
+          score = opponentHasDudunsparce ? 75 : 30;
+        } else {
+          score = 30;
+        }
       } else if (!supporter) {
         score = 14;
       }
@@ -1430,12 +1609,28 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     }
     case "CRISPIN_ATTACH": {
       const player = getPlayer(state, playerId);
-      const targetId = pending.targets[0] ?? player.active?.instanceId ?? player.bench[0]?.instanceId;
-      if (!targetId) return null;
+      if (pending.targets.length === 0) return null;
+      // Pick the best energy target: prefer primary attacker (by archetype), then one-away from attacking
+      const allOwn = [...(player.active ? [player.active] : []), ...player.bench];
+      const bestCrispin = [...pending.targets].sort((a, b) => {
+        const aMon = allOwn.find((p) => p.instanceId === a);
+        const bMon = allOwn.find((p) => p.instanceId === b);
+        const aDef = aMon ? getDefinition(state, aMon.definitionId) : undefined;
+        const bDef = bMon ? getDefinition(state, bMon.definitionId) : undefined;
+        const aName = aDef?.name?.toLowerCase() ?? "";
+        const bName = bDef?.name?.toLowerCase() ?? "";
+        const aArchPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, aName) : 0;
+        const bArchPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, bName) : 0;
+        if (aArchPrio !== bArchPrio) return bArchPrio - aArchPrio;
+        // Tie-break: Pokémon already with some energy (closer to attacking)
+        const aEnergy = aMon?.attachedEnergy.length ?? 0;
+        const bEnergy = bMon?.attachedEnergy.length ?? 0;
+        return bEnergy - aEnergy;
+      })[0];
       return gameReducer(state, {
         type: "SELECT_CRISPIN_TARGET",
         playerId,
-        pokemonId: targetId,
+        pokemonId: bestCrispin ?? pending.targets[0]!,
       });
     }
     case "CRISPIN_DISCARD":
@@ -1796,7 +1991,23 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     }
     case "SURFER": {
       if (pending.options.length === 0) return null;
-      return gameReducer(state, { type: "SELECT_SURFER_BENCH", playerId, benchInstanceId: pending.options[0]! });
+      // Pick best bench Pokémon to promote: prefer energized primary attackers
+      const surferPlayer = getPlayer(state, playerId);
+      const bestSurferBench = [...surferPlayer.bench]
+        .filter((p) => pending.options.includes(p.instanceId))
+        .sort((a, b) => {
+          const aName = getDefinition(state, a.definitionId)?.name?.toLowerCase() ?? "";
+          const bName = getDefinition(state, b.definitionId)?.name?.toLowerCase() ?? "";
+          const aArchPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, aName) : 0;
+          const bArchPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, bName) : 0;
+          if (aArchPrio !== bArchPrio) return bArchPrio - aArchPrio;
+          return b.attachedEnergy.length - a.attachedEnergy.length;
+        })[0];
+      return gameReducer(state, {
+        type: "SELECT_SURFER_BENCH",
+        playerId,
+        benchInstanceId: bestSurferBench?.instanceId ?? pending.options[0]!,
+      });
     }
     case "GRAND_TREE": {
       if (pending.step === "BASIC") {
