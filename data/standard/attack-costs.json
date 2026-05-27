@@ -64,6 +64,23 @@
     ]
   },
   {
+    "pokemonName": "bayleef",
+    "apiId": "me1-9",
+    "set": "MEG",
+    "number": "9",
+    "attacks": [
+      {
+        "name": "Push Down",
+        "cost": [
+          "Grass",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "50"
+      }
+    ]
+  },
+  {
     "pokemonName": "bloodmoon ursaluna ex",
     "apiId": "sv6-141",
     "set": "TWM",
@@ -177,22 +194,6 @@
         ],
         "convertedEnergyCost": 1,
         "damage": "20"
-      }
-    ]
-  },
-  {
-    "pokemonName": "cynthia's gabite",
-    "apiId": "sv10-103",
-    "set": "DRI",
-    "number": "103",
-    "attacks": [
-      {
-        "name": "Dragonslice",
-        "cost": [
-          "Fighting"
-        ],
-        "convertedEnergyCost": 1,
-        "damage": "40"
       }
     ]
   },
