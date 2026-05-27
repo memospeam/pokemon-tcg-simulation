@@ -8,6 +8,7 @@ import { PlayerMat } from "@/components/GameBoard/PlayerMat";
 import { TurnBanner } from "@/components/GameBoard/TurnBanner";
 import { HandBar } from "@/components/GameBoard/HandBar";
 import { BoardCard } from "@/components/GameBoard/BoardCard";
+import { SimAnalysis } from "./SimAnalysis";
 
 interface SimResult {
   winnerName: string | null;
@@ -178,57 +179,68 @@ export function SimPlayback() {
         </div>
       )}
 
-      {/* Board */}
+      {/* Board + Analysis */}
       {game && self && opponent && (
-        <>
-          <TurnBanner
-            game={game}
-            prompt={currentFrame?.label ?? ""}
-            isMyTurn={game.currentPlayerId === selfId}
-          />
-
-          <div className="play-screen__mat">
-            <PlayerMat
+        <div className="sim-body">
+          {/* Left: game board */}
+          <div className="sim-board-area">
+            <TurnBanner
               game={game}
-              player={opponent}
-              label={opponent.name}
-              isOpponent
-              isActiveTurn={game.currentPlayerId === opponentId}
-              onPokemonSelect={NOOP}
+              prompt={currentFrame?.label ?? ""}
+              isMyTurn={game.currentPlayerId === selfId}
             />
 
-            <div className="play-screen__center">
-              {game.stadium ? (
-                <div className="play-screen__stadium">
-                  <span>Stadium</span>
-                  <BoardCard state={game} card={game.stadium} size="mini" showName={false} />
-                </div>
-              ) : (
-                <div className="play-screen__stadium play-screen__stadium--empty">Stadium</div>
-              )}
+            <div className="play-screen__mat">
+              <PlayerMat
+                game={game}
+                player={opponent}
+                label={opponent.name}
+                isOpponent
+                isActiveTurn={game.currentPlayerId === opponentId}
+                onPokemonSelect={NOOP}
+              />
 
-              <ul className="play-log">
-                {game.log.slice(-8).map((entry, i) => (
-                  <li key={`${i}-${entry}`}>{entry}</li>
-                ))}
-              </ul>
+              <div className="play-screen__center">
+                {game.stadium ? (
+                  <div className="play-screen__stadium">
+                    <span>Stadium</span>
+                    <BoardCard state={game} card={game.stadium} size="mini" showName={false} />
+                  </div>
+                ) : (
+                  <div className="play-screen__stadium play-screen__stadium--empty">Stadium</div>
+                )}
 
-              {winner && (
-                <p className="status-ok play-screen__winner">Winner: {winner}</p>
-              )}
+                <ul className="play-log">
+                  {game.log.slice(-8).map((entry, i) => (
+                    <li key={`${i}-${entry}`}>{entry}</li>
+                  ))}
+                </ul>
+
+                {winner && (
+                  <p className="status-ok play-screen__winner">Winner: {winner}</p>
+                )}
+              </div>
+
+              <PlayerMat
+                game={game}
+                player={self}
+                label={self.name}
+                isActiveTurn={game.currentPlayerId === selfId}
+                onPokemonSelect={NOOP}
+              />
             </div>
 
-            <PlayerMat
-              game={game}
-              player={self}
-              label={self.name}
-              isActiveTurn={game.currentPlayerId === selfId}
-              onPokemonSelect={NOOP}
-            />
+            <HandBar game={game} hand={self.hand} onSelect={NOOP} />
           </div>
 
-          <HandBar game={game} hand={self.hand} onSelect={NOOP} />
-        </>
+          {/* Right: step-by-step analysis panel */}
+          <SimAnalysis
+            frames={frames}
+            currentIndex={currentIndex}
+            onStepTo={(i) => { pause(); stepTo(i); }}
+            game={game}
+          />
+        </div>
       )}
 
       {/* Controls */}

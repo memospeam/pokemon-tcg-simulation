@@ -18,9 +18,25 @@ import { gameReducer, getLegalActions } from "../engine/reducer";
 import { getDefinition, getPlayer, type EngineState } from "../engine/types";
 import { GamePhase, PlayerId } from "../models/enums";
 
+export type ActionCategory =
+  | "start"
+  | "trainer"
+  | "basic"
+  | "evolve"
+  | "energy"
+  | "ability"
+  | "retreat"
+  | "attack"
+  | "endturn"
+  | "resolve";
+
 export interface SimFrame {
   state: EngineState;
   label: string;
+  /** Broad category of the action that produced this frame */
+  category: ActionCategory;
+  /** New log entries added by this action (empty for the first frame) */
+  logDelta: string[];
 }
 
 function applyAction(
@@ -28,11 +44,12 @@ function applyAction(
   action: Parameters<typeof gameReducer>[1],
   frames: SimFrame[],
   fallback: string,
+  category: ActionCategory,
 ): EngineState {
   const logBefore = state.log.length;
   const next = gameReducer(state, action);
-  const newEntries = next.log.slice(logBefore);
-  frames.push({ state: next, label: newEntries.at(-1) ?? fallback });
+  const logDelta = next.log.slice(logBefore);
+  frames.push({ state: next, label: logDelta.at(-1) ?? fallback, category, logDelta });
   return next;
 }
 
@@ -44,8 +61,8 @@ function drainAndCapture(
   const logBefore = state.log.length;
   const drained = drainAutoPending(state, 12, ctx);
   if (drained.steps > 0) {
-    const newEntries = drained.state.log.slice(logBefore);
-    frames.push({ state: drained.state, label: newEntries.at(-1) ?? "Resolve" });
+    const logDelta = drained.state.log.slice(logBefore);
+    frames.push({ state: drained.state, label: logDelta.at(-1) ?? "Resolve", category: "resolve", logDelta });
   }
   return { ...drained, stalled: isPlayStalled(drained.state) };
 }
@@ -72,7 +89,7 @@ export function captureSimulationFrames(
     seed: input.seed,
   });
   state = autoSetupEngineState(state, { placeBenchBasics: true, maxMulligans: 40 });
-  frames.push({ state, label: "Game start" });
+  frames.push({ state, label: "Game start", category: "start", logDelta: [] });
 
   // Build strategy contexts once per player from their deck card names
   const strategyContexts: Partial<Record<PlayerId, StrategyContext>> = {};
@@ -126,7 +143,7 @@ export function captureSimulationFrames(
     if (!state.turnFlags.attacked && trainersThisTurn < MAX_TRAINERS_PER_TURN) {
       const trainerAction = pickAutoTrainerAction(state, ctx);
       if (trainerAction) {
-        state = applyAction(state, trainerAction, frames, "Play trainer");
+        state = applyAction(state, trainerAction, frames, "Play trainer", "trainer");
         actionCount += 1;
         trainersThisTurn += 1;
         const drained = drainAndCapture(state, frames, ctx);
@@ -141,7 +158,7 @@ export function captureSimulationFrames(
     if (!state.turnFlags.attacked) {
       const basicAction = pickAutoPlayBasicAction(state, ctx);
       if (basicAction) {
-        state = applyAction(state, basicAction, frames, "Place basic");
+        state = applyAction(state, basicAction, frames, "Place basic", "basic");
         actionCount += 1;
         continue;
       }
@@ -151,7 +168,7 @@ export function captureSimulationFrames(
     if (!state.turnFlags.attacked) {
       const evolveAction = pickAutoEvolveAction(state, ctx);
       if (evolveAction) {
-        state = applyAction(state, evolveAction, frames, "Evolve");
+        state = applyAction(state, evolveAction, frames, "Evolve", "evolve");
         actionCount += 1;
         continue;
       }
@@ -170,6 +187,7 @@ export function captureSimulationFrames(
             { type: "ATTACH_ENERGY", playerId, energyId: energy.instanceId, targetId: energyTarget },
             frames,
             "Attach energy",
+            "energy",
           );
           actionCount += 1;
         }
@@ -180,7 +198,7 @@ export function captureSimulationFrames(
     if (!state.turnFlags.retreated && !state.turnFlags.attacked) {
       const retreatAction = pickRetreatAction(state, playerId, ctx);
       if (retreatAction) {
-        state = applyAction(state, retreatAction, frames, "Retreat");
+        state = applyAction(state, retreatAction, frames, "Retreat", "retreat");
         actionCount += 1;
         continue;
       }
@@ -201,6 +219,7 @@ export function captureSimulationFrames(
           { type: "ATTACK", playerId, attackName: bestAttack },
           frames,
           `Attack: ${bestAttack}`,
+          "attack",
         );
         actionCount += 1;
         attacked = true;
@@ -214,7 +233,7 @@ export function captureSimulationFrames(
 
     if (!attacked) {
       const beforeTurn = state.turnNumber;
-      state = applyAction(state, { type: "END_TURN" }, frames, "End turn");
+      state = applyAction(state, { type: "END_TURN" }, frames, "End turn", "endturn");
       actionCount += 1;
       if (state.turnNumber > beforeTurn) turnCount += 1;
     }
