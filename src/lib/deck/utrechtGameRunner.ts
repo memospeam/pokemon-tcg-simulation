@@ -861,18 +861,40 @@ function estimateAttackDamage(
     return base + (lopunnyMoved ? 170 : 0);
   }
 
-  // "Night Joker" — copies the best attack from a benched N's Pokémon
+  // "Night Joker" — copies the best attack from a benched N's Pokémon.
+  // Estimate each possible copy's effective damage, accounting for:
+  //   • Rampaging Thunder (250) debuff: "can't attack next turn" — penalise unless KO
+  //   • Back Draft (30×): scales with energy in opponent discard
+  //   • Powerful Rage (20×): scales with damage counters on the bench Pokémon
+  //   • Triple Smash (120×): 3-coin flip → ~1.5 expected heads on average
   if (lower.includes("night joker")) {
-    let bestDamage = 0;
+    const opponentHpNJ = opponent.active ? remainingHp(state, opponent.active) : 9999;
+    let bestScore = 0;
     for (const bench of player.bench) {
       const def = getDefinition(state, bench.definitionId);
       if (!def?.name?.toLowerCase().startsWith("n's")) continue;
       for (const atk of (def.attacks ?? [])) {
-        const d = parseInt(atk.damage, 10) || 0;
-        if (d > bestDamage) bestDamage = d;
+        const raw = parseInt(atk.damage, 10) || 0;
+        const atkLower = atk.name.toLowerCase();
+        let est = raw;
+        if (atkLower.includes("rampaging thunder")) {
+          // 250 damage but Zoroark can't attack the following turn.
+          // Only full value if this KOs; otherwise apply a heavy multiplier penalty.
+          est = raw >= opponentHpNJ ? raw : Math.round(raw * 0.55);
+        } else if (atkLower.includes("back draft")) {
+          const energyInOppDiscard = opponent.discard.filter(
+            (c) => getDefinition(state, c.definitionId)?.supertype === "Energy",
+          ).length;
+          est = (raw || 30) * Math.max(1, energyInOppDiscard);
+        } else if (atkLower.includes("powerful rage")) {
+          est = (raw || 20) * (bench.damageCounters || 0);
+        } else if (atkLower.includes("triple smash")) {
+          est = Math.round((raw || 120) * 1.5); // ~1.5 expected heads from 3 coins
+        }
+        if (est > bestScore) bestScore = est;
       }
     }
-    return bestDamage;
+    return bestScore;
   }
 
   // Generic "X+" → assume full bonus is achievable (conservative estimate)
@@ -968,6 +990,11 @@ export function pickAutoAbilityAction(
       else if (player.hand.length >= 3) score = 55;  // Moderate hand → probably still worth it
       else if (player.hand.length === 2) score = 30; // Risky: discarding one of only two cards
       // else score = 0: hand ≤ 1 — can't afford to discard
+      // Zoroark: Trade is the primary draw/cycle engine — use it more aggressively
+      // (find N's Zorua, N's Zekrom, and key trainers faster)
+      if (ctx?.archetype === "zoroark" && player.hand.length >= 2) {
+        score = Math.max(score + 10, 45);
+      }
     }
 
     // === DAMAGE ABILITIES (value scales with KO potential) ===
@@ -2255,44 +2282,95 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     }
     case "COPY_BENCH_ATTACK": {
       if (pending.options.length === 0) return null;
-      const player = getPlayer(state, playerId);
-      const opponent = getPlayer(state, getOpponentId(playerId));
-      const opponentHp = opponent.active ? remainingHp(state, opponent.active) : 9999;
-      // Pick the copied attack that best KOs the opponent:
-      // prefer attack whose damage >= opponent HP (KO), then highest raw damage
+      const cbPlayer = getPlayer(state, playerId);
+      const cbOpponent = getPlayer(state, getOpponentId(playerId));
+      const cbOpponentHp = cbOpponent.active ? remainingHp(state, cbOpponent.active) : 9999;
+
+      // Estimate effective damage for each copyable attack, mirroring estimateAttackDamage.
+      function estimateCopiedDamage(
+        opt: { benchPokemonId: string; attackName: string },
+      ): number {
+        const benchMon = cbPlayer.bench.find((p) => p.instanceId === opt.benchPokemonId);
+        const benchDef = getDefinition(state, benchMon?.definitionId ?? "");
+        const atk = benchDef?.attacks?.find((a) => a.name === opt.attackName);
+        if (!atk) return 0;
+        const raw = parseInt(atk.damage, 10) || 0;
+        const atkLower = atk.name.toLowerCase();
+        // Rampaging Thunder: 250 damage but Zoroark can't attack next turn —
+        // penalise heavily unless it outright KOs the opponent.
+        if (atkLower.includes("rampaging thunder")) {
+          return raw >= cbOpponentHp ? raw : Math.round(raw * 0.55);
+        }
+        // Back Draft (30×): scales with energy in opponent's discard
+        if (atkLower.includes("back draft")) {
+          const energyInDiscard = cbOpponent.discard.filter(
+            (c) => getDefinition(state, c.definitionId)?.supertype === "Energy",
+          ).length;
+          return (raw || 30) * Math.max(1, energyInDiscard);
+        }
+        // Powerful Rage (20×): scales with damage counters on the bench Pokémon
+        if (atkLower.includes("powerful rage")) {
+          return (raw || 20) * (benchMon?.damageCounters ?? 0);
+        }
+        // Triple Smash (120×): 3 coins → expected ~1.5 heads
+        if (atkLower.includes("triple smash")) {
+          return Math.round((raw || 120) * 1.5);
+        }
+        return raw;
+      }
+
       const bestOpt = [...pending.options].sort((a, b) => {
-        const aBenchDef = getDefinition(state, player.bench.find((p) => p.instanceId === a.benchPokemonId)?.definitionId ?? "");
-        const bBenchDef = getDefinition(state, player.bench.find((p) => p.instanceId === b.benchPokemonId)?.definitionId ?? "");
-        const aAtk = aBenchDef?.attacks?.find((atk) => atk.name === a.attackName);
-        const bAtk = bBenchDef?.attacks?.find((atk) => atk.name === b.attackName);
-        const aDmg = parseInt(aAtk?.damage ?? "0", 10) || 0;
-        const bDmg = parseInt(bAtk?.damage ?? "0", 10) || 0;
-        const aKo = aDmg >= opponentHp && aDmg > 0 ? 1 : 0;
-        const bKo = bDmg >= opponentHp && bDmg > 0 ? 1 : 0;
+        const aDmg = estimateCopiedDamage(a);
+        const bDmg = estimateCopiedDamage(b);
+        const aKo = aDmg >= cbOpponentHp && aDmg > 0 ? 1 : 0;
+        const bKo = bDmg >= cbOpponentHp && bDmg > 0 ? 1 : 0;
         if (aKo !== bKo) return bKo - aKo; // prefer KO attack
-        return bDmg - aDmg; // else pick highest damage
+        return bDmg - aDmg; // else pick highest estimated damage
       })[0]!;
-      return gameReducer(state, { type: "CHOOSE_BENCH_ATTACK", playerId, benchPokemonId: bestOpt.benchPokemonId, attackName: bestOpt.attackName });
+      return gameReducer(state, {
+        type: "CHOOSE_BENCH_ATTACK",
+        playerId,
+        benchPokemonId: bestOpt.benchPokemonId,
+        attackName: bestOpt.attackName,
+      });
     }
     case "ABILITY_DISCARD_HAND": {
-      // Discard least valuable card (for Trade, N's Zoroark, etc.)
+      // Discard least valuable card (for Trade, N's Zoroark ex, etc.)
       const player = getPlayer(state, playerId);
       if (player.hand.length === 0) return null;
       const keepSet = new Set(ctx ? ctx.profile.ultraBallKeep.map((s) => s.toLowerCase()) : []);
+      // Zoroark: additionally protect N's Zorua (sole source of Zoroark ex evolution)
+      // and N's Zekrom (provides Rampaging Thunder 250 for Night Joker)
+      if (ctx?.archetype === "zoroark") {
+        keepSet.add("n's zorua");
+        keepSet.add("n's zekrom");
+      }
+      // Track how many copies of each definition are in hand — prefer discarding extras
+      const defCount = new Map<string, number>();
+      for (const card of player.hand) {
+        defCount.set(card.definitionId, (defCount.get(card.definitionId) ?? 0) + 1);
+      }
       const worst = [...player.hand].sort((a, b) => {
         const aDef = getDefinition(state, a.definitionId);
         const bDef = getDefinition(state, b.definitionId);
         const aName = aDef?.name?.toLowerCase() ?? "";
         const bName = bDef?.name?.toLowerCase() ?? "";
-        // Protected cards: never discard
+        // 1. Never discard protected (key archetype) cards
         const aProtected = keepSet.size > 0 && [...keepSet].some((k) => aName.includes(k));
         const bProtected = keepSet.size > 0 && [...keepSet].some((k) => bName.includes(k));
-        if (aProtected && !bProtected) return 1;
-        if (!aProtected && bProtected) return -1;
-        // Prefer discarding: duplicates of energy, then items, then basics
-        if (aDef?.supertype === "Energy" && bDef?.supertype !== "Energy") return -1;
-        if (aDef?.supertype !== "Energy" && bDef?.supertype === "Energy") return 1;
-        return 0;
+        if (aProtected !== bProtected) return aProtected ? 1 : -1;
+        // 2. Prefer discarding duplicate copies (excess in hand)
+        const aExtra = (defCount.get(a.definitionId) ?? 1) > 1 ? 1 : 0;
+        const bExtra = (defCount.get(b.definitionId) ?? 1) > 1 ? 1 : 0;
+        if (aExtra !== bExtra) return bExtra - aExtra;
+        // 3. Prefer discarding: Energy > Item > Basic Pokémon > Supporter
+        const supertypeScore = (def: typeof aDef): number => {
+          if (def?.supertype === "Energy") return 3;
+          if (def?.supertype === "Trainer" && !isSupporter(def)) return 2;
+          if (def?.supertype === "Pokémon") return 1;
+          return 0; // Supporter — avoid discarding
+        };
+        return supertypeScore(bDef) - supertypeScore(aDef);
       })[0];
       if (!worst) return null;
       return gameReducer(state, { type: "SELECT_HAND_DISCARD", playerId, instanceId: worst.instanceId });
