@@ -1485,7 +1485,7 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
             return isStage2(hDef) && canRareCandyEvolveInto(state, monDef, hDef);
           });
         });
-        score = hasRareCandyTarget ? 72 : 8; // High if ready to use; low if just holding
+        score = hasRareCandyTarget ? 95 : 8; // Must beat Iono (90) so we evolve before shuffling Rare Candy away
       } else if (name.includes("grand tree")) {
         // Grand Tree: stadium that lets you evolve a full chain from deck (Basic → Stage 1 → Stage 2).
         // Critically valuable for Stage 2 decks (Greninja, Dragapult, etc.) — prioritise playing it early.
@@ -1923,13 +1923,28 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
         return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
       }
       return null;
-    case "PICK_DISCARD":
+    case "PICK_DISCARD": {
       if (pending.options.length === 0) return null;
+      // Pick the most valuable Pokémon from the discard pile options
+      const pdPlayer = getPlayer(state, playerId);
+      const bestPdOption = pending.options.slice().sort((a, b) => {
+        // Options are instance IDs; find them in the discard pile
+        const aCard = pdPlayer.discard.find((c) => c.instanceId === a);
+        const bCard = pdPlayer.discard.find((c) => c.instanceId === b);
+        const aDef = aCard ? getDefinitionSafe(state, aCard.definitionId) : undefined;
+        const bDef = bCard ? getDefinitionSafe(state, bCard.definitionId) : undefined;
+        const aName = aDef?.name?.toLowerCase() ?? "";
+        const bName = bDef?.name?.toLowerCase() ?? "";
+        const aPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, aName) : 0;
+        const bPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, bName) : 0;
+        return bPrio - aPrio; // highest priority first
+      })[0]!;
       return gameReducer(state, {
         type: "PICK_DISCARD_POKEMON",
         playerId,
-        instanceId: pending.options[0]!,
+        instanceId: bestPdOption,
       });
+    }
     case "ATTACH_HAND_ENERGY": {
       // energyId is pre-selected by the engine; pick the best target Pokémon
       const { energyId, targetIds } = pending;
@@ -1959,18 +1974,29 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
       });
     }
     case "PROMOTE": {
-      const player = getPlayer(state, playerId);
-      const bench = player.bench[0];
-      if (!bench) {
+      const promotePlayer = getPlayer(state, playerId);
+      if (promotePlayer.bench.length === 0) {
         const finished = { ...state, pendingAction: null };
         finished.winnerId = getOpponentId(playerId);
         finished.phase = GamePhase.Finished;
         return finished;
       }
+      // Smart selection: prefer primary archetype attackers, then most energy attached, then highest remaining HP
+      const bestPromote = promotePlayer.bench.slice().sort((a, b) => {
+        const aName = getDefinition(state, a.definitionId)?.name?.toLowerCase() ?? "";
+        const bName = getDefinition(state, b.definitionId)?.name?.toLowerCase() ?? "";
+        const aPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, aName) : 0;
+        const bPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, bName) : 0;
+        if (aPrio !== bPrio) return bPrio - aPrio;
+        // Tie-break: more energy = ready to attack sooner
+        if (a.attachedEnergy.length !== b.attachedEnergy.length) return b.attachedEnergy.length - a.attachedEnergy.length;
+        // Tie-break: higher HP = safer to send out
+        return remainingHp(state, b) - remainingHp(state, a);
+      })[0]!;
       return gameReducer(state, {
         type: "PROMOTE_BENCH",
         playerId,
-        instanceId: bench.instanceId,
+        instanceId: bestPromote.instanceId,
       });
     }
     case "DAMAGE_TWO_OPPONENT": {
@@ -1980,23 +2006,70 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
         ...opponent.bench,
       ].filter((pokemon) => !pending.pickedIds.includes(pokemon.instanceId));
       if (candidates.length === 0) return null;
+      // Prefer targets closest to KO (lowest remaining HP), then boss-priority targets
+      const bestDmgTarget = candidates.slice().sort((a, b) => {
+        const aName = getDefinition(state, a.definitionId)?.name?.toLowerCase() ?? "";
+        const bName = getDefinition(state, b.definitionId)?.name?.toLowerCase() ?? "";
+        const aBoss = ctx ? getArchetypeBossPriority(ctx.archetype, aName) : 0;
+        const bBoss = ctx ? getArchetypeBossPriority(ctx.archetype, bName) : 0;
+        const aHp = remainingHp(state, a);
+        const bHp = remainingHp(state, b);
+        // Tie-break order: lowest HP first (soften KO targets), then boss priority
+        if (aHp !== bHp) return aHp - bHp;
+        return bBoss - aBoss;
+      })[0]!;
       return gameReducer(state, {
         type: "CHOOSE_OPPONENT_DAMAGE",
         playerId,
-        targetId: candidates[0]!.instanceId,
+        targetId: bestDmgTarget.instanceId,
       });
     }
     case "IONO_HAND_BOTTOM": {
-      const player = getPlayer(state, playerId);
-      const card = player.hand[0];
-      if (!card) return null;
-      return gameReducer(state, { type: "IONO_SELECT_HAND", playerId, instanceId: card.instanceId });
+      const ioPlayer = getPlayer(state, playerId);
+      if (ioPlayer.hand.length === 0) return null;
+      // Discard the card with the lowest keep-value (put it to the bottom of the deck)
+      const handEnergyCount = ioPlayer.hand.filter((c) => {
+        const d = getDefinitionSafe(state, c.definitionId);
+        return d?.supertype === "Energy";
+      }).length;
+      const ioScored = ioPlayer.hand.map((card) => {
+        const def = getDefinitionSafe(state, card.definitionId);
+        const name = def?.name?.toLowerCase() ?? "";
+        const supertype = def?.supertype ?? "";
+        let score = 50;
+        if (supertype === "Pokémon") {
+          // Primary attackers are most valuable to keep; bench filler less so
+          const archPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, name) : 0;
+          score = 10 + archPrio; // e.g. 10 for unknown, 110 for primary attacker
+        } else if (supertype === "Energy") {
+          // Excess energy is cheap to lose; but keep at least one for attachment
+          score = handEnergyCount > 2 ? 15 : 35;
+        } else {
+          // Trainers: key supporters & search items are critical
+          if (name.includes("professor's research") || name.includes("iono")) score = 95;
+          else if (name.includes("boss's orders") || name.includes("prime catcher")) score = 85;
+          else if (name.includes("rare candy") || name.includes("ultra ball") || name.includes("nest ball")) score = 70;
+          else score = 50;
+        }
+        return { instanceId: card.instanceId, score };
+      });
+      // Put the lowest-scored card on the bottom of the deck
+      const worst = ioScored.sort((a, b) => a.score - b.score)[0]!;
+      return gameReducer(state, { type: "IONO_SELECT_HAND", playerId, instanceId: worst.instanceId });
     }
     case "MOVE_ENERGY_TO_BENCH": {
-      const player = getPlayer(state, playerId);
-      const bench = player.bench[0];
-      if (!bench) return null;
-      return gameReducer(state, { type: "MOVE_ENERGY_TO_BENCH", playerId, benchInstanceId: bench.instanceId });
+      const mebPlayer = getPlayer(state, playerId);
+      if (mebPlayer.bench.length === 0) return null;
+      // Pick bench Pokémon that needs energy most: highest archetype priority, fewest energy attached
+      const bestMebTarget = mebPlayer.bench.slice().sort((a, b) => {
+        const aName = getDefinition(state, a.definitionId)?.name?.toLowerCase() ?? "";
+        const bName = getDefinition(state, b.definitionId)?.name?.toLowerCase() ?? "";
+        const aPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, aName) : 0;
+        const bPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, bName) : 0;
+        if (aPrio !== bPrio) return bPrio - aPrio;
+        return a.attachedEnergy.length - b.attachedEnergy.length; // fewer energy = needs it more
+      })[0]!;
+      return gameReducer(state, { type: "MOVE_ENERGY_TO_BENCH", playerId, benchInstanceId: bestMebTarget.instanceId });
     }
     case "SEARCH_EVOLUTION": {
       if (pending.options.length === 0) return null;
@@ -2150,7 +2223,40 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     }
     case "PRIME_CATCHER": {
       if (pending.options.length === 0) return null;
-      return gameReducer(state, { type: "SELECT_PRIME_CATCHER_BENCH", playerId, benchInstanceId: pending.options[0]! });
+      if (pending.step === "OPPONENT_BENCH") {
+        // Pull out the opponent's most threatening or lowest-HP bench Pokémon
+        const pcOpponent = getPlayer(state, getOpponentId(playerId));
+        const pcOppBench = pcOpponent.bench.filter((p) => pending.options.includes(p.instanceId));
+        const bestPcOpp = pcOppBench.slice().sort((a, b) => {
+          const aName = getDefinition(state, a.definitionId)?.name?.toLowerCase() ?? "";
+          const bName = getDefinition(state, b.definitionId)?.name?.toLowerCase() ?? "";
+          const aBoss = ctx ? getArchetypeBossPriority(ctx.archetype, aName) : 0;
+          const bBoss = ctx ? getArchetypeBossPriority(ctx.archetype, bName) : 0;
+          if (aBoss !== bBoss) return bBoss - aBoss; // higher boss priority first
+          return remainingHp(state, a) - remainingHp(state, b); // then lowest HP
+        })[0];
+        return gameReducer(state, {
+          type: "SELECT_PRIME_CATCHER_BENCH",
+          playerId,
+          benchInstanceId: bestPcOpp?.instanceId ?? pending.options[0]!,
+        });
+      }
+      // OWN_BENCH step: bring up the best attacker from our bench
+      const pcPlayer = getPlayer(state, playerId);
+      const pcOwnBench = pcPlayer.bench.filter((p) => pending.options.includes(p.instanceId));
+      const bestPcOwn = pcOwnBench.slice().sort((a, b) => {
+        const aName = getDefinition(state, a.definitionId)?.name?.toLowerCase() ?? "";
+        const bName = getDefinition(state, b.definitionId)?.name?.toLowerCase() ?? "";
+        const aPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, aName) : 0;
+        const bPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, bName) : 0;
+        if (aPrio !== bPrio) return bPrio - aPrio;
+        return b.attachedEnergy.length - a.attachedEnergy.length; // more energy = readier
+      })[0];
+      return gameReducer(state, {
+        type: "SELECT_PRIME_CATCHER_BENCH",
+        playerId,
+        benchInstanceId: bestPcOwn?.instanceId ?? pending.options[0]!,
+      });
     }
     case "N_PP_UP": {
       if (pending.options.length === 0) return null;

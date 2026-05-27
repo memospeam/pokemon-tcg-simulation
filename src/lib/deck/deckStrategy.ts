@@ -509,7 +509,7 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     ],
     benchPriority: ["abra", "dunsparce", "dudunsparce", "kadabra"],
     bossPriority: ["manaphy", "dudunsparce", "fan rotom", "fezandipiti ex", "meowth ex"],
-    ultraBallKeep: ["alakazam", "kadabra", "dudunsparce"],
+    ultraBallKeep: ["alakazam", "kadabra", "abra", "dudunsparce"],
     searchPriority: ["alakazam", "kadabra", "abra", "dudunsparce", "dunsparce"],
     matchupNotes: {
       dragapult:
