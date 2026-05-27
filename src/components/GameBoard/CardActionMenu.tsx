@@ -121,6 +121,20 @@ export function buildPokemonActions(
     if (legal.type === "SWITCH_OPPONENT_ACTIVE" && legal.benchInstanceId === card.instanceId) {
       actions.push({ label: "Switch into Active (Boss's Orders)", action: legal });
     }
+    if (legal.type === "SELECT_GIOVANNI_BENCH" && legal.benchInstanceId === card.instanceId) {
+      const step = game?.pendingAction?.type === "GIOVANNI" ? (game.pendingAction as { step: string }).step : "";
+      const label = step === "OWN_BENCH"
+        ? "Switch to Active (Giovanni)"
+        : "Force opponent's switch (Giovanni)";
+      actions.push({ label, action: legal });
+    }
+    if (legal.type === "SELECT_PRIME_CATCHER_BENCH" && legal.benchInstanceId === card.instanceId) {
+      const step = game?.pendingAction?.type === "PRIME_CATCHER" ? (game.pendingAction as { step: string }).step : "";
+      const label = step === "OPPONENT_BENCH"
+        ? "Force into Active (Prime Catcher)"
+        : "Switch with Active (Prime Catcher)";
+      actions.push({ label, action: legal });
+    }
     if (legal.type === "SWITCH_WITH_BENCH" && legal.benchInstanceId === card.instanceId) {
       actions.push({ label: "Switch with Active", action: legal });
     }

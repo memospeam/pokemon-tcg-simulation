@@ -92,6 +92,16 @@ export function useGameBoardController(
         if (game.pendingAction?.type === "MOVE_ENERGY_TO_BENCH") {
           return "Choose a Benched Pokémon to move Energy to.";
         }
+        if (game.pendingAction?.type === "GIOVANNI") {
+          return game.pendingAction.step === "OWN_BENCH"
+            ? "Giovanni: choose your Team Rocket's Benched Pokémon to switch with your Active."
+            : "Giovanni: choose an opponent's Benched Pokémon to force into the Active Spot.";
+        }
+        if (game.pendingAction?.type === "PRIME_CATCHER") {
+          return game.pendingAction.step === "OPPONENT_BENCH"
+            ? "Prime Catcher: choose an opponent's Benched Pokémon to force into the Active Spot."
+            : "Prime Catcher: choose your Benched Pokémon to switch with your Active.";
+        }
         {
           const pendingHint = getPendingPrompt(game.pendingAction);
           if (pendingHint) return pendingHint;
@@ -223,6 +233,8 @@ export function useGameBoardController(
       "CHOOSE_BENCH_DAMAGE",
       "SWITCH_WITH_BENCH",
       "MOVE_ENERGY_TO_BENCH",
+      "GIOVANNI",
+      "PRIME_CATCHER",
     ].includes(game.pendingAction.type);
   }
 

@@ -121,7 +121,9 @@ export function GameBoard() {
           highlightTargets={
             highlight &&
             (boardGame.pendingAction?.type === "BOSS_ORDERS" ||
-              boardGame.pendingAction?.type === "CRUSHING_HAMMER")
+              boardGame.pendingAction?.type === "CRUSHING_HAMMER" ||
+              (boardGame.pendingAction?.type === "GIOVANNI" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH") ||
+              (boardGame.pendingAction?.type === "PRIME_CATCHER" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH"))
           }
           onPokemonSelect={(card) => controller.handlePokemonSelect(boardGame, card)}
           onDiscardClick={() => setDiscardViewPlayerId(rival.id)}
@@ -156,7 +158,13 @@ export function GameBoard() {
           player={self}
           label={self.name}
           isActiveTurn={isMyTurn && boardGame.phase === GamePhase.Active}
-          highlightTargets={highlight && boardGame.pendingAction?.type !== "BOSS_ORDERS" && boardGame.pendingAction?.type !== "CRUSHING_HAMMER"}
+          highlightTargets={
+            highlight &&
+            boardGame.pendingAction?.type !== "BOSS_ORDERS" &&
+            boardGame.pendingAction?.type !== "CRUSHING_HAMMER" &&
+            !(boardGame.pendingAction?.type === "GIOVANNI" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH") &&
+            !(boardGame.pendingAction?.type === "PRIME_CATCHER" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH")
+          }
           onPokemonSelect={(card) => controller.handlePokemonSelect(boardGame, card)}
           onActiveSelect={handleActiveSelect}
           onDiscardClick={() => setDiscardViewPlayerId(self.id)}
