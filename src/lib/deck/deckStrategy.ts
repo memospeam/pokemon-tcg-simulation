@@ -18,6 +18,7 @@ export type Archetype =
   | "zoroark"
   | "greninja"
   | "hydrapple"
+  | "alakazam"
   | "unknown";
 
 // ─── Strategy profile ────────────────────────────────────────────────────────
@@ -472,6 +473,54 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     },
   },
 
+  alakazam: {
+    archetype: "alakazam",
+    displayName: "Alakazam / Dudunsparce",
+    winCondition:
+      "Alakazam Powerful Hand places 2 damage counters per card in your hand on the opponent's Active Pokémon (20 damage per card). Maximise hand size with Dudunsparce Run Away Draw and Hilda before attacking. Dawn accelerates Psychic energy. Abra Teleporter shuffles Abra back to deck from Active to avoid being KO'd and bring up evolved Pokémon.",
+    playstyle: "aggro",
+    signatureCards: ["alakazam", "kadabra", "abra", "dudunsparce", "dawn"],
+    primaryAttacker: "Alakazam",
+    signatureAttack: "Powerful Hand",
+    preferGoingSecond: false,
+    gamePlan: [
+      "T1: Bench Abra ×2 + Dunsparce. Use Hilda to search Kadabra + Alakazam or Dudunsparce. Attach Psychic energy.",
+      "T2: Evolve Abra → Kadabra (draw from Psychic Draw ability). Rare Candy Abra → Alakazam if possible. Dawn attaches 2 Psychic energies from deck in one action.",
+      "T3+: Alakazam Powerful Hand — keep hand ≥7 cards before attacking (= 140+ damage). Dudunsparce Run Away Draw refills hand each turn. Battle Cage protects bench from spread.",
+      "Mid-game: Abra Teleporter shuffles damaged Abra back to deck — avoids KO, promotes evolved Pokémon to active. Hilda searches next Alakazam + energy.",
+      "Priority: Always count hand size before attacking. 8 cards = 160 damage. 10 cards = 200 damage. Use Iono/Hilda draw before attacking.",
+    ],
+    trainerScoreAdjust: {
+      "dawn": 35,                  // Critical — attach 2 Psychic energy in one action
+      "hilda": 25,                 // Search Alakazam evolution line
+      "rare candy": 30,            // Abra → Alakazam skip Kadabra
+      "battle cage": 20,           // Blocks bench spread (essential vs Dragapult)
+      "buddy-buddy poffin": 15,    // Get Abra + Dunsparce early
+      "boss's orders": 10,
+      "iono": 12,                  // Hand disruption + slight refill
+      "ultra ball": 8,
+    },
+    attackerRoles: [
+      { pokemonName: "Alakazam", role: "primary", energyPriority: 95, benchFirst: false },
+      { pokemonName: "Kadabra", role: "setup", energyPriority: 50, benchFirst: true },
+      { pokemonName: "Abra", role: "setup", energyPriority: 20, benchFirst: true },
+      { pokemonName: "Dudunsparce", role: "setup", energyPriority: 0, benchFirst: true },
+      { pokemonName: "Dunsparce", role: "setup", energyPriority: 0, benchFirst: true },
+    ],
+    benchPriority: ["abra", "dunsparce", "dudunsparce", "kadabra"],
+    bossPriority: ["manaphy", "dudunsparce", "fan rotom", "fezandipiti ex", "meowth ex"],
+    ultraBallKeep: ["alakazam", "kadabra", "dudunsparce"],
+    searchPriority: ["alakazam", "kadabra", "abra", "dudunsparce", "dunsparce"],
+    matchupNotes: {
+      dragapult:
+        "Favorable — Battle Cage blocks Phantom Dive. Powerful Hand at 8+ cards = 160 damage OHKOs Dragapult ex (170 HP).",
+      lopunny:
+        "Unfavorable — Wally's Compassion heals damage each cycle. Powerful Hand struggles to land back-to-back KOs.",
+      honchkrow:
+        "Favorable — single-prize Alakazam vs single-prize Honchkrow. Powerful Hand at 7 cards = 140 matches Rocket Feathers threshold.",
+    },
+  },
+
   unknown: {
     archetype: "unknown",
     displayName: "Unknown Archetype",
@@ -524,6 +573,8 @@ export function detectArchetype(deckText: string): Archetype {
     lower.includes("lillie's clefairy ex") ||
     lower.includes("mega kangaskhan ex")
   ) return "ogerpon-box";
+  // Alakazam — Abra/Kadabra/Alakazam evolution line
+  if (lower.includes("alakazam") || (lower.includes("kadabra") && lower.includes("abra"))) return "alakazam";
 
   return "unknown";
 }

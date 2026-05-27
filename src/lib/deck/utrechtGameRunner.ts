@@ -611,6 +611,8 @@ export function pickAutoPlayBasicAction(
       // Honchkrow: TR Murkrow and TR Porygon fill bench for Ariana draw (+2 per TR bench)
       if (ctx.archetype === "honchkrow" && name.includes("team rocket's murkrow")) score += 20;
       if (ctx.archetype === "honchkrow" && name.includes("team rocket's porygon")) score += 15;
+      // Alakazam: Abra is the evolution seed — always bench it (evolves to Kadabra → Alakazam)
+      if (ctx.archetype === "alakazam" && name.includes("abra")) score += 25;
     }
 
     // Risky Ruins penalty: when opponent has Risky Ruins in play, benching non-Darkness Pokémon
@@ -688,6 +690,15 @@ export function pickAutoEvolveAction(state: EngineState, ctx?: StrategyContext):
       if (ctx.archetype === "garchomp" && name.includes("gabite")) score += 30;
       if (ctx.archetype === "garchomp" && name.includes("roserade")) score += 35;
       if (ctx.archetype === "garchomp" && name.includes("roselia")) score += 15;
+      // Alakazam: Alakazam is the primary attacker (Powerful Hand 20×hand); Kadabra is staging step.
+      // NOTE: Do NOT evolve Abra→Kadabra when Abra is active — the engine may not create PROMOTE
+      // when the active is evolved (same risk as Dudunsparce active evolve in Lopunny).
+      // Instead, strongly prefer evolving BENCH Abra → Kadabra → Alakazam.
+      if (ctx.archetype === "alakazam" && name.includes("alakazam")) score += 50;
+      if (ctx.archetype === "alakazam" && name.includes("kadabra")) {
+        if (isActive) score += 5; // Kadabra on active is acceptable staging
+        else score += 25;         // Bench Kadabra — evolve to have attacker ready
+      }
       // Archetype search priority bonus
       score += getArchetypeSearchPriority(ctx.archetype, name) / 5;
     }
@@ -898,6 +909,11 @@ function estimateAttackDamage(
     return bestScore;
   }
 
+  // "Powerful Hand" (Alakazam) — 2 damage counters per card in hand = 20 damage per card
+  if (lower.includes("powerful hand")) {
+    return player.hand.length * 20;
+  }
+
   // Generic "X+" → assume full bonus is achievable (conservative estimate)
   if (rawDamage.includes("+") && base > 0) return base + 60;
 
@@ -1076,6 +1092,19 @@ export function pickAutoAbilityAction(
         score = 40; // Decent hand but still net positive
       }
 
+    } else if (abilityLower.includes("psychic draw")) {
+      // Kadabra: draw when evolved (passive — engine auto-triggers, no AI decision needed).
+      // But if it shows up as an activatable ability, draw now (always beneficial).
+      score = 60;
+
+    } else if (abilityLower.includes("teleporter")) {
+      // DISABLED: Abra Teleporter shuffles Abra from Active back into the deck.
+      // The engine does NOT create PROMOTE pending when the active Pokémon voluntarily shuffles
+      // itself back (same engine bug as Dudunsparce's Run Away Draw from Active). This leaves
+      // active=null with no PROMOTE pending → broken/stalled game state.
+      // Safe to re-enable once the engine correctly creates PROMOTE after active self-shuffle.
+      score = 0;
+
     }
     // Unknown ability → skip (do not trigger abilities with unhandled pending states)
 
@@ -1242,6 +1271,10 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
       // Don't over-load Froslass; Greninja ex (energyPriority 95) takes priority first.
       // When Greninja ex already has enough energy (alreadyReady), the -50 penalty balances this.
       if (ctx.archetype === "greninja" && nameLower.includes("mega froslass ex")) score += 15;
+      // Alakazam: Abra and Dunsparce/Dudunsparce are utility only — don't waste energy on them.
+      // Kadabra is an interim attacker but gets some energy.
+      if (ctx.archetype === "alakazam" && (nameLower.includes("abra") || nameLower.includes("dunsparce") || nameLower.includes("dudunsparce"))) score -= 80;
+      if (ctx.archetype === "alakazam" && nameLower.includes("kadabra")) score += 10;
       // Lopunny: prefer BENCH Mega Lopunny ex for energy loading (Gale Thrust loop).
       // The bench Lopunny will retreat to active next turn — it needs energy BEFORE the retreat.
       // Exception: if active Lopunny just moved from bench THIS turn, it needs energy to attack NOW.
@@ -1300,6 +1333,21 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
         score = handSize >= 3 ? 88 : 45;
       } else if (name.includes("hilda")) {
         score = 85;
+      } else if (name.includes("dawn")) {
+        // Dawn: attach 2 Basic Psychic Energy from deck to a Psychic Pokémon.
+        // Critical for Alakazam — energy acceleration to power Powerful Hand attacker.
+        const allInPlay = [...(player.active ? [player.active] : []), ...player.bench];
+        const psychicNeedsEnergy = allInPlay.some((p) => {
+          const pDef = getDefinition(state, p.definitionId);
+          return pDef?.types?.includes("Psychic") && p.attachedEnergy.length <= 1;
+        });
+        const hasPsychicEnergyInDeck = player.deck.some((c) => {
+          const d = getDefinition(state, c.definitionId);
+          return d?.supertype === "Energy" && (d?.types?.includes("Psychic") || d?.name?.toLowerCase().includes("psychic"));
+        });
+        if (psychicNeedsEnergy && hasPsychicEnergyInDeck) score = 78;
+        else if (hasPsychicEnergyInDeck) score = 50;
+        else score = 12;
       } else if (name.includes("judge")) {
         score = opponent.hand.length >= 5 ? 80 : 65;
       } else if (name.includes("wally's compassion")) {
@@ -1549,6 +1597,11 @@ function pickBestSearchDeckCard(
         if (ctx.archetype === "zoroark" && name.includes("n's zekrom")) score += 30;
         // Honchkrow: TR Murkrow and TR Porygon fill bench for Ariana draw engine
         if (ctx.archetype === "honchkrow" && (name.includes("team rocket's murkrow") || name.includes("team rocket's porygon"))) score += 15;
+        // Alakazam: evolution line is the win condition — Alakazam >> Kadabra >> Abra >> Dudunsparce
+        if (ctx.archetype === "alakazam" && name.includes("alakazam")) score += 40;
+        if (ctx.archetype === "alakazam" && name.includes("kadabra")) score += 25;
+        if (ctx.archetype === "alakazam" && name.includes("abra")) score += 10;
+        if (ctx.archetype === "alakazam" && (name.includes("dudunsparce") || name.includes("dunsparce"))) score += 15;
       }
     } else if (def.supertype === "Trainer") {
       if (isSupporter(def)) {
@@ -2026,7 +2079,9 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     }
     case "HILDA": {
       if (pending.options.length === 0) return null;
-      return gameReducer(state, { type: "PICK_DECK_CARD", playerId, instanceId: pending.options[0]! });
+      // Hilda searches top 5 cards and picks up to 2. Use smart card selection.
+      const hildaBest = pickBestSearchDeckCard(state, playerId, pending.options, ctx);
+      return gameReducer(state, { type: "PICK_DECK_CARD", playerId, instanceId: hildaBest });
     }
     case "DAWN":
     case "COLRESS":
