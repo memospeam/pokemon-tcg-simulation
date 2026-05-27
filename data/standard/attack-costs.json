@@ -1,0 +1,1221 @@
+[
+  {
+    "pokemonName": "abra",
+    "apiId": "me1-54",
+    "set": "MEG",
+    "number": "54",
+    "attacks": [
+      {
+        "name": "Teleportation Attack",
+        "cost": [
+          "Psychic"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "10"
+      }
+    ]
+  },
+  {
+    "pokemonName": "abra",
+    "apiId": "sv6-80",
+    "set": "TWM",
+    "number": "80",
+    "attacks": [
+      {
+        "name": "Beam",
+        "cost": [
+          "Psychic"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "10"
+      }
+    ]
+  },
+  {
+    "pokemonName": "alakazam",
+    "apiId": "me1-56",
+    "set": "MEG",
+    "number": "56",
+    "attacks": [
+      {
+        "name": "Powerful Hand",
+        "cost": [
+          "Psychic"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      }
+    ]
+  },
+  {
+    "pokemonName": "applin",
+    "apiId": "sv6-17",
+    "set": "TWM",
+    "number": "17",
+    "attacks": [
+      {
+        "name": "Tumbling Attack",
+        "cost": [
+          "Grass"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "10+"
+      }
+    ]
+  },
+  {
+    "pokemonName": "bloodmoon ursaluna ex",
+    "apiId": "sv6-141",
+    "set": "TWM",
+    "number": "141",
+    "attacks": [
+      {
+        "name": "Blood Moon",
+        "cost": [
+          "Colorless",
+          "Colorless",
+          "Colorless",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 5,
+        "damage": "240"
+      }
+    ]
+  },
+  {
+    "pokemonName": "budew",
+    "apiId": "me2pt5-16",
+    "set": "ASC",
+    "number": "16",
+    "attacks": [
+      {
+        "name": "Itchy Pollen",
+        "cost": [],
+        "convertedEnergyCost": 0,
+        "damage": "10"
+      }
+    ]
+  },
+  {
+    "pokemonName": "buneary",
+    "apiId": "me2-83",
+    "set": "PFL",
+    "number": "83",
+    "attacks": [
+      {
+        "name": "Run Around",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      },
+      {
+        "name": "Kick",
+        "cost": [
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "20"
+      }
+    ]
+  },
+  {
+    "pokemonName": "celebi",
+    "apiId": "me1-12",
+    "set": "MEG",
+    "number": "12",
+    "attacks": [
+      {
+        "name": "Traverse Time",
+        "cost": [
+          "Grass"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      },
+      {
+        "name": "Solar Cutter",
+        "cost": [
+          "Grass"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "30"
+      }
+    ]
+  },
+  {
+    "pokemonName": "chien-pao",
+    "apiId": "sv8-56",
+    "set": "SSP",
+    "number": "56",
+    "attacks": [
+      {
+        "name": "Icicle Loop",
+        "cost": [
+          "Water",
+          "Water",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "120"
+      }
+    ]
+  },
+  {
+    "pokemonName": "chikorita",
+    "apiId": "me1-8",
+    "set": "MEG",
+    "number": "8",
+    "attacks": [
+      {
+        "name": "Razor Leaf",
+        "cost": [
+          "Grass"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "20"
+      }
+    ]
+  },
+  {
+    "pokemonName": "cynthia's gabite",
+    "apiId": "sv10-103",
+    "set": "DRI",
+    "number": "103",
+    "attacks": [
+      {
+        "name": "Dragonslice",
+        "cost": [
+          "Fighting"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "40"
+      }
+    ]
+  },
+  {
+    "pokemonName": "cynthia's garchomp ex",
+    "apiId": "sv10-104",
+    "set": "DRI",
+    "number": "104",
+    "attacks": [
+      {
+        "name": "Corkscrew Dive",
+        "cost": [
+          "Fighting"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "100"
+      },
+      {
+        "name": "Draconic Buster",
+        "cost": [
+          "Fighting",
+          "Fighting"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "260"
+      }
+    ]
+  },
+  {
+    "pokemonName": "cynthia's gible",
+    "apiId": "sv10-102",
+    "set": "DRI",
+    "number": "102",
+    "attacks": [
+      {
+        "name": "Rock Hurl",
+        "cost": [
+          "Fighting"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "20"
+      }
+    ]
+  },
+  {
+    "pokemonName": "cynthia's roserade",
+    "apiId": "sv10-8",
+    "set": "DRI",
+    "number": "8",
+    "attacks": [
+      {
+        "name": "Leaf Step",
+        "cost": [
+          "Grass",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "80"
+      }
+    ]
+  },
+  {
+    "pokemonName": "cynthia's spiritomb",
+    "apiId": "sv10-129",
+    "set": "DRI",
+    "number": "129",
+    "attacks": [
+      {
+        "name": "Raging Curse",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "10×"
+      }
+    ]
+  },
+  {
+    "pokemonName": "dedenne",
+    "apiId": "sv8-87",
+    "set": "SSP",
+    "number": "87",
+    "attacks": [
+      {
+        "name": "Electromagnetic Sonar",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      },
+      {
+        "name": "Gnaw",
+        "cost": [
+          "Psychic"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "30"
+      }
+    ]
+  },
+  {
+    "pokemonName": "dipplin",
+    "apiId": "sv6-18",
+    "set": "TWM",
+    "number": "18",
+    "attacks": [
+      {
+        "name": "Do the Wave",
+        "cost": [
+          "Grass"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "20×"
+      }
+    ]
+  },
+  {
+    "pokemonName": "dragapult ex",
+    "apiId": "sv6-130",
+    "set": "TWM",
+    "number": "130",
+    "attacks": [
+      {
+        "name": "Jet Headbutt",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "70"
+      },
+      {
+        "name": "Phantom Dive",
+        "cost": [
+          "Fire",
+          "Psychic"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "200"
+      }
+    ]
+  },
+  {
+    "pokemonName": "drakloak",
+    "apiId": "sv6-129",
+    "set": "TWM",
+    "number": "129",
+    "attacks": [
+      {
+        "name": "Dragon Headbutt",
+        "cost": [
+          "Fire",
+          "Psychic"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "70"
+      }
+    ]
+  },
+  {
+    "pokemonName": "dreepy",
+    "apiId": "sv6-128",
+    "set": "TWM",
+    "number": "128",
+    "attacks": [
+      {
+        "name": "Petty Grudge",
+        "cost": [
+          "Psychic"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "10"
+      },
+      {
+        "name": "Bite",
+        "cost": [
+          "Fire",
+          "Psychic"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "40"
+      }
+    ]
+  },
+  {
+    "pokemonName": "dudunsparce",
+    "apiId": "sv5-129",
+    "set": "TEF",
+    "number": "129",
+    "attacks": [
+      {
+        "name": "Land Crush",
+        "cost": [
+          "Colorless",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "90"
+      }
+    ]
+  },
+  {
+    "pokemonName": "dudunsparce ex",
+    "apiId": "sv9-121",
+    "set": "JTG",
+    "number": "121",
+    "attacks": [
+      {
+        "name": "Tenacious Tail",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "60×"
+      },
+      {
+        "name": "Destructive Drill",
+        "cost": [
+          "Colorless",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "150"
+      }
+    ]
+  },
+  {
+    "pokemonName": "dunsparce",
+    "apiId": "sv5-128",
+    "set": "TEF",
+    "number": "128",
+    "attacks": [
+      {
+        "name": "Gnaw",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "10"
+      },
+      {
+        "name": "Dig",
+        "cost": [
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "30"
+      }
+    ]
+  },
+  {
+    "pokemonName": "dunsparce",
+    "apiId": "sv9-120",
+    "set": "JTG",
+    "number": "120",
+    "attacks": [
+      {
+        "name": "Trading Places",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      },
+      {
+        "name": "Ram",
+        "cost": [
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "20"
+      }
+    ]
+  },
+  {
+    "pokemonName": "dusclops",
+    "apiId": "sv8pt5-36",
+    "set": "PRE",
+    "number": "36",
+    "attacks": [
+      {
+        "name": "Will-O-Wisp",
+        "cost": [
+          "Psychic",
+          "Psychic"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "50"
+      }
+    ]
+  },
+  {
+    "pokemonName": "dusknoir",
+    "apiId": "sv8pt5-37",
+    "set": "PRE",
+    "number": "37",
+    "attacks": [
+      {
+        "name": "Shadow Bind",
+        "cost": [
+          "Psychic",
+          "Psychic",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "150"
+      }
+    ]
+  },
+  {
+    "pokemonName": "duskull",
+    "apiId": "sv8pt5-35",
+    "set": "PRE",
+    "number": "35",
+    "attacks": [
+      {
+        "name": "Come and Get You",
+        "cost": [
+          "Psychic"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      },
+      {
+        "name": "Mumble",
+        "cost": [
+          "Psychic",
+          "Psychic"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "30"
+      }
+    ]
+  },
+  {
+    "pokemonName": "fan rotom",
+    "apiId": "sv7-118",
+    "set": "SCR",
+    "number": "118",
+    "attacks": [
+      {
+        "name": "Assault Landing",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "70"
+      }
+    ]
+  },
+  {
+    "pokemonName": "fezandipiti ex",
+    "apiId": "me2pt5-142",
+    "set": "ASC",
+    "number": "142",
+    "attacks": [
+      {
+        "name": "Cruel Arrow",
+        "cost": [
+          "Colorless",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": ""
+      }
+    ]
+  },
+  {
+    "pokemonName": "froakie",
+    "apiId": "sv6-56",
+    "set": "TWM",
+    "number": "56",
+    "attacks": [
+      {
+        "name": "Flock",
+        "cost": [
+          "Water"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      },
+      {
+        "name": "Flop",
+        "cost": [
+          "Water"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "10"
+      }
+    ]
+  },
+  {
+    "pokemonName": "frogadier",
+    "apiId": "sv6-57",
+    "set": "TWM",
+    "number": "57",
+    "attacks": [
+      {
+        "name": "Numbing Water",
+        "cost": [
+          "Water"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "20"
+      }
+    ]
+  },
+  {
+    "pokemonName": "froslass",
+    "apiId": "sv6-53",
+    "set": "TWM",
+    "number": "53",
+    "attacks": [
+      {
+        "name": "Frost Smash",
+        "cost": [
+          "Water",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "60"
+      }
+    ]
+  },
+  {
+    "pokemonName": "genesect",
+    "apiId": "sv6pt5-40",
+    "set": "SFA",
+    "number": "40",
+    "attacks": [
+      {
+        "name": "Magnetic Blast",
+        "cost": [
+          "Metal",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "100"
+      }
+    ]
+  },
+  {
+    "pokemonName": "glalie",
+    "apiId": "sv6-52",
+    "set": "TWM",
+    "number": "52",
+    "attacks": [
+      {
+        "name": "Damage Beat",
+        "cost": [
+          "Water"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "20×"
+      },
+      {
+        "name": "Crazy Headbutt",
+        "cost": [
+          "Water",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "140"
+      }
+    ]
+  },
+  {
+    "pokemonName": "greninja ex",
+    "apiId": "sv6-106",
+    "set": "TWM",
+    "number": "106",
+    "attacks": [
+      {
+        "name": "Shinobi Blade",
+        "cost": [
+          "Water"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "170"
+      },
+      {
+        "name": "Mirage Barrage",
+        "cost": [
+          "Water",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": ""
+      }
+    ]
+  },
+  {
+    "pokemonName": "hydrapple ex",
+    "apiId": "sv7-14",
+    "set": "SCR",
+    "number": "14",
+    "attacks": [
+      {
+        "name": "Syrup Storm",
+        "cost": [
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "30+"
+      }
+    ]
+  },
+  {
+    "pokemonName": "iron leaves ex",
+    "apiId": "sv5-25",
+    "set": "TEF",
+    "number": "25",
+    "attacks": [
+      {
+        "name": "Prism Edge",
+        "cost": [
+          "Grass",
+          "Grass",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "180"
+      }
+    ]
+  },
+  {
+    "pokemonName": "kadabra",
+    "apiId": "me1-55",
+    "set": "MEG",
+    "number": "55",
+    "attacks": [
+      {
+        "name": "Super Psy Bolt",
+        "cost": [
+          "Psychic"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "30"
+      }
+    ]
+  },
+  {
+    "pokemonName": "latias ex",
+    "apiId": "sv8-76",
+    "set": "SSP",
+    "number": "76",
+    "attacks": [
+      {
+        "name": "Eon Blade",
+        "cost": [
+          "Psychic",
+          "Psychic",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "200"
+      }
+    ]
+  },
+  {
+    "pokemonName": "mega froslass ex",
+    "apiId": "me2pt5-47",
+    "set": "ASC",
+    "number": "47",
+    "attacks": [
+      {
+        "name": "Resentful Refrain",
+        "cost": [
+          "Water"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "50×"
+      },
+      {
+        "name": "Absolute Snow",
+        "cost": [
+          "Water",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "150"
+      }
+    ]
+  },
+  {
+    "pokemonName": "mega kangaskhan ex",
+    "apiId": "me1-104",
+    "set": "MEG",
+    "number": "104",
+    "attacks": [
+      {
+        "name": "Rapid-Fire Combo",
+        "cost": [
+          "Colorless",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "200+"
+      }
+    ]
+  },
+  {
+    "pokemonName": "meganium",
+    "apiId": "me1-10",
+    "set": "MEG",
+    "number": "10",
+    "attacks": [
+      {
+        "name": "Solar Beam",
+        "cost": [
+          "Grass",
+          "Grass",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 4,
+        "damage": "140"
+      }
+    ]
+  },
+  {
+    "pokemonName": "meowth ex",
+    "apiId": "me3-62",
+    "set": "POR",
+    "number": "62",
+    "attacks": [
+      {
+        "name": "Tuck Tail",
+        "cost": [
+          "Colorless",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "60"
+      }
+    ]
+  },
+  {
+    "pokemonName": "moltres",
+    "apiId": "me2-14",
+    "set": "PFL",
+    "number": "14",
+    "attacks": [
+      {
+        "name": "Fighting Wings",
+        "cost": [
+          "Fire"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "20+"
+      }
+    ]
+  },
+  {
+    "pokemonName": "n's darmanitan",
+    "apiId": "sv9-27",
+    "set": "JTG",
+    "number": "27",
+    "attacks": [
+      {
+        "name": "Back Draft",
+        "cost": [
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "30×"
+      },
+      {
+        "name": "Flamebody Cannon",
+        "cost": [
+          "Fire",
+          "Fire",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "90"
+      }
+    ]
+  },
+  {
+    "pokemonName": "n's darumaka",
+    "apiId": "sv9-26",
+    "set": "JTG",
+    "number": "26",
+    "attacks": [
+      {
+        "name": "Rolling Tackle",
+        "cost": [
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "20"
+      },
+      {
+        "name": "Flare",
+        "cost": [
+          "Fire",
+          "Fire",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "50"
+      }
+    ]
+  },
+  {
+    "pokemonName": "n's zekrom",
+    "apiId": "me2pt5-155",
+    "set": "ASC",
+    "number": "155",
+    "attacks": [
+      {
+        "name": "Shred",
+        "cost": [
+          "Colorless",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "70"
+      },
+      {
+        "name": "Rampaging Thunder",
+        "cost": [
+          "Fire",
+          "Lightning",
+          "Lightning",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 4,
+        "damage": "250"
+      }
+    ]
+  },
+  {
+    "pokemonName": "n's zoroark ex",
+    "apiId": "sv9-98",
+    "set": "JTG",
+    "number": "98",
+    "attacks": [
+      {
+        "name": "Night Joker",
+        "cost": [
+          "Darkness",
+          "Darkness"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": ""
+      }
+    ]
+  },
+  {
+    "pokemonName": "n's zorua",
+    "apiId": "sv9-97",
+    "set": "JTG",
+    "number": "97",
+    "attacks": [
+      {
+        "name": "Scratch",
+        "cost": [
+          "Darkness"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "20"
+      }
+    ]
+  },
+  {
+    "pokemonName": "paldean tauros",
+    "apiId": "sv8-18",
+    "set": "SSP",
+    "number": "18",
+    "attacks": [
+      {
+        "name": "Rear Kick",
+        "cost": [
+          "Fire"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "30"
+      },
+      {
+        "name": "Spirited Tackle",
+        "cost": [
+          "Fire",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "90+"
+      }
+    ]
+  },
+  {
+    "pokemonName": "passimian",
+    "apiId": "sv8-111",
+    "set": "SSP",
+    "number": "111",
+    "attacks": [
+      {
+        "name": "Coordinated Throwing",
+        "cost": [
+          "Fighting",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "20×"
+      }
+    ]
+  },
+  {
+    "pokemonName": "pecharunt ex",
+    "apiId": "sv6pt5-39",
+    "set": "SFA",
+    "number": "39",
+    "attacks": [
+      {
+        "name": "Irritated Outburst",
+        "cost": [
+          "Darkness",
+          "Darkness"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "60×"
+      }
+    ]
+  },
+  {
+    "pokemonName": "snorunt",
+    "apiId": "me2pt5-46",
+    "set": "ASC",
+    "number": "46",
+    "attacks": [
+      {
+        "name": "Chilly",
+        "cost": [
+          "Water"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "10"
+      }
+    ]
+  },
+  {
+    "pokemonName": "tapu bulu",
+    "apiId": "sv6pt5-6",
+    "set": "SFA",
+    "number": "6",
+    "attacks": [
+      {
+        "name": "Wood Hammer",
+        "cost": [
+          "Grass",
+          "Grass",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 4,
+        "damage": "220"
+      }
+    ]
+  },
+  {
+    "pokemonName": "teal mask ogerpon ex",
+    "apiId": "sv6-25",
+    "set": "TWM",
+    "number": "25",
+    "attacks": [
+      {
+        "name": "Myriad Leaf Shower",
+        "cost": [
+          "Grass",
+          "Grass",
+          "Grass"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "30+"
+      }
+    ]
+  },
+  {
+    "pokemonName": "team rocket's articuno",
+    "apiId": "sv10-51",
+    "set": "DRI",
+    "number": "51",
+    "attacks": [
+      {
+        "name": "Dark Frost",
+        "cost": [
+          "Water",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "60+"
+      }
+    ]
+  },
+  {
+    "pokemonName": "team rocket's honchkrow",
+    "apiId": "me2pt5-127",
+    "set": "ASC",
+    "number": "127",
+    "attacks": [
+      {
+        "name": "Rocket Feathers",
+        "cost": [
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "60×"
+      },
+      {
+        "name": "Hammer In",
+        "cost": [
+          "Darkness",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "100"
+      }
+    ]
+  },
+  {
+    "pokemonName": "team rocket's murkrow",
+    "apiId": "sv10-127",
+    "set": "DRI",
+    "number": "127",
+    "attacks": [
+      {
+        "name": "Deceit",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      },
+      {
+        "name": "Torment",
+        "cost": [
+          "Darkness",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "30"
+      }
+    ]
+  },
+  {
+    "pokemonName": "team rocket's porygon",
+    "apiId": "sv10-153",
+    "set": "DRI",
+    "number": "153",
+    "attacks": [
+      {
+        "name": "Hacking",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      }
+    ]
+  },
+  {
+    "pokemonName": "team rocket's porygon2",
+    "apiId": "sv10-154",
+    "set": "DRI",
+    "number": "154",
+    "attacks": [
+      {
+        "name": "R Command",
+        "cost": [
+          "Colorless",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "20×"
+      }
+    ]
+  },
+  {
+    "pokemonName": "yveltal",
+    "apiId": "me1-88",
+    "set": "MEG",
+    "number": "88",
+    "attacks": [
+      {
+        "name": "Clutch",
+        "cost": [
+          "Darkness"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "20"
+      },
+      {
+        "name": "Dark Feather",
+        "cost": [
+          "Darkness",
+          "Darkness",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "110"
+      }
+    ]
+  }
+]

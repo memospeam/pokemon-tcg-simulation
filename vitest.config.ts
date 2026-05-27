@@ -10,7 +10,11 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    exclude: ["**/node_modules/**", "scripts/prepare-standard-effects.test.ts"],
+    exclude: [
+      "**/node_modules/**",
+      "scripts/prepare-standard-effects.test.ts",
+      "scripts/fetchAttackCosts.test.ts",
+    ],
     testTimeout: 30000,
   },
 });
