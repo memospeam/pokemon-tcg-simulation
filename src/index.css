@@ -1412,6 +1412,28 @@ button {
   flex: 1;
   min-height: 0;
   gap: 0.5rem;
+  align-items: center;
+}
+
+/* In sim view: active + bench sit side-by-side so the row only needs
+   ~100px tall, instead of ~190px when stacked vertically. */
+.sim-screen .player-mat__center {
+  flex-direction: row;
+  gap: 0.45rem;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.sim-screen .player-mat__bench {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.sim-screen .player-mat__left,
+.sim-screen .player-mat__right {
+  gap: 0.3rem;
+  font-size: 0.7rem;
 }
 
 .sim-screen .player-mat__bench-slot,
