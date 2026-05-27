@@ -1364,6 +1364,12 @@ button {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Hide visible scrollbar — still scrollable via wheel/trackpad */
+  scrollbar-width: none;
+}
+
+.sim-board-area::-webkit-scrollbar {
+  display: none;
 }
 
 /* ── Analysis panel ───────────────────────────────────────────── */
@@ -1852,6 +1858,28 @@ button {
   color: #94a3b8;
   font-size: 0.8rem;
   cursor: pointer;
+}
+
+.sim-controls__analysis-toggle {
+  padding: 0.3rem 0.7rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.8);
+  color: #94a3b8;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sim-controls__analysis-toggle:hover {
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fcd34d;
+}
+
+.sim-controls__analysis-toggle.is-active {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.4);
+  color: #fcd34d;
 }
 
 .sim-controls__label {

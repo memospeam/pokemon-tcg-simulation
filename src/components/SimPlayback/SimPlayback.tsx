@@ -40,6 +40,7 @@ export function SimPlayback() {
   const [running, setRunning] = useState(false);
   const [viewingId, setViewingId] = useState<PlayerId>(PlayerId.P1);
   const [result, setResult] = useState<SimResult | null>(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   const handleTournamentChange = useCallback((id: string) => {
     const t = ALL_TOURNAMENTS.find((t) => String(t.tournamentId) === id) ?? DEFAULT_TOURNAMENT;
@@ -248,13 +249,15 @@ export function SimPlayback() {
             />
           </div>
 
-          {/* Right: step-by-step analysis panel */}
-          <SimAnalysis
-            frames={frames}
-            currentIndex={currentIndex}
-            onStepTo={(i) => { pause(); stepTo(i); }}
-            game={game}
-          />
+          {/* Right: step-by-step analysis panel (toggleable) */}
+          {showAnalysis && (
+            <SimAnalysis
+              frames={frames}
+              currentIndex={currentIndex}
+              onStepTo={(i) => { pause(); stepTo(i); }}
+              game={game}
+            />
+          )}
         </div>
       )}
 
@@ -309,6 +312,15 @@ export function SimPlayback() {
             title="Flip perspective"
           >
             ⇄ Flip
+          </button>
+
+          <button
+            type="button"
+            className={`sim-controls__analysis-toggle${showAnalysis ? " is-active" : ""}`}
+            onClick={() => setShowAnalysis((v) => !v)}
+            title={showAnalysis ? "Hide analysis panel" : "Show analysis panel"}
+          >
+            {showAnalysis ? "✕ Analysis" : "📊 Analysis"}
           </button>
 
           {currentFrame && (
