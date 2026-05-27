@@ -9,16 +9,24 @@ interface HandBarProps {
   selectedId?: string;
   onSelect: (card: CardInstance) => void;
   getQuickLabel?: (def: CardDefinition) => string | null;
+  /** Player name shown as prefix in the label */
+  playerName?: string;
+  /** Flips border/gradient direction (for the opponent row at the top) */
+  isOpponent?: boolean;
 }
 
-export function HandBar({ game, hand, selectedId, onSelect, getQuickLabel }: HandBarProps) {
+export function HandBar({ game, hand, selectedId, onSelect, getQuickLabel, playerName, isOpponent }: HandBarProps) {
+  const cls = `hand-bar${isOpponent ? " hand-bar--opponent" : ""}`;
   if (hand.length === 0) {
-    return <div className="hand-bar hand-bar--empty">Hand is empty</div>;
+    return <div className={`${cls} hand-bar--empty`}>{playerName ?? "Hand"} — empty</div>;
   }
 
   return (
-    <div className="hand-bar">
-      <div className="hand-bar__label">Hand · {hand.length} cards</div>
+    <div className={cls}>
+      <div className="hand-bar__label">
+        {playerName && <span className="hand-bar__player">{playerName}</span>}
+        Hand · {hand.length} cards
+      </div>
       <div className="hand-bar__cards">
         {hand.map((card) => {
           const def = game.definitions[card.definitionId];

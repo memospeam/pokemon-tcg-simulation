@@ -190,6 +190,15 @@ export function SimPlayback() {
               isMyTurn={game.currentPlayerId === selfId}
             />
 
+            {/* Opponent's hand — sits above their board */}
+            <HandBar
+              game={game}
+              hand={opponent.hand}
+              onSelect={NOOP}
+              playerName={opponent.name}
+              isOpponent
+            />
+
             <div className="play-screen__mat">
               <PlayerMat
                 game={game}
@@ -230,7 +239,13 @@ export function SimPlayback() {
               />
             </div>
 
-            <HandBar game={game} hand={self.hand} onSelect={NOOP} />
+            {/* Self's hand — sits below their board */}
+            <HandBar
+              game={game}
+              hand={self.hand}
+              onSelect={NOOP}
+              playerName={self.name}
+            />
           </div>
 
           {/* Right: step-by-step analysis panel */}
