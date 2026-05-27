@@ -1228,78 +1228,135 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
   ];
   if (allPokemon.length === 0) return null;
 
-  // Score each Pokémon: prefer those closest to being able to attack
+  // What energy types do we have in hand? Used to penalise targets we cannot fuel.
+  const energyTypesInHand = new Set<string>();
+  let haveColorlessEnergy = false;
+  for (const card of player.hand) {
+    const def = getDefinitionSafe(state, card.definitionId);
+    if (def.supertype !== "Energy") continue;
+    const types = def.types ?? ["Colorless"];
+    for (const t of types) {
+      energyTypesInHand.add(t);
+      if (t === "Colorless") haveColorlessEnergy = true;
+    }
+  }
+
+  // Is the active Pokémon close to dying? If so, the bench backup is the better
+  // home for fresh energy — the current attacker will be KO'd before another swing.
+  const activeMon = player.active;
+  let activeIsDying = false;
+  if (activeMon) {
+    const activeDef = getDefinitionSafe(state, activeMon.definitionId);
+    const maxHp = parseInt(activeDef.hp ?? "0", 10) || 0;
+    if (maxHp > 0) {
+      const hpRatio = remainingHp(state, activeMon) / maxHp;
+      activeIsDying = hpRatio < 0.4 && player.bench.length > 0;
+    }
+  }
+
   const scored = allPokemon.map((pokemon) => {
     const def = getDefinitionSafe(state, pokemon.definitionId);
+    const nameLower = def.name.toLowerCase();
     const energyCount = pokemon.attachedEnergy.length;
     const isActive = player.active?.instanceId === pokemon.instanceId;
-    const hasAttacks = (def.attacks?.length ?? 0) > 0;
+    const attacks = def.attacks ?? [];
+    const hasAttacks = attacks.length > 0;
 
-    // Check if already can attack (skip — no point adding more)
-    const alreadyReady = (def.attacks ?? []).some(
-      (atk) => canAffordAttack(state, pokemon, atk),
-    );
+    // Hard filter: a Pokémon that literally has no attacks (Snorunt, Dunsparce,
+    // pure-ability Pokémon, etc.) can never use energy. Eliminate them outright.
+    if (!hasAttacks) {
+      return { id: pokemon.instanceId, score: -1000 };
+    }
 
-    // Check if ONE more energy would let it attack ("one-away")
-    const oneAway = !alreadyReady && hasAttacks && (def.attacks ?? []).some((atk) => {
-      const needed = atk.convertedEnergyCost ?? 1;
-      return energyCount === needed - 1;
-    });
+    // Distance metrics — distinguish "can use any attack" vs "ready for the big one".
+    // Most attackers have a cheap setup attack AND a strong finisher; once the cheap
+    // attack is affordable the Pokémon isn't "done" yet — we still want to load up
+    // for the big attack.
+    const costs = attacks.map((atk) => atk.convertedEnergyCost ?? atk.cost?.length ?? 1);
+    const cheapestCost = Math.min(...costs);
+    const mostExpensiveCost = Math.max(...costs);
+    const energiesNeededForCheapest = Math.max(0, cheapestCost - energyCount);
+    const energiesNeededForMax = Math.max(0, mostExpensiveCost - energyCount);
+    const fullyLoaded = energiesNeededForMax === 0; // can use the biggest attack
 
-    // Base score: prefer active, prefer closer to attacking
-    let score = energyCount * 10 + (isActive ? 5 : 0) + (hasAttacks ? 2 : 0);
-    if (alreadyReady) score -= 50; // Don't pile energy on already-ready Pokémon
-    if (oneAway) score += 25;      // "One-away": strong bonus — enable the next attacker
+    // Base score — bringing a NEW attacker online is the highest-leverage attach.
+    let score: number;
+    if (fullyLoaded) {
+      score = -80; // truly done — pointless to keep attaching
+    } else if (energiesNeededForCheapest === 1) {
+      score = 70; // ONE-AWAY from being able to attack at all
+    } else if (energiesNeededForCheapest === 2) {
+      score = 35; // TWO-AWAY: meaningful progress
+    } else if (energiesNeededForCheapest === 0) {
+      // Can attack now but still building toward the bigger attack — neutral start.
+      score = 25;
+    } else {
+      score = 10 + energyCount * 4; // building up — modest preference for partials
+    }
 
-    // Archetype-aware: boost Pokémon that the strategy wants energized
+    // Active gets a flat boost — it's the one swinging now.
+    if (isActive) score += 20;
+
+    // Active is about to be KO'd → that energy is wasted; redirect to bench.
+    if (isActive && activeIsDying) score -= 50;
+    if (!isActive && activeIsDying) score += 18;
+
+    // Type matching: penalise targets we cannot fuel from our current hand.
+    // Colorless-type Pokémon accept any energy → no penalty.
+    const pokemonTypes = def.types ?? ["Colorless"];
+    const targetIsColorless = pokemonTypes.includes("Colorless");
+    if (!targetIsColorless && energyTypesInHand.size > 0) {
+      const typeMatches =
+        haveColorlessEnergy || pokemonTypes.some((t) => energyTypesInHand.has(t));
+      if (!typeMatches) score -= 30;
+    }
+
+    // Archetype-aware: boost Pokémon the strategy wants energised.
     if (ctx) {
-      const nameLower = def.name.toLowerCase();
       const archPriority = getArchetypeEnergyPriority(ctx.archetype, nameLower);
       score += archPriority;
 
-      // Dragapult: never attach to Budew (item-locker, has no relevant attacks needing energy)
-      if (ctx.archetype === "dragapult" && nameLower.includes("budew")) score -= 100;
-      // Zoroark: never attach to N's Zorua (no attacks worth energizing)
+      // ─ Per-archetype hard exclusions (true no-energy Pokémon) ─
+      // Pokémon that have NO meaningful energy attack: ability-only, item-lockers,
+      // or evolution-bait. Use very strong (-200) penalties.
+      if (nameLower.includes("dusknoir") || nameLower.includes("munkidori") || nameLower.includes("dusclops")) score -= 200;
+      if (ctx.archetype === "dragapult" && nameLower.includes("budew")) score -= 200;
+      if (ctx.archetype === "greninja" && nameLower.includes("budew")) score -= 200;
+      if (ctx.archetype === "garchomp" && (nameLower.includes("roserade") || nameLower.includes("roselia"))) score -= 200;
+      if (ctx.archetype === "hydrapple" && nameLower.includes("meganium")) score -= 200;
+
+      // ─ Soft avoidance: weaker than primaries but can still take energy if nothing else ─
+      // Original values from before the rework — gentle penalties that don't completely
+      // shut out the Pokémon. archPriority already keeps primaries in the lead.
       if (ctx.archetype === "zoroark" && nameLower.includes("zorua")) score -= 80;
-      // Ogerpon: always keep some energy on Teal Mask Ogerpon ex (Teal Dance ability needs Grass)
-      if ((ctx.archetype === "ogerpon-box") && nameLower.includes("teal mask ogerpon")) score += 20;
-      // Dusknoir / Munkidori / Dusclops: never attach energy (ability-only Pokémon, no energy attacks)
-      if (nameLower.includes("dusknoir") || nameLower.includes("munkidori") || nameLower.includes("dusclops")) score -= 60;
-      // Hydrapple: Meganium only provides energy, doesn't attack — skip energy
-      if (ctx.archetype === "hydrapple" && nameLower.includes("meganium")) score -= 60;
       if (ctx.archetype === "hydrapple" && nameLower.includes("bayleef")) score -= 30;
-      // Garchomp: Roserade/Roselia are bench-only — never attach energy
-      if (ctx.archetype === "garchomp" && (nameLower.includes("roserade") || nameLower.includes("roselia"))) score -= 80;
-      // Greninja: Budew item-locks only — skip energy
-      if (ctx.archetype === "greninja" && nameLower.includes("budew")) score -= 100;
-      // Greninja: Froakie/Snorunt/Duskull/Dusclops/Latias ex are support-only — deprioritise energy
       if (ctx.archetype === "greninja" && (nameLower.includes("froakie") || nameLower.includes("snorunt") || nameLower.includes("latias ex"))) score -= 60;
-      // Greninja: Frogadier is staging attacker — gets some energy to use Summoning Jutsu/Aqua Edge
-      if (ctx.archetype === "greninja" && nameLower.includes("frogadier")) score += 10;
-      // Greninja: Mega Froslass ex is secondary attacker — needs at least 1 energy for Resentful Refrain
-      // Don't over-load Froslass; Greninja ex (energyPriority 95) takes priority first.
-      // When Greninja ex already has enough energy (alreadyReady), the -50 penalty balances this.
-      if (ctx.archetype === "greninja" && nameLower.includes("mega froslass ex")) score += 15;
-      // Alakazam: Abra and Dunsparce/Dudunsparce are utility only — don't waste energy on them.
-      // Kadabra is an interim attacker but gets some energy.
       if (ctx.archetype === "alakazam" && (nameLower.includes("abra") || nameLower.includes("dunsparce") || nameLower.includes("dudunsparce"))) score -= 80;
+
+      // ─ Per-archetype small boosts (situational attackers / setup) ─
+      if (ctx.archetype === "ogerpon-box" && nameLower.includes("teal mask ogerpon")) score += 20;
+      if (ctx.archetype === "greninja" && nameLower.includes("frogadier")) score += 10;
+      if (ctx.archetype === "greninja" && nameLower.includes("mega froslass ex")) score += 15;
       if (ctx.archetype === "alakazam" && nameLower.includes("kadabra")) score += 10;
-      // Lopunny: prefer BENCH Mega Lopunny ex for energy loading (Gale Thrust loop).
-      // The bench Lopunny will retreat to active next turn — it needs energy BEFORE the retreat.
-      // Exception: if active Lopunny just moved from bench THIS turn, it needs energy to attack NOW.
+
+      // Lopunny: load BENCH Mega Lopunny so it's ready when it retreats into Active.
+      // Unless the current Active just came from the bench this turn (its energy is fresh).
       if (ctx.archetype === "lopunny" && nameLower.includes("mega lopunny ex") && !isActive) {
         const movedIds = state.turnFlags.movedFromBenchToActiveIds ?? [];
         const activeJustMoved = player.active && movedIds.includes(player.active.instanceId);
-        if (!activeJustMoved) {
-          score += 25; // Load bench Lopunny so it can Gale Thrust when promoted
-        }
+        if (!activeJustMoved) score += 25;
       }
     }
 
     return { id: pokemon.instanceId, score };
   }).sort((a, b) => b.score - a.score);
 
-  return scored[0]?.id ?? (player.active?.instanceId ?? null);
+  // Skip only when every option is a deeply-negative target (true no-energy
+  // Pokémon like Dusknoir / Munkidori). Mildly-negative scores still attach —
+  // a sub-optimal energy is better than wasting the turn's only attachment.
+  const best = scored[0];
+  if (!best || best.score < -80) return null;
+  return best.id;
 }
 
 export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext): Extract<GameAction, { type: "PLAY_TRAINER" }> | null {
