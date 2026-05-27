@@ -252,6 +252,28 @@ export function GameBoard() {
         </div>
       )}
 
+      {boardGame.turnFlags.trFactoryDrawAvailable && isMyTurn && !boardGame.pendingAction && (
+        <div className="pending-panel pending-panel--compact pending-panel--top">
+          <p>Team Rocket's Factory — draw 2 cards?</p>
+          <div className="pending-panel__actions">
+            <button
+              type="button"
+              className="pending-panel__pick"
+              onClick={() => controller.runAction({ type: "USE_TR_FACTORY_DRAW", playerId: viewingId })}
+            >
+              Draw 2
+            </button>
+            <button
+              type="button"
+              className="pending-panel__skip"
+              onClick={() => controller.runAction({ type: "SKIP_OPTIONAL", playerId: viewingId })}
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      )}
+
       {vsAI && !isMyTurn && !boardGame.winnerId && (
         <div className="ai-thinking-banner">
           🤖 AI is playing…

@@ -47,7 +47,7 @@ import {
   skipGrandTreeStage2,
   startGrandTreeFlow,
 } from "./effects/grandTreeEffects";
-import { logStadiumOnPlay, getMaxBenchSize, canUseLumioseCity, getLumioseDeckOptions } from "./effects/stadiumEffects";
+import { logStadiumOnPlay, getStadiumKind, getMaxBenchSize, canUseLumioseCity, getLumioseDeckOptions } from "./effects/stadiumEffects";
 import { markMovedFromBenchToActive } from "./effects/pokemonZoneHelpers";
 import {
   canPlayToolFromHand,
@@ -489,6 +489,11 @@ function handlePlayTrainer(state: EngineState, playerId: PlayerId, instanceId: s
     removed.zone = Zone.Stadium;
     log(state, `${player.name} played Stadium ${def.name}.`);
     logStadiumOnPlay(state, def);
+    // If TR Factory just placed and a TR Supporter was already played this turn, trigger the draw
+    if (getStadiumKind(state) === "team_rocket_factory" && state.turnFlags.playedTeamRocketSupporter) {
+      state.turnFlags.trFactoryDrawAvailable = true;
+      log(state, "Team Rocket's Factory: you may draw 2 cards.");
+    }
   } else {
     moveToDiscard(player, removed);
     log(state, `${player.name} played ${def.name}.`);
