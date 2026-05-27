@@ -7,6 +7,7 @@ import { BoardCard } from "./BoardCard";
 interface PendingActionPanelProps {
   game: EngineState;
   onPickDeck: (instanceId: string) => void;
+  onPickDiscard: (instanceId: string) => void;
   onDiscardHandCard: (instanceId: string) => void;
   onSkipOptional: () => void;
   onConfirmDrawUntil: () => void;
@@ -46,6 +47,7 @@ function resolveDeckCards(
 export function PendingActionPanel({
   game,
   onPickDeck,
+  onPickDiscard,
   onDiscardHandCard,
   onSkipOptional,
   onConfirmDrawUntil,
@@ -165,6 +167,107 @@ export function PendingActionPanel({
         ) : (
           <p className="pending-panel__meta">No Team Rocket Supporters in hand — click "Done" to attack.</p>
         )}
+      </div>
+    );
+  }
+
+  if (pending.type === "ROTO_STICK") {
+    const player = getPlayer(game, pending.playerId);
+    const cards = pending.options
+      .map((id) => player.deck.find((entry) => entry.instanceId === id) ?? null)
+      .filter(Boolean) as CardInstance[];
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <div className="pending-panel__header">
+          <h4>Roto-Stick — choose Supporters from top 4 ({pending.options.length} remaining)</h4>
+          <button type="button" className="pending-panel__skip" onClick={onSkipOptional}>
+            Done / Take none
+          </button>
+        </div>
+        <div className="pending-panel__cards pending-panel__cards--scroll">
+          {cards.map((card) => {
+            const def = getDefinition(game, card.definitionId);
+            return (
+              <button
+                key={card.instanceId}
+                type="button"
+                className="pending-panel__pick"
+                onClick={() => onPickDeck(card.instanceId)}
+              >
+                <BoardCard state={game} card={card} size="hand" showName={false} />
+                <span>{def?.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (pending.type === "MIRACLE_HEADSET") {
+    const player = getPlayer(game, pending.playerId);
+    const remaining = pending.maxPicks - pending.pickedIds.length;
+    const cards = pending.options
+      .map((id) => player.discard.find((entry) => entry.instanceId === id) ?? null)
+      .filter(Boolean) as CardInstance[];
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <div className="pending-panel__header">
+          <h4>Miracle Headset — choose up to {remaining} Supporter(s) from discard ({pending.options.length} found)</h4>
+          <button type="button" className="pending-panel__skip" onClick={onSkipOptional}>
+            Done
+          </button>
+        </div>
+        <div className="pending-panel__cards pending-panel__cards--scroll">
+          {cards.map((card) => {
+            const def = getDefinition(game, card.definitionId);
+            return (
+              <button
+                key={card.instanceId}
+                type="button"
+                className="pending-panel__pick"
+                onClick={() => onPickDiscard(card.instanceId)}
+              >
+                <BoardCard state={game} card={card} size="hand" showName={false} />
+                <span>{def?.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (pending.type === "BUG_CATCHING_SET") {
+    const player = getPlayer(game, pending.playerId);
+    const remaining = pending.maxPicks - pending.pickedIds.length;
+    const cards = pending.options
+      .map((id) => player.deck.find((entry) => entry.instanceId === id) ?? null)
+      .filter(Boolean) as CardInstance[];
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <div className="pending-panel__header">
+          <h4>Bug Catching Set — choose up to {remaining} card(s) from top 7 ({pending.options.length} found)</h4>
+          <button type="button" className="pending-panel__skip" onClick={onSkipOptional}>
+            Done
+          </button>
+        </div>
+        <div className="pending-panel__cards pending-panel__cards--scroll">
+          {cards.map((card) => {
+            const def = getDefinition(game, card.definitionId);
+            return (
+              <button
+                key={card.instanceId}
+                type="button"
+                className="pending-panel__pick"
+                onClick={() => onPickDeck(card.instanceId)}
+              >
+                <BoardCard state={game} card={card} size="hand" showName={false} />
+                <span>{def?.name}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   }

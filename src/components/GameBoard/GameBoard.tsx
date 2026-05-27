@@ -223,13 +223,24 @@ export function GameBoard() {
 
       <PendingActionPanel
         game={boardGame}
-        onPickDeck={(instanceId) =>
-          controller.runAction({
-            type: "PICK_DECK_CARD",
-            playerId: boardGame.pendingAction?.playerId ?? viewingId,
-            instanceId,
-          })
-        }
+        onPickDeck={(instanceId) => {
+          const pid = boardGame.pendingAction?.playerId ?? viewingId;
+          const pt = boardGame.pendingAction?.type;
+          if (pt === "ROTO_STICK") {
+            controller.runAction({ type: "SELECT_ROTO_STICK", playerId: pid, instanceId });
+          } else if (pt === "BUG_CATCHING_SET") {
+            controller.runAction({ type: "SELECT_BUG_CATCHING", playerId: pid, instanceId });
+          } else {
+            controller.runAction({ type: "PICK_DECK_CARD", playerId: pid, instanceId });
+          }
+        }}
+        onPickDiscard={(instanceId) => {
+          const pid = boardGame.pendingAction?.playerId ?? viewingId;
+          const pt = boardGame.pendingAction?.type;
+          if (pt === "MIRACLE_HEADSET") {
+            controller.runAction({ type: "SELECT_MIRACLE_HEADSET", playerId: pid, instanceId });
+          }
+        }}
         onDiscardHandCard={(instanceId) =>
           controller.runAction({
             type: "DISCARD_HAND_SUPPORTER_FOR_ATTACK",
