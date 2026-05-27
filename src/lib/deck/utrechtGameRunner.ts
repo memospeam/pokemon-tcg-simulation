@@ -865,7 +865,7 @@ function estimateAttackDamage(
   // Estimate each possible copy's effective damage, accounting for:
   //   • Rampaging Thunder (250) debuff: "can't attack next turn" — penalise unless KO
   //   • Back Draft (30×): scales with energy in opponent discard
-  //   • Powerful Rage (20×): scales with damage counters on the bench Pokémon
+  //   • Powerful Rage (20×): scales with damage counters on N's Zoroark ex (the active attacker)
   //   • Triple Smash (120×): 3-coin flip → ~1.5 expected heads on average
   if (lower.includes("night joker")) {
     const opponentHpNJ = opponent.active ? remainingHp(state, opponent.active) : 9999;
@@ -887,7 +887,8 @@ function estimateAttackDamage(
           ).length;
           est = (raw || 30) * Math.max(1, energyInOppDiscard);
         } else if (atkLower.includes("powerful rage")) {
-          est = (raw || 20) * (bench.damageCounters || 0);
+          // "this Pokémon" when copied via Night Joker = N's Zoroark ex (the active attacker)
+          est = (raw || 20) * (player.active?.damageCounters ?? 0);
         } else if (atkLower.includes("triple smash")) {
           est = Math.round((raw || 120) * 1.5); // ~1.5 expected heads from 3 coins
         }
@@ -2308,9 +2309,9 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
           ).length;
           return (raw || 30) * Math.max(1, energyInDiscard);
         }
-        // Powerful Rage (20×): scales with damage counters on the bench Pokémon
+        // Powerful Rage (20×): "this Pokémon" when copied = N's Zoroark ex (the active attacker)
         if (atkLower.includes("powerful rage")) {
-          return (raw || 20) * (benchMon?.damageCounters ?? 0);
+          return (raw || 20) * (cbPlayer.active?.damageCounters ?? 0);
         }
         // Triple Smash (120×): 3 coins → expected ~1.5 heads
         if (atkLower.includes("triple smash")) {
