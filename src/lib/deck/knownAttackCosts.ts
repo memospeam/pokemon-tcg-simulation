@@ -1,168 +1,107 @@
 /**
  * Hardcoded attack-cost overrides for meta-relevant Pokémon.
  *
- * Why this exists: the standard corpus index (`data/standard/cards-index.json`)
- * was built without preserving the `cost` field from the Pokémon TCG API.
- * As a fallback, `corpusDeckBuilder.buildAttacks` invents a 1-of-primary-type
- * cost for every attack — which means:
- *   - Dragapult ex's Phantom Dive (real cost: 2 Psychic + 1 Colorless) is
- *     treated as needing just 1 Psychic, so the AI thinks Dragapult is
- *     "fully loaded" after a single energy attach.
- *   - Team Rocket's Articuno's Dark Frost (real cost: 1 Water) is treated as
- *     1 Colorless because the deck has no Water energy, so any single energy
- *     can fuel it.
+ * BACKGROUND
+ * The standard corpus index (`data/standard/cards-index.json`) is generated
+ * without preserving the `cost` array from the Pokémon TCG API. As a result,
+ * `corpusDeckBuilder.buildAttacks` invents a coarse fallback cost of one
+ * energy of the inferred primary type, which is wrong for:
+ *   - multi-energy attacks (e.g. Phantom Dive — 1 Psychic + 1 Fire)
+ *   - cross-type attacks (e.g. Dark Frost on a non-Water inferred Pokémon)
  *
- * Until the corpus is rebuilt with proper cost data, this lookup table
- * provides the authoritative costs for cards we know about. Keys are matched
- * against the Pokémon name (case-insensitive substring), then the attack
- * name (case-insensitive exact).
+ * This file lets us layer authoritative costs on top of that fallback for
+ * specific cards we know about.
+ *
+ * AUTHORITY
+ * Entries are split into two tiers:
+ *
+ *   1. VERIFIED — confirmed by the user or by direct visual reference to
+ *      the printed/promo card. Safe to rely on.
+ *
+ *   2. UNVERIFIED — best-effort entries we have NOT yet checked against
+ *      the real cards. They may be wrong. Treat them as approximations
+ *      until someone with the API key (POKEMONTCG_API_KEY) re-fetches the
+ *      corpus with `cost` preserved.
+ *
+ * The right long-term fix is to update `prepareStandardCorpus.ts` to keep
+ * the cost field and re-run the corpus build — at which point this file
+ * becomes redundant.
  */
 
 export interface KnownAttackCost {
   cost: string[];
   /** Optional explicit converted cost; otherwise derived from cost.length. */
   convertedEnergyCost?: number;
+  /** Mark unverified entries clearly so future audits can prioritise them. */
+  unverified?: true;
 }
 
-const KNOWN: Record<string, Record<string, KnownAttackCost>> = {
-  // ─── Dragapult ──────────────────────────────────────────────────────────
+// ─── VERIFIED — user-confirmed or directly checked against the card ────────
+const VERIFIED: Record<string, Record<string, KnownAttackCost>> = {
   "dragapult ex": {
-    "Phantom Dive": { cost: ["Psychic", "Psychic", "Colorless"] },
-    "Jet Headbutt": { cost: ["Colorless", "Colorless"] },
+    // User-corrected 2026-05-29: 1 Psychic + 1 Fire (2 energy total).
+    "Phantom Dive": { cost: ["Psychic", "Fire"] },
   },
-  "drakloak": {
-    "Shadow Mist": { cost: ["Psychic", "Colorless"] },
-  },
-  "dreepy": {
-    "Dragon Headbutt": { cost: ["Colorless"] },
-  },
-
-  // ─── Lopunny ────────────────────────────────────────────────────────────
-  "mega lopunny ex": {
-    "Gale Thrust": { cost: ["Colorless", "Colorless"] },
-    "Bouncy Punch": { cost: ["Colorless", "Colorless", "Colorless"] },
-  },
-  "buneary": {
-    "Tackle": { cost: ["Colorless"] },
-  },
-
-  // ─── Rocket's Honchkrow ────────────────────────────────────────────────
-  "team rocket's honchkrow": {
-    "Rocket Feathers": { cost: ["Darkness", "Colorless"] },
-  },
-  "team rocket's murkrow": {
-    "Skill Dive": { cost: ["Darkness"] },
-    "Peck": { cost: ["Colorless"] },
+  "alakazam": {
+    // User-corrected 2026-05-29: 1 Psychic only (1 energy total).
+    // Note: substring match — also matches "Alakazam ex" if added later.
+    "Powerful Hand": { cost: ["Psychic"] },
   },
   "team rocket's articuno": {
-    // The reason this file exists — real card requires 1 Water energy.
+    // Confirmed cost from the user's original bug report — Dark Frost
+    // requires 1 Water Energy.
     "Dark Frost": { cost: ["Water"] },
   },
-  "team rocket's porygon": {
-    "Conversion": { cost: ["Colorless"] },
-  },
-  "team rocket's porygon2": {
-    "Trick Gift": { cost: ["Colorless", "Colorless"] },
-  },
+};
 
-  // ─── Cynthia's Garchomp ─────────────────────────────────────────────────
-  "cynthia's garchomp ex": {
-    "Dragon Stride": { cost: ["Fighting", "Fighting", "Colorless"] },
-    "Linear Attack": { cost: ["Fighting"] },
+// ─── UNVERIFIED — best-effort approximations, mark with `unverified: true` ─
+// These entries cover meta cards whose real costs we have NOT yet confirmed.
+// They're better than the 1-energy default (which silently breaks the
+// energy AI's "fully loaded" check), but should not be trusted as accurate.
+// Audit and either confirm-and-move-to-VERIFIED or correct as data lands.
+const UNVERIFIED: Record<string, Record<string, KnownAttackCost>> = {
+  "dragapult ex": {
+    "Jet Headbutt": { cost: ["Colorless", "Colorless"], unverified: true },
   },
-  "cynthia's gabite": {
-    "Bite": { cost: ["Fighting"] },
+  "mega lopunny ex": {
+    "Gale Thrust": { cost: ["Colorless", "Colorless"], unverified: true },
   },
-  "cynthia's gible": {
-    "Take Down": { cost: ["Fighting"] },
+  "team rocket's honchkrow": {
+    "Rocket Feathers": { cost: ["Darkness", "Colorless"], unverified: true },
   },
-
-  // ─── N's Zoroark ────────────────────────────────────────────────────────
-  "n's zoroark ex": {
-    "Boss's Rage": { cost: ["Darkness", "Colorless"] },
-  },
-  "n's zorua": {
-    "Scratch": { cost: ["Colorless"] },
-  },
-  "n's zekrom": {
-    "Lightning Strike": { cost: ["Lightning", "Lightning"] },
-  },
-
-  // ─── Greninja ───────────────────────────────────────────────────────────
   "greninja ex": {
-    "Mist Slash": { cost: ["Water"] },
-    "Big Wave Splash": { cost: ["Water", "Water", "Colorless"] },
-  },
-  "frogadier": {
-    "Aqua Edge": { cost: ["Water", "Colorless"] },
-    "Summoning Jutsu": { cost: ["Water"] },
-  },
-  "froakie": {
-    "Bubble Drain": { cost: ["Water"] },
-  },
-  "mega froslass ex": {
-    "Resentful Refrain": { cost: ["Water"] },
-  },
-
-  // ─── Hydrapple ──────────────────────────────────────────────────────────
-  "hydrapple ex": {
-    "Apple Drum": { cost: ["Grass", "Grass"] },
-    "Syrupy Splash": { cost: ["Grass", "Colorless"] },
-  },
-  "dipplin": {
-    "Sticky Sap": { cost: ["Grass"] },
-  },
-
-  // ─── Alakazam ──────────────────────────────────────────────────────────
-  "alakazam": {
-    "Powerful Hand": { cost: ["Psychic", "Colorless"] },
-  },
-  "kadabra": {
-    "Confuse Ray": { cost: ["Psychic", "Colorless"] },
-  },
-
-  // ─── Ogerpon Box (multi-attacker) ───────────────────────────────────────
-  "teal mask ogerpon ex": {
-    "Leafy Fall": { cost: ["Grass"] },
-    "Teal Strike": { cost: ["Grass", "Colorless"] },
-  },
-  "wellspring mask ogerpon ex": {
-    "Sparkling Riptide": { cost: ["Water", "Colorless"] },
-  },
-  "lillie's clefairy ex": {
-    "Full Moon Rondo": { cost: ["Psychic", "Colorless"] },
-  },
-  "mega kangaskhan ex": {
-    "Mega Punch": { cost: ["Colorless", "Colorless", "Colorless"] },
-  },
-
-  // ─── Common bench utility ──────────────────────────────────────────────
-  "munkidori": {
-    "Goodnight, Babies": { cost: ["Psychic"] },
-  },
-  "fezandipiti ex": {
-    "Flip the Script": { cost: ["Darkness", "Colorless"] },
-  },
-  "latias ex": {
-    "Eon Blade": { cost: ["Psychic", "Colorless", "Colorless"] },
+    "Mist Slash": { cost: ["Water"], unverified: true },
   },
 };
 
 /**
  * Look up the canonical cost for a (pokemonName, attackName) pair.
- * Returns `null` if the attack is not in the override table — the caller
+ * Returns `null` if the attack is not in the override tables — the caller
  * should fall back to its default cost-inference logic.
+ *
+ * VERIFIED entries take precedence over UNVERIFIED.
  */
 export function lookupAttackCost(
   pokemonName: string,
   attackName: string,
 ): KnownAttackCost | null {
   const nameKey = pokemonName.toLowerCase();
-  for (const [keyword, attacks] of Object.entries(KNOWN)) {
+
+  // 1. Check the verified table first.
+  for (const [keyword, attacks] of Object.entries(VERIFIED)) {
     if (nameKey.includes(keyword)) {
       const found = attacks[attackName];
       if (found) return found;
     }
   }
+
+  // 2. Fall back to unverified entries.
+  for (const [keyword, attacks] of Object.entries(UNVERIFIED)) {
+    if (nameKey.includes(keyword)) {
+      const found = attacks[attackName];
+      if (found) return found;
+    }
+  }
+
   return null;
 }

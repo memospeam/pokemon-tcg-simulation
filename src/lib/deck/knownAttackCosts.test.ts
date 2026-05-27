@@ -1,37 +1,47 @@
 import { describe, expect, it } from "vitest";
 import { lookupAttackCost } from "./knownAttackCosts";
 
-describe("knownAttackCosts — authoritative attack-cost overrides", () => {
-  it("Team Rocket's Articuno · Dark Frost requires 1 Water energy (the original bug)", () => {
+describe("knownAttackCosts — verified entries", () => {
+  it("Team Rocket's Articuno · Dark Frost requires 1 Water energy", () => {
     const result = lookupAttackCost("Team Rocket's Articuno", "Dark Frost");
     expect(result).not.toBeNull();
     expect(result!.cost).toEqual(["Water"]);
-    expect(result!.convertedEnergyCost ?? result!.cost.length).toBe(1);
+    expect(result!.unverified).toBeUndefined();
   });
 
-  it("Dragapult ex · Phantom Dive requires 2 Psychic + 1 Colorless (not the buggy 1-energy default)", () => {
+  it("Dragapult ex · Phantom Dive requires 1 Psychic + 1 Fire (user-corrected)", () => {
     const result = lookupAttackCost("Dragapult ex", "Phantom Dive");
     expect(result).not.toBeNull();
-    expect(result!.cost.sort()).toEqual(["Colorless", "Psychic", "Psychic"]);
-    expect(result!.cost.length).toBe(3);
+    // Real cost on TWM 130 is P + R (1 Psychic, 1 Fire) — total 2 energy.
+    expect(result!.cost.sort()).toEqual(["Fire", "Psychic"]);
+    expect(result!.cost.length).toBe(2);
+    expect(result!.unverified).toBeUndefined();
   });
 
-  it("Greninja ex · Big Wave Splash requires 2 Water + 1 Colorless", () => {
-    const result = lookupAttackCost("Greninja ex", "Big Wave Splash");
+  it("Alakazam · Powerful Hand requires just 1 Psychic (user-corrected)", () => {
+    const result = lookupAttackCost("Alakazam", "Powerful Hand");
     expect(result).not.toBeNull();
-    expect(result!.cost.length).toBe(3);
-    expect(result!.cost.filter((c) => c === "Water").length).toBe(2);
-    expect(result!.cost.filter((c) => c === "Colorless").length).toBe(1);
+    expect(result!.cost).toEqual(["Psychic"]);
+    expect(result!.cost.length).toBe(1);
+    expect(result!.unverified).toBeUndefined();
   });
+});
 
+describe("knownAttackCosts — unverified entries are tagged", () => {
+  it("Jet Headbutt is flagged unverified (best-effort estimate)", () => {
+    const result = lookupAttackCost("Dragapult ex", "Jet Headbutt");
+    expect(result).not.toBeNull();
+    expect(result!.unverified).toBe(true);
+  });
+});
+
+describe("knownAttackCosts — lookup mechanics", () => {
   it("matches by substring so set-prefixed names still resolve", () => {
-    // The corpus name may include extra qualifiers; substring matching keeps
-    // the lookup robust without an exact equality check.
     expect(lookupAttackCost("team rocket's articuno", "Dark Frost")).not.toBeNull();
     expect(lookupAttackCost("DRI 51 Team Rocket's Articuno", "Dark Frost")).not.toBeNull();
   });
 
-  it("returns null for cards / attacks not in the table — caller falls back", () => {
+  it("returns null for cards / attacks not in the tables — caller falls back", () => {
     expect(lookupAttackCost("Random Unknown Pokémon", "Random Attack")).toBeNull();
     expect(lookupAttackCost("Dragapult ex", "Not An Attack")).toBeNull();
   });
