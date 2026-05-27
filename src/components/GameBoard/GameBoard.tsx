@@ -122,6 +122,7 @@ export function GameBoard() {
             highlight &&
             (boardGame.pendingAction?.type === "BOSS_ORDERS" ||
               boardGame.pendingAction?.type === "CRUSHING_HAMMER" ||
+              boardGame.pendingAction?.type === "CHOOSE_OPPONENT_POKEMON_DAMAGE" ||
               (boardGame.pendingAction?.type === "GIOVANNI" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH") ||
               (boardGame.pendingAction?.type === "PRIME_CATCHER" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH"))
           }
@@ -162,6 +163,7 @@ export function GameBoard() {
             highlight &&
             boardGame.pendingAction?.type !== "BOSS_ORDERS" &&
             boardGame.pendingAction?.type !== "CRUSHING_HAMMER" &&
+            boardGame.pendingAction?.type !== "CHOOSE_OPPONENT_POKEMON_DAMAGE" &&
             !(boardGame.pendingAction?.type === "GIOVANNI" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH") &&
             !(boardGame.pendingAction?.type === "PRIME_CATCHER" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH")
           }
@@ -254,6 +256,14 @@ export function GameBoard() {
             type: "DISCARD_HAND_SUPPORTER_FOR_ATTACK",
             playerId: boardGame.pendingAction?.playerId ?? viewingId,
             instanceId,
+          })
+        }
+        onChooseBenchAttack={(benchPokemonId, attackName) =>
+          controller.runAction({
+            type: "CHOOSE_BENCH_ATTACK",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+            benchPokemonId,
+            attackName,
           })
         }
         onSkipOptional={() =>

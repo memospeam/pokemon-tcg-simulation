@@ -9,6 +9,7 @@ interface PendingActionPanelProps {
   onPickDeck: (instanceId: string) => void;
   onPickDiscard: (instanceId: string) => void;
   onDiscardHandCard: (instanceId: string) => void;
+  onChooseBenchAttack: (benchPokemonId: string, attackName: string) => void;
   onSkipOptional: () => void;
   onConfirmDrawUntil: () => void;
 }
@@ -49,6 +50,7 @@ export function PendingActionPanel({
   onPickDeck,
   onPickDiscard,
   onDiscardHandCard,
+  onChooseBenchAttack,
   onSkipOptional,
   onConfirmDrawUntil,
 }: PendingActionPanelProps) {
@@ -264,6 +266,37 @@ export function PendingActionPanel({
               >
                 <BoardCard state={game} card={card} size="hand" showName={false} />
                 <span>{def?.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (pending.type === "COPY_BENCH_ATTACK") {
+    const player = getPlayer(game, pending.playerId);
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <h4>Night Joker — choose a Benched N's Pokémon's attack to copy</h4>
+        <div className="pending-panel__cards pending-panel__cards--scroll">
+          {pending.options.map((option) => {
+            const benchMon = player.bench.find((b) => b.instanceId === option.benchPokemonId);
+            if (!benchMon) return null;
+            const def = getDefinition(game, benchMon.definitionId);
+            const attack = def?.attacks?.find((a) => a.name === option.attackName);
+            return (
+              <button
+                key={`${option.benchPokemonId}-${option.attackName}`}
+                type="button"
+                className="pending-panel__pick"
+                onClick={() => onChooseBenchAttack(option.benchPokemonId, option.attackName)}
+              >
+                <BoardCard state={game} card={benchMon} size="hand" showName={false} />
+                <span>
+                  {def?.name} — {option.attackName}
+                  {attack?.damage ? ` (${attack.damage})` : ""}
+                </span>
               </button>
             );
           })}

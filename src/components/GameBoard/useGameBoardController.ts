@@ -83,6 +83,18 @@ export function useGameBoardController(
         if (game.pendingAction?.type === "CHOOSE_BENCH_DAMAGE") {
           return "Choose a Benched Pokémon to damage.";
         }
+        if (game.pendingAction?.type === "ABILITY_DISCARD_HAND") {
+          return `${game.pendingAction.abilityName}: discard a card from your hand.`;
+        }
+        if (game.pendingAction?.type === "ABILITY_DISCARD_HAND_ENERGY") {
+          return `${game.pendingAction.abilityName}: discard a Basic ${game.pendingAction.energyType} Energy from your hand.`;
+        }
+        if (game.pendingAction?.type === "COPY_BENCH_ATTACK") {
+          return "Night Joker: choose a Benched N's Pokémon's attack to copy.";
+        }
+        if (game.pendingAction?.type === "CHOOSE_OPPONENT_POKEMON_DAMAGE") {
+          return `Choose one of your opponent's Pokémon to place ${game.pendingAction.amount} damage counter(s) on.`;
+        }
         if (game.pendingAction?.type === "RECON_DIRECTIVE") {
           return getPendingPrompt(game.pendingAction) ?? "Recon Directive: choose 1 of the top 2 cards of your deck.";
         }
@@ -129,6 +141,16 @@ export function useGameBoardController(
     if (engineState?.pendingAction?.type === "CRISPIN_DISCARD") {
       const action = legalActions.find(
         (entry) => entry.type === "CRISPIN_OPTIONAL_DISCARD" && entry.instanceId === card.instanceId,
+      );
+      if (action) runAction(action);
+      return;
+    }
+    if (
+      engineState?.pendingAction?.type === "ABILITY_DISCARD_HAND" ||
+      engineState?.pendingAction?.type === "ABILITY_DISCARD_HAND_ENERGY"
+    ) {
+      const action = legalActions.find(
+        (entry) => entry.type === "SELECT_HAND_DISCARD" && entry.instanceId === card.instanceId,
       );
       if (action) runAction(action);
       return;
@@ -235,6 +257,7 @@ export function useGameBoardController(
       "MOVE_ENERGY_TO_BENCH",
       "GIOVANNI",
       "PRIME_CATCHER",
+      "CHOOSE_OPPONENT_POKEMON_DAMAGE",
     ].includes(game.pendingAction.type);
   }
 

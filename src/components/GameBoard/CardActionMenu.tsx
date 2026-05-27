@@ -156,6 +156,9 @@ export function buildPokemonActions(
     if (legal.type === "CHOOSE_BENCH_DAMAGE_TARGET" && legal.targetId === card.instanceId) {
       actions.push({ label: "Damage this Benched Pokémon", action: legal });
     }
+    if (legal.type === "CHOOSE_OPPONENT_POKEMON_DAMAGE_TARGET" && legal.targetId === card.instanceId) {
+      actions.push({ label: "Place damage counters here", action: legal });
+    }
     if (legal.type === "MOVE_DAMAGE_SOURCE" && legal.sourceId === card.instanceId) {
       actions.push({ label: "Move damage from this Pokémon", action: legal });
     }
