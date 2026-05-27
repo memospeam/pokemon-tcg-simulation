@@ -1,11 +1,13 @@
 import type { EngineState } from "@/lib/engine";
 import { getDefinition, getPlayer } from "@/lib/engine";
+import { isSupporter } from "@/lib/models/definition";
 import type { CardInstance } from "@/lib/models/instance";
 import { BoardCard } from "./BoardCard";
 
 interface PendingActionPanelProps {
   game: EngineState;
   onPickDeck: (instanceId: string) => void;
+  onDiscardHandCard: (instanceId: string) => void;
   onSkipOptional: () => void;
   onConfirmDrawUntil: () => void;
 }
@@ -44,6 +46,7 @@ function resolveDeckCards(
 export function PendingActionPanel({
   game,
   onPickDeck,
+  onDiscardHandCard,
   onSkipOptional,
   onConfirmDrawUntil,
 }: PendingActionPanelProps) {
@@ -120,6 +123,48 @@ export function PendingActionPanel({
         <button type="button" className="pending-panel__skip" onClick={onSkipOptional}>
           Skip optional effect
         </button>
+      </div>
+    );
+  }
+
+  if (pending.type === "DISCARD_NAMED_SUPPORTERS_FOR_DAMAGE") {
+    const player = getPlayer(game, pending.playerId);
+    const eligibleCards = player.hand.filter((card) => {
+      const def = getDefinition(game, card.definitionId);
+      return def && isSupporter(def) && def.name.toLowerCase().includes(pending.nameFilter.toLowerCase());
+    });
+    const bonusSoFar = pending.discardedCount * pending.perCard;
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <div className="pending-panel__header">
+          <h4>
+            Rocket Feathers — discard Team Rocket Supporters (+{pending.perCard} each)
+            {pending.discardedCount > 0 && ` · ${pending.discardedCount} discarded (+${bonusSoFar} damage)`}
+          </h4>
+          <button type="button" className="pending-panel__skip" onClick={onSkipOptional}>
+            Done — Attack
+          </button>
+        </div>
+        {eligibleCards.length > 0 ? (
+          <div className="pending-panel__cards pending-panel__cards--scroll">
+            {eligibleCards.map((card) => {
+              const def = getDefinition(game, card.definitionId);
+              return (
+                <button
+                  key={card.instanceId}
+                  type="button"
+                  className="pending-panel__pick"
+                  onClick={() => onDiscardHandCard(card.instanceId)}
+                >
+                  <BoardCard state={game} card={card} size="hand" showName={false} />
+                  <span>{def?.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="pending-panel__meta">No Team Rocket Supporters in hand — click "Done" to attack.</p>
+        )}
       </div>
     );
   }

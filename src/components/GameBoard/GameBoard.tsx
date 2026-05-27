@@ -230,6 +230,13 @@ export function GameBoard() {
             instanceId,
           })
         }
+        onDiscardHandCard={(instanceId) =>
+          controller.runAction({
+            type: "DISCARD_HAND_SUPPORTER_FOR_ATTACK",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+            instanceId,
+          })
+        }
         onSkipOptional={() =>
           controller.runAction({
             type: "SKIP_OPTIONAL",
