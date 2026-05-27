@@ -3,6 +3,7 @@ import { loadStandardCorpus } from "../format/loadStandardCorpus";
 import type { StandardCardIndex } from "../format/prepareStandardCorpus";
 import type { CardAbility, CardAttack, CardDefinition } from "../models/definition";
 import type { BuiltDeck } from "./builder";
+import { lookupAttackCost } from "./knownAttackCosts";
 import { parseLimitlessDeckList, type ParsedDeckLine } from "./limitlessParser";
 import { resolveTrainerRulesText } from "./trainerStubTexts";
 import { validateDeck, type DeckValidationResult } from "./validator";
@@ -222,13 +223,34 @@ function inferSubtypes(name: string, pokemonNames: Set<string>): string[] {
 
 function buildAttacks(card: StandardCardIndex, types: string[]): CardAttack[] {
   const primaryType = types[0] ?? "Colorless";
-  return card.attacks.map((attack) => ({
-    name: attack.name,
-    cost: attack.text.includes("Discard") && attack.text.includes("Energy") ? [] : [primaryType],
-    convertedEnergyCost: 1,
-    damage: attack.damage,
-    text: attack.text,
-  }));
+  return card.attacks.map((attack) => {
+    // First: use the curated override table when we have authoritative data.
+    // This is the only source of accurate multi-energy costs (the corpus
+    // index doesn't preserve them).
+    const known = lookupAttackCost(card.name, attack.name);
+    if (known) {
+      return {
+        name: attack.name,
+        cost: [...known.cost],
+        convertedEnergyCost: known.convertedEnergyCost ?? known.cost.length,
+        damage: attack.damage,
+        text: attack.text,
+      };
+    }
+    // Fallback for unknown cards: assume 1 energy of the primary type, except
+    // for Discard-Energy attacks which are treated as "no fixed cost" so the
+    // engine can still simulate them at all.
+    const cost = attack.text.includes("Discard") && attack.text.includes("Energy")
+      ? []
+      : [primaryType];
+    return {
+      name: attack.name,
+      cost,
+      convertedEnergyCost: cost.length,
+      damage: attack.damage,
+      text: attack.text,
+    };
+  });
 }
 
 function buildAbilities(card: StandardCardIndex): CardAbility[] {
