@@ -194,6 +194,8 @@ export function applyWeaknessAndResistance(
 
 export function countPrizeCards(pokemon: CardDefinition): number {
   if (pokemon.subtypes.includes("VMAX") || pokemon.subtypes.includes("VSTAR")) return 2;
+  // Mega Evolution Pokémon ex (MEGA + ex) award 3 Prize cards
+  if (pokemon.subtypes.includes("MEGA") && pokemon.subtypes.includes("ex")) return 3;
   if (
     pokemon.subtypes.includes("V") ||
     pokemon.subtypes.includes("ex") ||

@@ -5,6 +5,7 @@ import { GamePhase, PlayerId, Zone } from "../../models/enums";
 import { getExecutableAbilityEffects, parseAbilityText, parseAttackText, startAttackIfDiscardPending } from "./index";
 import { gameReducer } from "../reducer";
 import { emptyTurnFlags, getPlayer, type EngineState } from "../types";
+import { countPrizeCards } from "../rules";
 
 function mockBasic(
   name: string,
@@ -320,5 +321,36 @@ describe("Chaos Rising — Ninja Spinner", () => {
     state = gameReducer(state, { type: "SKIP_OPTIONAL", playerId: PlayerId.P1 });
     expect(getPlayer(state, PlayerId.P2).active!.damageCounters).toBe(120);
     expect(getPlayer(state, PlayerId.P1).active!.attachedEnergy).toHaveLength(1);
+  });
+});
+
+describe("countPrizeCards — Mega Evolution ex", () => {
+  function makeDef(subtypes: string[]): CardDefinition {
+    return {
+      apiId: "test",
+      name: "Test Pokémon",
+      supertype: "Pokémon",
+      subtypes,
+      set: { id: "test", name: "Test" },
+      number: "1",
+      images: { small: "", large: "" },
+    };
+  }
+
+  it("regular Pokémon gives 1 prize", () => {
+    expect(countPrizeCards(makeDef(["Basic"]))).toBe(1);
+  });
+
+  it("Pokémon ex gives 2 prizes", () => {
+    expect(countPrizeCards(makeDef(["Basic", "ex"]))).toBe(2);
+  });
+
+  it("Mega Evolution Pokémon ex (MEGA + ex) gives 3 prizes", () => {
+    expect(countPrizeCards(makeDef(["Stage 2", "MEGA", "ex"]))).toBe(3);
+    expect(countPrizeCards(makeDef(["Basic", "MEGA", "ex"]))).toBe(3);
+  });
+
+  it("VMAX gives 2 prizes", () => {
+    expect(countPrizeCards(makeDef(["VMAX"]))).toBe(2);
   });
 });
