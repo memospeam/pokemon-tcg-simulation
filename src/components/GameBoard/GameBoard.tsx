@@ -17,7 +17,8 @@ import { PendingActionPanel } from "./PendingActionPanel";
 import { useGameBoardController } from "./useGameBoardController";
 
 export function GameBoard() {
-  const { engineState, dispatch, startGame, clearSaved } = useGameStore();
+  const { engineState, dispatch, startGame, clearSaved, humanPlayerId } = useGameStore();
+  const vsAI = humanPlayerId !== null;
   const controller = useGameBoardController(engineState, dispatch);
   const [discardViewPlayerId, setDiscardViewPlayerId] = useState<PlayerId | null>(null);
 
@@ -251,6 +252,12 @@ export function GameBoard() {
         </div>
       )}
 
+      {vsAI && !isMyTurn && !boardGame.winnerId && (
+        <div className="ai-thinking-banner">
+          🤖 AI is playing…
+        </div>
+      )}
+
       <ActionDock
         phase={boardGame.phase}
         isMyTurn={isMyTurn}
@@ -260,7 +267,7 @@ export function GameBoard() {
         currentId={boardGame.currentPlayerId}
         opponentId={opponentId}
         onEndTurn={() => dispatch({ type: "END_TURN" })}
-        onSwitchSide={() => dispatch({ type: "SWITCH_VIEW", playerId: opponentId })}
+        onSwitchSide={vsAI ? undefined : () => dispatch({ type: "SWITCH_VIEW", playerId: opponentId })}
         onJumpToCurrent={() => dispatch({ type: "SWITCH_VIEW", playerId: boardGame.currentPlayerId })}
         onMulligan={
           boardGame.pendingMulliganPlayerId

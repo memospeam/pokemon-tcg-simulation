@@ -10,7 +10,7 @@ interface ActionDockProps {
   currentId: PlayerId;
   opponentId: PlayerId;
   onEndTurn: () => void;
-  onSwitchSide: () => void;
+  onSwitchSide?: () => void;
   onJumpToCurrent: () => void;
   onMulligan?: () => void;
   onStartGame: () => void;
@@ -34,9 +34,11 @@ export function ActionDock({
   return (
     <div className="action-dock">
       <div className="action-dock__group">
-        <button type="button" className="action-dock__secondary" onClick={onSwitchSide}>
-          Switch side
-        </button>
+        {onSwitchSide && (
+          <button type="button" className="action-dock__secondary" onClick={onSwitchSide}>
+            Switch side
+          </button>
+        )}
         <button type="button" className="action-dock__secondary" onClick={onJumpToCurrent}>
           Current player
         </button>

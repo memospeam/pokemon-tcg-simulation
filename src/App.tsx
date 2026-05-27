@@ -20,13 +20,14 @@ export function App() {
     }
   }, [loadSaved]);
 
-  function handlePlay(player1Name: string, player2Name: string) {
+  function handlePlay(player1Name: string, player2Name: string, vsAI = false) {
     if (!player1Deck || !player2Deck) return;
     startMatch({
       player1Name,
       player2Name,
       player1Deck,
       player2Deck,
+      vsAI,
     });
     setTab("play");
   }
@@ -84,7 +85,7 @@ export function App() {
       </nav>
 
       <main>
-        {tab === "lobby" && <Lobby onPlay={handlePlay} />}
+        {tab === "lobby" && <Lobby onPlay={(p1, p2, vsAI) => handlePlay(p1, p2, vsAI)} />}
         {tab === "play" && <GameBoard />}
         {tab === "builder" && <DeckBuilder />}
         {tab === "sim" && <SimPlayback />}

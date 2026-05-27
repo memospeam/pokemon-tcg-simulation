@@ -11,7 +11,7 @@ import { useDeckStore } from "@/stores/deckStore";
 import { DeckBuilder } from "../DeckBuilder/DeckBuilder";
 
 interface LobbyProps {
-  onPlay: (player1Name: string, player2Name: string) => void;
+  onPlay: (player1Name: string, player2Name: string, vsAI?: boolean) => void;
 }
 
 export function Lobby({ onPlay }: LobbyProps) {
@@ -29,6 +29,7 @@ export function Lobby({ onPlay }: LobbyProps) {
   const [error, setError] = useState<string | null>(null);
   const [showBuilder, setShowBuilder] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [vsAI, setVsAI] = useState(false);
 
   async function loadDecks(
     p1: { name: string; text: string },
@@ -201,8 +202,23 @@ export function Lobby({ onPlay }: LobbyProps) {
           <button type="button" onClick={refreshSavedDecks}>
             Refresh saved decks
           </button>
-          <button type="button" disabled={!canPlay || loadingSlot !== null} onClick={() => onPlay(player1Name, player2Name)}>
-            Play
+
+          <label className="lobby-mode-toggle">
+            <input
+              type="checkbox"
+              checked={vsAI}
+              onChange={(e) => setVsAI(e.target.checked)}
+            />
+            {" "}Play vs AI (Player 1 = you, Player 2 = AI)
+          </label>
+
+          <button
+            type="button"
+            disabled={!canPlay || loadingSlot !== null}
+            onClick={() => onPlay(player1Name, player2Name, vsAI)}
+            className="action-dock__primary"
+          >
+            {vsAI ? "⚔️ Play vs AI" : "Play (both sides)"}
           </button>
         </div>
       </section>

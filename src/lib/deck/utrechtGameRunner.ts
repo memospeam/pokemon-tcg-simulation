@@ -406,6 +406,144 @@ export function runEngineAutoPlay(
 
 export { checkMulliganNeeded };
 
+/**
+ * Run exactly ONE AI player's turn (all actions until the turn ends or game is over).
+ * Returns the new game state after the AI has finished its turn.
+ *
+ * Stops early if:
+ * - A pending action requires the HUMAN player to resolve (e.g., PROMOTE after KO)
+ * - The game ends (winner found)
+ * - The turn number advances (turn ended via attack or END_TURN)
+ */
+export function runAISingleTurn(
+  state: EngineState,
+  ctx: StrategyContext,
+): EngineState {
+  const aiPlayerId = state.currentPlayerId;
+  const startTurn = state.turnNumber;
+  let current = state;
+  let steps = 0;
+  const maxSteps = 150;
+
+  while (steps < maxSteps && current.phase === GamePhase.Active && !current.winnerId) {
+    steps++;
+
+    // Turn changed — AI is done (attacked, or END_TURN fired)
+    if (current.turnNumber > startTurn) break;
+
+    // Pending action: only auto-resolve if it's for the AI player.
+    // If it's for the human (e.g., PROMOTE after KO), stop and let the UI handle it.
+    if (current.pendingAction) {
+      if (current.pendingAction.playerId !== aiPlayerId) break;
+      const { state: drained, steps: n } = drainAutoPending(current, 12, ctx);
+      if (n === 0) break; // Couldn't resolve — stop to avoid infinite loop
+      current = drained;
+      continue;
+    }
+
+    // Switched to opponent without a pending — shouldn't happen normally but guard
+    if (current.currentPlayerId !== aiPlayerId) break;
+
+    const player = getPlayer(current, aiPlayerId);
+
+    // 1. Play trainers (highest priority)
+    if (!current.turnFlags.attacked) {
+      const trainerAction = pickAutoTrainerAction(current, ctx);
+      if (trainerAction) {
+        current = gameReducer(current, trainerAction);
+        const { state: drained } = drainAutoPending(current, 12, ctx);
+        current = drained;
+        continue;
+      }
+    }
+
+    // 2. Bench Basic Pokémon
+    if (!current.turnFlags.attacked) {
+      const basicAction = pickAutoPlayBasicAction(current, ctx);
+      if (basicAction) { current = gameReducer(current, basicAction); continue; }
+    }
+
+    // 3. Evolve Pokémon
+    if (!current.turnFlags.attacked) {
+      const evolveAction = pickAutoEvolveAction(current, ctx);
+      if (evolveAction) { current = gameReducer(current, evolveAction); continue; }
+    }
+
+    // 4. Attach energy (with type-matching)
+    if (
+      !current.turnFlags.energyAttached &&
+      player.hand.some((card) => getDefinition(current, card.definitionId)?.supertype === "Energy")
+    ) {
+      const primaryTarget = pickBestEnergyTarget(current, aiPlayerId, ctx);
+      if (primaryTarget) {
+        const targetMon = [...(player.active ? [player.active] : []), ...player.bench]
+          .find((p) => p.instanceId === primaryTarget);
+        const targetTypes = targetMon
+          ? (getDefinition(current, targetMon.definitionId)?.types ?? ["Colorless"])
+          : ["Colorless"];
+        const energiesInHand = player.hand.filter(
+          (card) => getDefinition(current, card.definitionId)?.supertype === "Energy",
+        );
+        const targetIsColorless = targetTypes.includes("Colorless");
+        const bestEnergy = energiesInHand.sort((a, b) => {
+          const aTypes = getDefinition(current, a.definitionId)?.types ?? ["Colorless"];
+          const bTypes = getDefinition(current, b.definitionId)?.types ?? ["Colorless"];
+          const aM = (aTypes.includes("Colorless") || targetIsColorless || aTypes.some((t) => targetTypes.includes(t))) ? 1 : 0;
+          const bM = (bTypes.includes("Colorless") || targetIsColorless || bTypes.some((t) => targetTypes.includes(t))) ? 1 : 0;
+          return bM - aM;
+        })[0];
+        if (bestEnergy) {
+          current = gameReducer(current, {
+            type: "ATTACH_ENERGY",
+            playerId: aiPlayerId,
+            energyId: bestEnergy.instanceId,
+            targetId: primaryTarget,
+          });
+          continue;
+        }
+      }
+    }
+
+    // 5. Use abilities
+    if (!current.pendingAction) {
+      const abilityAction = pickAutoAbilityAction(current, ctx);
+      if (abilityAction) {
+        current = gameReducer(current, abilityAction);
+        const { state: drained } = drainAutoPending(current, 12, ctx);
+        current = drained;
+        continue;
+      }
+    }
+
+    // 6. Retreat to better attacker
+    if (!current.turnFlags.retreated && !current.turnFlags.attacked) {
+      const retreatAction = pickRetreatAction(current, aiPlayerId, ctx);
+      if (retreatAction) { current = gameReducer(current, retreatAction); continue; }
+    }
+
+    // 7. Attack
+    const canAttack =
+      player.active &&
+      !current.turnFlags.attacked &&
+      getLegalActions(current).some((a) => a.type === "ATTACK");
+    if (canAttack) {
+      const bestAttack = pickBestAttack(current, aiPlayerId, ctx);
+      if (bestAttack) {
+        current = gameReducer(current, { type: "ATTACK", playerId: aiPlayerId, attackName: bestAttack });
+        const { state: drained } = drainAutoPending(current, 12, ctx);
+        current = drained;
+        break; // Turn ends after attack
+      }
+    }
+
+    // 8. End turn (no profitable actions left)
+    current = gameReducer(current, { type: "END_TURN" });
+    break;
+  }
+
+  return current;
+}
+
 /** Resolve simple optional/target pending actions so corpus playtests can finish. */
 export function drainAutoPending(state: EngineState, maxSteps = 12, ctx?: StrategyContext): { state: EngineState; steps: number } {
   let next = state;

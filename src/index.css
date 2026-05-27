@@ -421,6 +421,15 @@ button {
   margin-bottom: 1rem;
 }
 
+.lobby-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+}
+
 @media (max-width: 900px) {
   .lobby-slots {
     grid-template-columns: 1fr;
@@ -1159,6 +1168,27 @@ button {
 .action-dock__danger {
   background: rgba(239, 68, 68, 0.2);
   color: #fecaca;
+}
+
+.ai-thinking-banner {
+  position: fixed;
+  top: 4.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 41, 59, 0.92);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  padding: 0.4rem 1.1rem;
+  font-size: 0.85rem;
+  z-index: 20;
+  pointer-events: none;
+  animation: ai-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ai-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 .play-screen__clear {
