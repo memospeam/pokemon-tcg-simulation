@@ -1316,6 +1316,18 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
       const archPriority = getArchetypeEnergyPriority(ctx.archetype, nameLower);
       score += archPriority;
 
+      // PRIMARY ATTACKER PROTECTION (archPriority >= 85):
+      // The deck's main attacker must always be able to use its attacks.
+      // Give a strong baseline bonus until it's fully loaded for its biggest
+      // attack — beats one-away setup Pokémon even when the primary is on
+      // the bench. Active primaries get an extra layer so we don't whiff a
+      // turn loading the bench while the active sits one short.
+      if (archPriority >= 85 && !fullyLoaded) {
+        score += 60;
+        if (isActive) score += 25;             // active primary: load NOW
+        if (energiesNeededForMax === 1) score += 35; // primary one-away from finisher
+      }
+
       // ─ Per-archetype hard exclusions (true no-energy Pokémon) ─
       // Pokémon that have NO meaningful energy attack: ability-only, item-lockers,
       // or evolution-bait. Use very strong (-200) penalties.
