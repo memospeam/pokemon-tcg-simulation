@@ -340,6 +340,21 @@ function startGameIfReady(state: EngineState): EngineState {
     withPrizes.turnNumber = 1;
     withPrizes.currentPlayerId = withPrizes.firstPlayerId;
     withPrizes.turnFlags = emptyTurnFlags();
+
+    // Setup basics had enteredPlayTurn = 0 (the pre-game turn). Per TCG rules
+    // they count as "just entered play" on turn 1 — they CANNOT evolve until
+    // turn 2. Bring them in line with turnNumber = 1 so the standard
+    // canEvolvePokemonThisTurn check (enteredPlayTurn !== state.turnNumber)
+    // correctly blocks first-turn evolution.
+    for (const playerId of [PlayerId.P1, PlayerId.P2]) {
+      const p = getPlayer(withPrizes, playerId);
+      const stamp = (card: typeof p.active) => {
+        if (card && card.enteredPlayTurn === 0) card.enteredPlayTurn = 1;
+      };
+      stamp(p.active);
+      for (const benched of p.bench) stamp(benched);
+    }
+
     log(withPrizes, "Game started!");
     drawCards(withPrizes, withPrizes.firstPlayerId, 1);
     return withPrizes;
