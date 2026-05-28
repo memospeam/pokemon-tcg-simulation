@@ -123,11 +123,11 @@ function canPayCost(pool: EnergyPool, cost: string[]): boolean {
   const working = { ...pool.colors };
   let rainbow = pool.rainbow;
   let flexPsychicDark = pool.flexPsychicDark;
-  const colorlessNeeded: string[] = [];
+  let colorlessNeeded = 0;
 
   for (const requirement of cost) {
     if (requirement === "Colorless") {
-      colorlessNeeded.push(requirement);
+      colorlessNeeded += 1;
       continue;
     }
     if ((working[requirement] ?? 0) > 0) {
@@ -140,7 +140,10 @@ function canPayCost(pool: EnergyPool, cost: string[]): boolean {
     } else if (rainbow > 0) {
       rainbow -= 1;
     } else {
-      colorlessNeeded.push("Colorless");
+      // Typed requirement that can't be matched by exact type, by a
+      // Psychic/Darkness flex slot, or by Rainbow energy. Mismatched
+      // typed energy (e.g. Water for a Fire cost) MUST NOT count.
+      return false;
     }
   }
 
@@ -148,7 +151,7 @@ function canPayCost(pool: EnergyPool, cost: string[]): boolean {
   for (const count of Object.values(working)) {
     availableColorless += count;
   }
-  return availableColorless >= colorlessNeeded.length;
+  return availableColorless >= colorlessNeeded;
 }
 
 export function canAffordAttack(
