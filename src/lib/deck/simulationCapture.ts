@@ -10,6 +10,7 @@ import {
   pickAutoPlayBasicAction,
   pickAutoEvolveAction,
   pickBestAttack,
+  pickBestEnergyForTarget,
   pickBestEnergyTarget,
   pickRetreatAction,
 } from "./utrechtGameRunner";
@@ -176,12 +177,18 @@ export function captureSimulationFrames(
 
     // 4. Attach energy to the best target (not always active)
     if (!state.turnFlags.energyAttached) {
-      const energy = player.hand.find(
+      const energiesInHand = player.hand.filter(
         (card) => getDefinition(state, card.definitionId)?.supertype === "Energy",
       );
-      if (energy) {
+      if (energiesInHand.length > 0) {
         const energyTarget = pickBestEnergyTarget(state, playerId, ctx);
         if (energyTarget) {
+          // Find the target instance to inform energy-type selection.
+          const targetMon = [...(player.active ? [player.active] : []), ...player.bench]
+            .find((p) => p.instanceId === energyTarget);
+          const energy = targetMon
+            ? (pickBestEnergyForTarget(state, energiesInHand, targetMon) ?? energiesInHand[0]!)
+            : energiesInHand[0]!;
           state = applyAction(
             state,
             { type: "ATTACH_ENERGY", playerId, energyId: energy.instanceId, targetId: energyTarget },

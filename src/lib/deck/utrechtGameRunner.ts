@@ -287,29 +287,15 @@ export function runEngineAutoPlay(
       if (primaryTarget) {
         const targetMon = [...(player.active ? [player.active] : []), ...player.bench]
           .find((p) => p.instanceId === primaryTarget);
-        const targetTypes: string[] = targetMon
-          ? (getDefinition(state, targetMon.definitionId)?.types ?? ["Colorless"])
-          : ["Colorless"];
-
-        // Find best energy from hand: prefer one that matches the target's type.
-        // Match rules:
-        // 1. Colorless energy → matches any Pokémon (can pay any attack cost)
-        // 2. Colorless-type Pokémon → any energy matches (attack costs are Colorless)
-        // 3. Same type (e.g. Psychic energy → Psychic Pokémon) → match
         const energiesInHand = player.hand.filter(
           (card) => getDefinition(state, card.definitionId)?.supertype === "Energy",
         );
-        const targetIsColorless = targetTypes.includes("Colorless");
-        const bestEnergyForTarget = energiesInHand.sort((a, b) => {
-          const aTypes = getDefinition(state, a.definitionId)?.types ?? ["Colorless"];
-          const bTypes = getDefinition(state, b.definitionId)?.types ?? ["Colorless"];
-          // Energy matches target if: energy is Colorless, target is Colorless, or types overlap
-          const aMatches = (aTypes.includes("Colorless") || targetIsColorless ||
-            aTypes.some((t) => targetTypes.includes(t))) ? 1 : 0;
-          const bMatches = (bTypes.includes("Colorless") || targetIsColorless ||
-            bTypes.some((t) => targetTypes.includes(t))) ? 1 : 0;
-          return bMatches - aMatches; // prefer matching energy first
-        })[0];
+        // Pick the energy that best fills this target's outstanding attack
+        // cost (looks at what its attacks actually NEED, not just the
+        // Pokémon's own type — see pickBestEnergyForTarget for why).
+        const bestEnergyForTarget = targetMon
+          ? pickBestEnergyForTarget(state, energiesInHand, targetMon)
+          : energiesInHand[0];
 
         if (bestEnergyForTarget) {
           state = gameReducer(state, {
@@ -478,20 +464,13 @@ export function runAISingleTurn(
       if (primaryTarget) {
         const targetMon = [...(player.active ? [player.active] : []), ...player.bench]
           .find((p) => p.instanceId === primaryTarget);
-        const targetTypes = targetMon
-          ? (getDefinition(current, targetMon.definitionId)?.types ?? ["Colorless"])
-          : ["Colorless"];
         const energiesInHand = player.hand.filter(
           (card) => getDefinition(current, card.definitionId)?.supertype === "Energy",
         );
-        const targetIsColorless = targetTypes.includes("Colorless");
-        const bestEnergy = energiesInHand.sort((a, b) => {
-          const aTypes = getDefinition(current, a.definitionId)?.types ?? ["Colorless"];
-          const bTypes = getDefinition(current, b.definitionId)?.types ?? ["Colorless"];
-          const aM = (aTypes.includes("Colorless") || targetIsColorless || aTypes.some((t) => targetTypes.includes(t))) ? 1 : 0;
-          const bM = (bTypes.includes("Colorless") || targetIsColorless || bTypes.some((t) => targetTypes.includes(t))) ? 1 : 0;
-          return bM - aM;
-        })[0];
+        // Pick the energy that fills the target's actual attack shortfall.
+        const bestEnergy = targetMon
+          ? pickBestEnergyForTarget(current, energiesInHand, targetMon)
+          : energiesInHand[0];
         if (bestEnergy) {
           current = gameReducer(current, {
             type: "ATTACH_ENERGY",
@@ -1220,6 +1199,98 @@ export function pickBestAttack(state: EngineState, playerId: PlayerId, ctx?: Str
  * 2. Bench Pokémon with the most energy already toward attack cost
  * 3. Active as fallback
  */
+/**
+ * Pick which energy card from hand to attach to a given target Pokémon.
+ *
+ * Old logic only looked at the Pokémon's type. That breaks for multi-type
+ * attacks like Dragapult ex's Phantom Dive (Fire + Psychic) — the AI would
+ * keep attaching Psychic (matches Dragapult's type) and never grab a Fire,
+ * so Phantom Dive could never come online.
+ *
+ * New logic ranks candidate energies by how well they cover the Pokémon's
+ * BIGGEST UNFULFILLED ATTACK COST. Concretely, for each energy in hand we
+ * simulate "what if I attached this?" and count how many attack costs are
+ * now closer to being paid. Colorless energy gets a small bonus because it
+ * fits anywhere. Types the attack DOESN'T need are penalised.
+ *
+ * Returns the chosen energy CardInstance, or `null` if there are no
+ * energies in the player's hand.
+ */
+export function pickBestEnergyForTarget(
+  state: EngineState,
+  energiesInHand: CardInstance[],
+  target: CardInstance,
+): CardInstance | null {
+  if (energiesInHand.length === 0) return null;
+  if (energiesInHand.length === 1) return energiesInHand[0]!;
+
+  const def = getDefinitionSafe(state, target.definitionId);
+  const attacks = def.attacks ?? [];
+
+  // Count what types of energy the target needs ACROSS ALL its attacks,
+  // weighted by attack cost (bigger attacks matter more). Subtract what's
+  // already attached so we focus on the GAP.
+  const need: Record<string, number> = {};
+  const have: Record<string, number> = {};
+
+  for (const eng of target.attachedEnergy) {
+    const ed = getDefinitionSafe(state, eng.definitionId);
+    const t = ed.types?.[0] ?? "Colorless";
+    have[t] = (have[t] ?? 0) + 1;
+  }
+
+  // Look at each attack and tally outstanding non-Colorless requirements.
+  // Colorless slots can be filled by anything, so we tally them last.
+  let totalColorlessNeed = 0;
+  let totalCostInProgress = 0;
+  for (const attack of attacks) {
+    const cost = attack.cost ?? [];
+    if (cost.length === 0) continue;
+    totalCostInProgress = Math.max(totalCostInProgress, cost.length);
+    const remaining: Record<string, number> = { ...have };
+    let colorlessSlots = 0;
+    for (const c of cost) {
+      if (c === "Colorless") {
+        colorlessSlots += 1;
+      } else if ((remaining[c] ?? 0) > 0) {
+        remaining[c]! -= 1;
+      } else {
+        // This typed cost is still unmet — add to need.
+        need[c] = (need[c] ?? 0) + 1;
+      }
+    }
+    // Colorless slots can be filled by leftover energy of any type. Add to
+    // the colorless tally only after accounting for what we already have.
+    const leftover = Object.values(remaining).reduce((a, b) => a + b, 0);
+    totalColorlessNeed += Math.max(0, colorlessSlots - leftover);
+  }
+
+  // Score each candidate energy by how much "need" it covers.
+  const scored = energiesInHand.map((energy) => {
+    const ed = getDefinitionSafe(state, energy.definitionId);
+    const types = ed.types ?? ["Colorless"];
+    let score = 0;
+    for (const t of types) {
+      if (t === "Colorless") {
+        // Colorless covers any Colorless slot.
+        if (totalColorlessNeed > 0) score += 30;
+        else score += 5; // mild fallback bonus
+      } else if ((need[t] ?? 0) > 0) {
+        // High value — fills a specific typed gap in an attack cost.
+        score += 100 + (need[t]! * 20);
+      } else {
+        // Energy type the attack doesn't actually need. Still useful as a
+        // Colorless filler, but much less so than the right type.
+        if (totalColorlessNeed > 0) score += 15;
+        else score -= 5; // genuinely wrong type
+      }
+    }
+    return { energy, score };
+  }).sort((a, b) => b.score - a.score);
+
+  return scored[0]!.energy;
+}
+
 export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx?: StrategyContext): string | null {
   const player = getPlayer(state, playerId);
   const allPokemon = [
