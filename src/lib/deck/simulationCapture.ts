@@ -7,6 +7,7 @@ import {
   drainAutoPending,
   isPlayStalled,
   pickAutoTrainerAction,
+  pickAutoAbilityAction,
   pickAutoPlayBasicAction,
   pickAutoEvolveAction,
   pickBestAttack,
@@ -198,6 +199,24 @@ export function captureSimulationFrames(
           );
           actionCount += 1;
         }
+      }
+    }
+
+    // 4.5 Use activatable abilities (Recon Directive, Adrena-Brain, Trade,
+    // Teal Dance, Cursed Blast, etc.). Sits between energy attach and retreat
+    // so we draw / search / set up damage BEFORE deciding whether to retreat
+    // or attack. Loops back to top so multiple abilities can fire in one turn
+    // (e.g. two Drakloak's Recon Directives stacked).
+    if (!state.pendingAction && !state.turnFlags.attacked) {
+      const abilityAction = pickAutoAbilityAction(state, ctx);
+      if (abilityAction) {
+        state = applyAction(state, abilityAction, frames, "Use ability", "ability");
+        actionCount += 1;
+        const drained = drainAndCapture(state, frames, ctx);
+        state = drained.state;
+        actionCount += drained.steps;
+        if (drained.stalled || state.phase !== GamePhase.Active || state.winnerId) break;
+        continue;
       }
     }
 

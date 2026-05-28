@@ -1044,9 +1044,10 @@ export function pickAutoAbilityAction(
       score = damage >= opponentHp ? 92 : damage >= 60 ? 60 : damage > 0 ? 40 : 0;
 
     } else if (abilityLower.includes("recon directive")) {
-      // Look at top 2 of deck, put 1 into hand — exceptional setup card for Dragapult
-      // Drakloak sits on bench passively, triggering this each turn for free card advantage.
-      score = player.deck.length >= 2 ? 78 : 0;
+      // Drakloak's Recon Directive: peek top 2, draw 1, bottom-deck the other.
+      // Free card-quality engine — should fire EVERY turn it's available.
+      // Top tier setup ability (above most damage abilities).
+      score = player.deck.length >= 2 ? 92 : 0;
 
     } else if (abilityLower.includes("run away draw")) {
       // Draw 3 cards, then shuffle this Pokémon (Dudunsparce) back into the deck.
