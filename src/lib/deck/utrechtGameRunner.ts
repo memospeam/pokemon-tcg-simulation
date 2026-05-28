@@ -1045,21 +1045,54 @@ export function pickAutoAbilityAction(
       score = 95;
 
     } else if (abilityLower.includes("subjugating chains")) {
-      // Pecharunt ex: swap a Benched Darkness Pokémon with the Active; the new Active is
-      // Poisoned. Useful when (a) we have a stronger Darkness attacker on bench, or
-      // (b) we want to retreat the Active without paying retreat cost.
-      const benchDarkAttacker = player.bench.some((b) => {
+      // Pecharunt ex: swap a Benched Darkness Pokémon (NOT another Pecharunt ex)
+      // with the Active; the new Active is Poisoned.
+      //
+      // Mirror the engine's filter exactly: only Darkness-typed bench Pokémon,
+      // and Pecharunt ex itself is excluded (the card text says "except any
+      // Pecharunt ex"). If no eligible target exists, the ability would just
+      // burn the once-per-turn use, so we score it 0.
+      const eligibleBenchDark = player.bench.filter((b) => {
         const bDef = getDefinition(state, b.definitionId);
-        return (bDef?.types ?? []).includes("Darkness") && (bDef?.attacks?.length ?? 0) > 0;
+        const bName = bDef?.name?.toLowerCase() ?? "";
+        const isDark = (bDef?.types ?? []).includes("Darkness");
+        const isPecharunt = bName.includes("pecharunt ex");
+        const hasAttacks = (bDef?.attacks?.length ?? 0) > 0;
+        return isDark && !isPecharunt && hasAttacks;
       });
-      if (benchDarkAttacker) {
-        // Active in trouble OR bench attacker is better suited → switch in
-        const activeHp = player.active ? remainingHp(state, player.active) : 0;
+
+      if (eligibleBenchDark.length > 0) {
+        // The swap is only valuable when the bench candidate is a STRICTLY
+        // BETTER attacker than what's already in the Active spot. The active
+        // gets Poisoned on swap, so we don't want to throw away our primary
+        // for an opportunistic move.
         const activeDef = player.active ? getDefinition(state, player.active.definitionId) : null;
+        const activeName = activeDef?.name?.toLowerCase() ?? "";
+        const activeArchPrio = ctx
+          ? getArchetypeEnergyPriority(ctx.archetype, activeName)
+          : 0;
+        const bestBenchPrio = ctx
+          ? Math.max(
+              ...eligibleBenchDark.map((b) => {
+                const bDef = getDefinition(state, b.definitionId);
+                const bName = bDef?.name?.toLowerCase() ?? "";
+                return getArchetypeEnergyPriority(ctx.archetype, bName);
+              }),
+            )
+          : 0;
+        const benchBetter = bestBenchPrio > activeArchPrio;
+
+        const activeHp = player.active ? remainingHp(state, player.active) : 0;
         const activeMaxHp = parseInt(activeDef?.hp ?? "0", 10) || 100;
         const activeDying = activeMaxHp > 0 && activeHp / activeMaxHp < 0.4;
-        if (activeDying) score = 75;
-        else score = 45;
+        // Active is the primary attacker (archPrio ≥ 85) and not dying:
+        //   keep it there; swapping in is net-negative.
+        // Active dying + bench strictly better: rescue.
+        // Active not dying but bench strictly better: opportunistic upgrade.
+        if (activeArchPrio >= 85 && !activeDying) score = 0;
+        else if (activeDying && benchBetter) score = 75;
+        else if (benchBetter) score = 45;
+        // else score stays 0 — no point swapping to a worse attacker.
       }
 
     } else if (abilityLower.includes("r command")) {
