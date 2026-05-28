@@ -1122,6 +1122,28 @@ export function pickAutoAbilityAction(
     }
     // Unknown ability → skip (do not trigger abilities with unhandled pending states)
 
+    // Deck-out awareness: deck-draining abilities (Trade, Recon Directive,
+    // Run Errand, Run Away Draw, Psychic Draw, Fan Call, Flip the Script,
+    // etc.) are net-negative when the deck is shrinking — they shorten the
+    // game we're already losing.
+    const drawAbilityKeywords = [
+      "trade",
+      "recon directive",
+      "run errand",
+      "run away draw",
+      "psychic draw",
+      "flip the script",
+      "fan call",
+    ];
+    const isDrawAbility = drawAbilityKeywords.some((k) => abilityLower.includes(k));
+    if (isDrawAbility) {
+      if (player.deck.length <= 3) {
+        score = -1; // never deck out on our own ability
+      } else if (player.deck.length <= 7) {
+        score = Math.max(0, score - 35);
+      }
+    }
+
     return { action, score };
   })
     .filter((e) => e.score > 0)
@@ -1468,6 +1490,37 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
   return best.id;
 }
 
+/**
+ * Trainer/ability names that REMOVE cards from the deck (search or draw)
+ * without returning anything to it. These are the actions that risk losing
+ * us the game by deck-out when our deck is low.
+ *
+ * NOT in this list:
+ *   - Iono / Lillie's Determination: shuffle hand back into deck before
+ *     drawing → net deck change is often near zero or even positive when
+ *     hand is large. Beneficial when low on deck.
+ *   - Boss's Orders / Crushing Hammer / Pokémon Catcher / Stadium plays:
+ *     do not interact with deck.
+ *   - Night Stretcher / Sacred Ash: recover from discard.
+ */
+function isDeckDrainingTrainerName(nameLower: string): boolean {
+  return (
+    nameLower.includes("professor's research") ||
+    nameLower.includes("professor sada") ||
+    nameLower.includes("professor turo") ||
+    nameLower.includes("hilda") ||
+    nameLower.includes("ultra ball") ||
+    nameLower.includes("nest ball") ||
+    nameLower.includes("buddy-buddy poffin") ||
+    nameLower.includes("poffin") ||
+    nameLower.includes("pokégear") ||
+    nameLower.includes("pokegear") ||
+    nameLower.includes("crispin") ||
+    nameLower.includes("dawn") ||
+    nameLower.includes("colress")
+  );
+}
+
 export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext): Extract<GameAction, { type: "PLAY_TRAINER" }> | null {
   const playerId = state.currentPlayerId;
   const player = getPlayer(state, playerId);
@@ -1483,6 +1536,13 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
     const def = card ? getDefinition(state, card.definitionId) : undefined;
     return def && isSupporter(def);
   });
+
+  // Deck-out awareness: as our deck shrinks, deck-draining plays become a
+  // losing move. Iono / Lillie's are actually safer in this window because
+  // they reshuffle our hand back in before drawing.
+  const deckSize = player.deck.length;
+  const deckCritical = deckSize <= 4;   // any extra drain probably ends the game
+  const deckLow      = deckSize <= 10;  // start being careful
 
   const scored = legal
     .map((action) => {
@@ -1716,6 +1776,24 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
       // Apply archetype-specific bonus from strategy knowledge
       if (ctx) {
         score += getArchetypeTrainerBonus(ctx.archetype, name);
+      }
+
+      // Deck-out awareness: heavily down-rank actions that drain the deck
+      // when the deck is shrinking, and gently up-rank actions that REFILL
+      // the deck (Iono / Lillie's Determination — they shuffle hand back in
+      // before drawing, so they often leave the deck no worse off).
+      if (deckCritical && isDeckDrainingTrainerName(name)) {
+        // One more drain probably ends the game. Take it off the table.
+        score = -1;
+      } else if (deckLow && isDeckDrainingTrainerName(name)) {
+        // Allow only if nothing else is strongly preferable.
+        score -= 35;
+      }
+      if (deckCritical && (name.includes("iono") || name.includes("lillie"))) {
+        // Reshuffling hand back into deck literally buys turns. Boost.
+        score = Math.max(score, 90);
+      } else if (deckLow && (name.includes("iono") || name.includes("lillie"))) {
+        score += 10;
       }
 
       return { action, score };
