@@ -1020,18 +1020,43 @@ export function pickAutoAbilityAction(
       score = canKOTarget ? 90 : 50; // High if KO, medium for spread
 
     } else if (abilityLower.includes("adrena-brain")) {
-      // Move up to 3 damage counters from ONE opponent Pokémon to ANOTHER opponent Pokémon
-      // Source = opponent's Pokémon with excess counters; Target = opponent's Pokémon nearest to KO
-      const opponentDamagedList = allOpponent.filter((p) => p.damageCounters >= 3);
+      // Munkidori: move up to 3 damage counters from ONE opp Pokémon to ANOTHER opp Pokémon.
+      // Use any time the opponent has at least one damaged Pokémon AND another Pokémon to
+      // move counters to — there's almost always value in piling damage toward a KO.
+      const opponentDamagedList = allOpponent.filter((p) => p.damageCounters >= 1);
       const canConsolidateKO = allOpponent.some((p) => {
         const hp = remainingHp(state, p);
-        // Can we finish off a Pokémon by moving 3 counters (30 damage) onto it?
         return hp <= 30 && opponentDamagedList.some((src) => src.instanceId !== p.instanceId);
       });
-      const hasSpreadDamage = opponentDamagedList.length >= 2; // Two damaged Pokémon → consolidate
-      if (canConsolidateKO) score = 88;      // Move 30 damage to KO a near-dead Pokémon
-      else if (hasSpreadDamage) score = 55;  // Redistribute to consolidate for future KO
-      // else score = 0 — nothing to move, don't waste the ability
+      const hasSpreadDamage = opponentDamagedList.length >= 2; // two damaged → consolidate
+      const hasAnyDamage = opponentDamagedList.length >= 1 && allOpponent.length >= 2;
+      if (canConsolidateKO) score = 88;       // Move ≥30 damage onto a near-dead Pokémon
+      else if (hasSpreadDamage) score = 60;   // Redistribute for future KO
+      else if (hasAnyDamage) score = 35;      // Any damage worth shifting toward the target
+      // else score = 0 — opponent has zero damage; nothing to redistribute
+
+    } else if (abilityLower.includes("run errand")) {
+      // Mega Kangaskhan ex: active-only, draw 2 cards. Pure card advantage with
+      // no downside — always fire when legal (engine guards the active-only rule).
+      score = 95;
+
+    } else if (abilityLower.includes("subjugating chains")) {
+      // Pecharunt ex: swap a Benched Darkness Pokémon with the Active; the new Active is
+      // Poisoned. Useful when (a) we have a stronger Darkness attacker on bench, or
+      // (b) we want to retreat the Active without paying retreat cost.
+      const benchDarkAttacker = player.bench.some((b) => {
+        const bDef = getDefinition(state, b.definitionId);
+        return (bDef?.types ?? []).includes("Darkness") && (bDef?.attacks?.length ?? 0) > 0;
+      });
+      if (benchDarkAttacker) {
+        // Active in trouble OR bench attacker is better suited → switch in
+        const activeHp = player.active ? remainingHp(state, player.active) : 0;
+        const activeDef = player.active ? getDefinition(state, player.active.definitionId) : null;
+        const activeMaxHp = parseInt(activeDef?.hp ?? "0", 10) || 100;
+        const activeDying = activeMaxHp > 0 && activeHp / activeMaxHp < 0.4;
+        if (activeDying) score = 75;
+        else score = 45;
+      }
 
     } else if (abilityLower.includes("r command")) {
       // Deal 20 damage × TR Supporters in own discard pile
