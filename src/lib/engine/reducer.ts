@@ -679,6 +679,13 @@ function handleChooseOpponentDamage(
   const result = resolveChooseOpponentDamage(state, playerId, targetId);
   if (result === "failed") return state;
   if (result === "pending") return state;
+  // DAMAGE_TWO_OPPONENT pendings only spawn from attack effects (e.g.
+  // Mirage Barrage). When the last pick resolves, the attack is complete:
+  // mark the turn as having attacked so end-of-turn / auto-end fires and
+  // the player can't loop-attack with the same Pokémon.
+  if (state.currentPlayerId === playerId) {
+    state.turnFlags.attacked = true;
+  }
   return finishAttackAndEffects(state, playerId);
 }
 
@@ -1747,6 +1754,13 @@ function handleEndTurn(state: EngineState): EngineState {
   log(state, `${getPlayer(state, previous).name} ended their turn.`);
 
   const drawingPlayer = getPlayer(state, state.currentPlayerId);
+  // Deck-out: a player who cannot draw at the start of their turn loses.
+  if (drawingPlayer.deck.length === 0) {
+    state.winnerId = getOpponentId(state.currentPlayerId);
+    state.phase = GamePhase.Finished;
+    log(state, `${drawingPlayer.name} cannot draw. Deck out!`);
+    return state;
+  }
   drawCards(state, state.currentPlayerId, 1);
 
   if (drawingPlayer.active === null && drawingPlayer.bench.length === 0) {

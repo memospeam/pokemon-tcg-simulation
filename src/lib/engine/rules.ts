@@ -213,11 +213,13 @@ export function checkWinCondition(state: EngineState): PlayerId | null {
     if (player.prizes.length === 0) return playerId;
   }
 
+  // Deck-out is NOT an immediate loss the moment a player's deck hits zero —
+  // a player only loses to deck-out when they FAIL TO DRAW at the start of
+  // their turn (handled in handleDraw). Checking deck.length === 0 here would
+  // incorrectly end the game the instant a player drew their last card.
+
   for (const playerId of [PlayerId.P1, PlayerId.P2]) {
     const player = getPlayer(state, playerId);
-    if (player.deck.length === 0 && state.phase === GamePhase.Active) {
-      return getOpponentId(playerId);
-    }
     if (!player.active && player.bench.length === 0 && state.phase === GamePhase.Active) {
       return getOpponentId(playerId);
     }
