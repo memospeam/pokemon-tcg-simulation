@@ -300,7 +300,7 @@
           "Colorless"
         ],
         "convertedEnergyCost": 1,
-        "damage": "10×"
+        "damage": "10\u00d7"
       }
     ]
   },
@@ -340,7 +340,7 @@
           "Grass"
         ],
         "convertedEnergyCost": 1,
-        "damage": "20×"
+        "damage": "20\u00d7"
       }
     ]
   },
@@ -441,7 +441,7 @@
           "Colorless"
         ],
         "convertedEnergyCost": 1,
-        "damage": "60×"
+        "damage": "60\u00d7"
       },
       {
         "name": "Destructive Drill",
@@ -686,7 +686,7 @@
           "Water"
         ],
         "convertedEnergyCost": 1,
-        "damage": "20×"
+        "damage": "20\u00d7"
       },
       {
         "name": "Crazy Headbutt",
@@ -824,7 +824,7 @@
           "Water"
         ],
         "convertedEnergyCost": 1,
-        "damage": "50×"
+        "damage": "50\u00d7"
       },
       {
         "name": "Absolute Snow",
@@ -935,6 +935,23 @@
     ]
   },
   {
+    "pokemonName": "munkidori",
+    "apiId": "sv6-95",
+    "set": "TWM",
+    "number": "95",
+    "attacks": [
+      {
+        "name": "Mind Bend",
+        "cost": [
+          "Psychic",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "60"
+      }
+    ]
+  },
+  {
     "pokemonName": "n's darmanitan",
     "apiId": "sv9-27",
     "set": "JTG",
@@ -947,7 +964,7 @@
           "Colorless"
         ],
         "convertedEnergyCost": 2,
-        "damage": "30×"
+        "damage": "30\u00d7"
       },
       {
         "name": "Flamebody Cannon",
@@ -1089,7 +1106,7 @@
           "Colorless"
         ],
         "convertedEnergyCost": 2,
-        "damage": "20×"
+        "damage": "20\u00d7"
       }
     ]
   },
@@ -1106,7 +1123,7 @@
           "Darkness"
         ],
         "convertedEnergyCost": 2,
-        "damage": "60×"
+        "damage": "60\u00d7"
       }
     ]
   },
@@ -1211,7 +1228,7 @@
           "Colorless"
         ],
         "convertedEnergyCost": 2,
-        "damage": "60×"
+        "damage": "60\u00d7"
       },
       {
         "name": "Hammer In",
@@ -1280,7 +1297,33 @@
           "Colorless"
         ],
         "convertedEnergyCost": 3,
-        "damage": "20×"
+        "damage": "20\u00d7"
+      }
+    ]
+  },
+  {
+    "pokemonName": "wellspring mask ogerpon ex",
+    "apiId": "sv6-64",
+    "set": "TWM",
+    "number": "64",
+    "attacks": [
+      {
+        "name": "Sob",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "20"
+      },
+      {
+        "name": "Torrential Pump",
+        "cost": [
+          "Water",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "100"
       }
     ]
   },
