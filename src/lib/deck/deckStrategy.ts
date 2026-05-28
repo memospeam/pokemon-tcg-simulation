@@ -366,11 +366,16 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
       "pokégear": 8,
     },
     attackerRoles: [
+      // Zoroark deck runs only Darkness Energy. Zekrom (F+L+L+C) and Darmanitan
+      // (Fire) can't be powered up reliably; energy on them is wasted. Pecharunt
+      // shares the Darkness type but starves the primary. Focus everything on
+      // N's Zoroark ex — Night Joker copies the opponent's attack so it carries
+      // the win condition alone.
       { pokemonName: "N's Zoroark ex", role: "primary", energyPriority: 95, benchFirst: false },
-      { pokemonName: "N's Zekrom", role: "secondary", energyPriority: 60, benchFirst: true },
-      { pokemonName: "Pecharunt ex", role: "tech", energyPriority: 40, benchFirst: true },
-      { pokemonName: "N's Darmanitan", role: "tech", energyPriority: 30, benchFirst: true },
-      { pokemonName: "N's Zorua", role: "setup", energyPriority: 20, benchFirst: true },
+      { pokemonName: "N's Zekrom", role: "secondary", energyPriority: 0, benchFirst: true },
+      { pokemonName: "Pecharunt ex", role: "tech", energyPriority: 0, benchFirst: true },
+      { pokemonName: "N's Darmanitan", role: "tech", energyPriority: 0, benchFirst: true },
+      { pokemonName: "N's Zorua", role: "setup", energyPriority: 0, benchFirst: true },
     ],
     benchPriority: ["n's zorua", "n's zekrom", "pecharunt ex", "munkidori"],
     bossPriority: ["manaphy", "dudunsparce", "fan rotom", "fezandipiti ex"],

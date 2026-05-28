@@ -1455,6 +1455,16 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
       if (ctx.archetype === "greninja" && nameLower.includes("budew")) score -= 200;
       if (ctx.archetype === "garchomp" && (nameLower.includes("roserade") || nameLower.includes("roselia"))) score -= 200;
       if (ctx.archetype === "hydrapple" && nameLower.includes("meganium")) score -= 200;
+      // Zoroark deck only ships Darkness Energy, but N's Zekrom (Fire+L+L+C)
+      // and N's Darmanitan (Fire-based) need types we don't have. Pecharunt ex
+      // does share Darkness but starves Zoroark ex of energy. User-requested:
+      // focus 100% on N's Zoroark ex.
+      if (ctx.archetype === "zoroark" && (
+        nameLower.includes("n's zekrom") ||
+        nameLower.includes("n's darmanitan") ||
+        nameLower.includes("n's darumaka")
+      )) score -= 200;
+      if (ctx.archetype === "zoroark" && nameLower.includes("pecharunt ex")) score -= 150;
 
       // ─ Soft avoidance: weaker than primaries but can still take energy if nothing else ─
       // Original values from before the rework — gentle penalties that don't completely
