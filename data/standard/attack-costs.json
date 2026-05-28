@@ -198,6 +198,22 @@
     ]
   },
   {
+    "pokemonName": "cynthia's gabite",
+    "apiId": "sv10-103",
+    "set": "DRI",
+    "number": "103",
+    "attacks": [
+      {
+        "name": "Dragonslice",
+        "cost": [
+          "Fighting"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "40"
+      }
+    ]
+  },
+  {
     "pokemonName": "cynthia's garchomp ex",
     "apiId": "sv10-104",
     "set": "DRI",
@@ -232,6 +248,22 @@
         "name": "Rock Hurl",
         "cost": [
           "Fighting"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "20"
+      }
+    ]
+  },
+  {
+    "pokemonName": "cynthia's roselia",
+    "apiId": "sv10-7",
+    "set": "DRI",
+    "number": "7",
+    "attacks": [
+      {
+        "name": "Spike Sting",
+        "cost": [
+          "Colorless"
         ],
         "convertedEnergyCost": 1,
         "damage": "20"
@@ -764,6 +796,23 @@
     ]
   },
   {
+    "pokemonName": "lillie's clefairy ex",
+    "apiId": "sv9-56",
+    "set": "JTG",
+    "number": "56",
+    "attacks": [
+      {
+        "name": "Full Moon Rondo",
+        "cost": [
+          "Psychic",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "20+"
+      }
+    ]
+  },
+  {
     "pokemonName": "mega froslass ex",
     "apiId": "me2pt5-47",
     "set": "ASC",
@@ -804,6 +853,31 @@
         ],
         "convertedEnergyCost": 3,
         "damage": "200+"
+      }
+    ]
+  },
+  {
+    "pokemonName": "mega lopunny ex",
+    "apiId": "me2-84",
+    "set": "PFL",
+    "number": "84",
+    "attacks": [
+      {
+        "name": "Gale Thrust",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "60+"
+      },
+      {
+        "name": "Spiky Hopper",
+        "cost": [
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "160"
       }
     ]
   },
@@ -1033,6 +1107,23 @@
         ],
         "convertedEnergyCost": 2,
         "damage": "60×"
+      }
+    ]
+  },
+  {
+    "pokemonName": "shaymin",
+    "apiId": "sv10-10",
+    "set": "DRI",
+    "number": "10",
+    "attacks": [
+      {
+        "name": "Smash Kick",
+        "cost": [
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "30"
       }
     ]
   },
