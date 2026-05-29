@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickBestEnergyForTarget } from "./utrechtGameRunner";
+import { pickBestEnergyForTarget } from "./metaGameRunner";
 import { createCardInstance } from "../models/instance";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
 import { emptyTurnFlags, type EngineState } from "../engine/types";

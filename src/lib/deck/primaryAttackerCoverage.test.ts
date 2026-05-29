@@ -8,13 +8,13 @@ import {
 /**
  * The energy-attachment AI uses `archPriority >= 85` to detect a deck's
  * primary attacker and grant it a boosted score (see pickBestEnergyTarget
- * in utrechtGameRunner.ts). This file locks in the contract: every known
+ * in metaGameRunner.ts). This file locks in the contract: every known
  * meta archetype must have at least one Pokémon that crosses the threshold,
  * otherwise the primary-attacker bonus silently no-ops for that deck.
  *
  * If a new archetype is added with a primary attacker below 85, this test
  * will fail and force the author to either (a) raise its energyPriority,
- * or (b) lower the threshold in utrechtGameRunner.ts.
+ * or (b) lower the threshold in metaGameRunner.ts.
  */
 
 const PRIMARY_THRESHOLD = 85;

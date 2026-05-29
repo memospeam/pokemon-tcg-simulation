@@ -3,7 +3,7 @@ import type { CardDefinition } from "../models/definition";
 import { createCardInstance } from "../models/instance";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
 import { emptyTurnFlags, getPlayer, type EngineState } from "../engine/types";
-import { getTournamentDeckById, UTRECHT_535_TOP16 } from "./tournamentPresets";
+import { getTournamentDeckById, TOURNAMENT_535_TOP16 } from "./tournamentPresets";
 import { buildPlaytestDeckFromCorpusText } from "./corpusDeckBuilder";
 import {
   autoSetupEngineState,
@@ -11,7 +11,7 @@ import {
   runEngineAutoPlay,
   runMatchFromBuiltDecks,
   runTournamentPresetMatch,
-} from "./utrechtGameRunner";
+} from "./metaGameRunner";
 
 function mockBasic(
   name: string,
@@ -114,7 +114,7 @@ function mirrorMatchState(): EngineState {
   };
 }
 
-describe("utrechtGameRunner", () => {
+describe("metaGameRunner", () => {
   it("runs alternating attacks until a winner is declared", () => {
     const result = runEngineAutoPlay(mirrorMatchState(), { maxTurns: 20, maxActions: 80 });
     expect(result.stalled).toBe(false);
@@ -176,8 +176,8 @@ describe("utrechtGameRunner", () => {
     expect(getPlayer(result.state, PlayerId.P1).active!.attachedEnergy).toHaveLength(2);
   });
 
-  it("builds a 60-card corpus deck from a Utrecht list", () => {
-    const preset = UTRECHT_535_TOP16.decks[1];
+  it("builds a 60-card corpus deck from a tournament list", () => {
+    const preset = TOURNAMENT_535_TOP16.decks[1];
     const deck = buildPlaytestDeckFromCorpusText(preset.label, preset.text);
     expect(deck.resolveErrors).toEqual([]);
     expect(deck.cards).toHaveLength(60);
@@ -186,7 +186,7 @@ describe("utrechtGameRunner", () => {
     expect(deck.cards.some((card) => card.name === "Lillie's Determination")).toBe(true);
   });
 
-  it("auto-setups a match from Utrecht Dragapult mirror decks", () => {
+  it("auto-setups a match from Tournament Dragapult mirror decks", () => {
     const preset = getTournamentDeckById("utrecht-2-hasan-kunukcu")!;
     const deck = buildPlaytestDeckFromCorpusText(preset.label, preset.text);
     let state = beginMatchFromBuiltDecks({

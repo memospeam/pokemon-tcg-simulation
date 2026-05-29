@@ -7,7 +7,7 @@ import {
   type GameRunOptions,
   type MatchSetupOptions,
   type TournamentMatchResult,
-} from "./utrechtGameRunner";
+} from "./metaGameRunner";
 
 export interface MatchBatchOptions {
   seeds: number[];

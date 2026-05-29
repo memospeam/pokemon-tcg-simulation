@@ -9,7 +9,7 @@ const tournamentJson = JSON.parse(
 ) as { decks: Array<{ label: string; text: string }> };
 
 describe("tournament deck presets", () => {
-  it("parses all Utrecht Top 16 lists without format errors", () => {
+  it("parses all Tournament Top 16 lists without format errors", () => {
     for (const deck of tournamentJson.decks) {
       const parsed = parseLimitlessDeckList(deck.text);
       expect(parsed.errors, deck.label).toHaveLength(0);

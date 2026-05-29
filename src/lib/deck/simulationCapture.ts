@@ -14,7 +14,7 @@ import {
   pickBestEnergyForTarget,
   pickBestEnergyTarget,
   pickRetreatAction,
-} from "./utrechtGameRunner";
+} from "./metaGameRunner";
 import { buildStrategyContext, type StrategyContext } from "./deckStrategy";
 import { gameReducer, getLegalActions } from "../engine/reducer";
 import { getDefinition, getPlayer, type EngineState } from "../engine/types";

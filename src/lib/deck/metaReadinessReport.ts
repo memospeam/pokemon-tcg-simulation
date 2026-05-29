@@ -20,7 +20,7 @@ import {
   type MatchBatchOptions,
   type SimHealthSummary,
 } from "./playtestRunner";
-import type { Top16AnalysisSummary, TournamentDeckAnalysis } from "./utrechtTop16Analyzer";
+import type { Top16AnalysisSummary, TournamentDeckAnalysis } from "./top16Analyzer";
 
 export interface CriMetaReadinessReport {
   analysis: Top16AnalysisSummary & { focusSignatures: ReturnType<typeof summarizeCriPlaytestAnalysis>["focusSignatures"] };

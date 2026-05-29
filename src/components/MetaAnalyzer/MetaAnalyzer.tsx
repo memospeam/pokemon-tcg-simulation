@@ -8,7 +8,7 @@ import {
   type StrategyProfile,
 } from "@/lib/deck/deckStrategy";
 import { buildPlaytestDeckFromCorpusText } from "@/lib/deck/corpusDeckBuilder";
-import { runMatchFromBuiltDecks } from "@/lib/deck/utrechtGameRunner";
+import { runMatchFromBuiltDecks } from "@/lib/deck/metaGameRunner";
 import { PlayerId } from "@/lib/models/enums";
 
 // ─── Types ───────────────────────────────────────────────────────────────────

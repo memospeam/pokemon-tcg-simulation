@@ -6,14 +6,14 @@ import { GamePhase, PlayerId, Zone } from "../models/enums";
 import { gameReducer } from "../engine/reducer";
 import { applyWeaknessAndResistanceForPokemon } from "../engine/effects/passiveRules";
 import { emptyTurnFlags, getPlayer, type EngineState } from "../engine/types";
-import { UTRECHT_535_TOP16 } from "./tournamentPresets";
+import { TOURNAMENT_535_TOP16 } from "./tournamentPresets";
 import {
-  analyzeAllUtrechtTop16,
+  analyzeAllTop16,
   analyzeTournamentDeck,
   ARCHETYPE_SIGNATURES,
   formatTop16AnalysisReport,
   summarizeTop16Analysis,
-} from "./utrechtTop16Analyzer";
+} from "./top16Analyzer";
 
 function mockBasic(
   name: string,
@@ -161,8 +161,8 @@ function activeBattleState(overrides: Partial<EngineState> = {}): EngineState {
   };
 }
 
-describe("Utrecht Top 16 deck analysis", () => {
-  const analyses = analyzeAllUtrechtTop16();
+describe("Tournament Top 16 deck analysis", () => {
+  const analyses = analyzeAllTop16();
   const summary = summarizeTop16Analysis(analyses);
 
   it("covers all 16 tournament decks", () => {
@@ -206,16 +206,16 @@ describe("Utrecht Top 16 deck analysis", () => {
 
   it("prints analysis report for manual review", () => {
     const report = formatTop16AnalysisReport(summary, analyses);
-    expect(report).toContain("Utrecht Top 16 Playtest Analysis");
+    expect(report).toContain("Tournament Top 16 Playtest Analysis");
     expect(report).toContain("Signature effects:");
     // eslint-disable-next-line no-console
     console.log("\n" + report);
   });
 });
 
-describe("Utrecht Top 16 engine smoke playtests", () => {
+describe("Tournament Top 16 engine smoke playtests", () => {
   it("Lopunny Gale Thrust finishes the turn after retreating into Active", () => {
-    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.placement === 1)!;
+    const deck = TOURNAMENT_535_TOP16.decks.find((entry) => entry.placement === 1)!;
     expect(analyzeTournamentDeck(deck).signatureEffects.some((e) => e.effectName === "Gale Thrust")).toBe(true);
 
     const lopunnyDef = mockBasic("Mega Lopunny ex", "260", ["Colorless"], [
@@ -267,7 +267,7 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
   });
 
   it("Dragapult Phantom Dive distributes bench damage and completes the attack", () => {
-    const dragapultDecks = UTRECHT_535_TOP16.decks.filter((entry) => entry.deckName.startsWith("Dragapult"));
+    const dragapultDecks = TOURNAMENT_535_TOP16.decks.filter((entry) => entry.deckName.startsWith("Dragapult"));
     expect(dragapultDecks.length).toBeGreaterThanOrEqual(8);
 
     const dragapultDef = mockBasic("Dragapult ex", "330", ["Psychic"], [
@@ -328,7 +328,7 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
   });
 
   it("Hydrapple Ripening Charge heals after attaching Grass Energy", () => {
-    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.placement === 16)!;
+    const deck = TOURNAMENT_535_TOP16.decks.find((entry) => entry.placement === 16)!;
     expect(analyzeTournamentDeck(deck).signatureEffects.map((e) => e.effectName)).toEqual(
       expect.arrayContaining(["Ripening Charge", "Syrup Storm"]),
     );
@@ -382,7 +382,7 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
   });
 
   it("Munkidori Adrena-Brain moves damage through gameReducer", () => {
-    const dragapultDeck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Dragapult")!;
+    const dragapultDeck = TOURNAMENT_535_TOP16.decks.find((entry) => entry.deckName === "Dragapult")!;
     expect(analyzeTournamentDeck(dragapultDeck).signatureEffects.some((e) => e.effectName === "Adrena-Brain")).toBe(
       true,
     );
@@ -440,7 +440,7 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
   });
 
   it("Dragapult Dusknoir Cursed Blast damages opponent then KOs self", () => {
-    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Dragapult Dusknoir")!;
+    const deck = TOURNAMENT_535_TOP16.decks.find((entry) => entry.deckName === "Dragapult Dusknoir")!;
     expect(analyzeTournamentDeck(deck).signatureEffects.some((e) => e.effectName === "Cursed Blast")).toBe(true);
 
     const abilityText =
@@ -488,7 +488,7 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
   });
 
   it("Rocket Honchkrow Rocket Feathers discards Team Rocket Supporters for bonus damage", () => {
-    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Rocket's Honchkrow")!;
+    const deck = TOURNAMENT_535_TOP16.decks.find((entry) => entry.deckName === "Rocket's Honchkrow")!;
     expect(analyzeTournamentDeck(deck).signatureEffects.some((e) => e.effectName === "Rocket Feathers")).toBe(true);
 
     const attackText =
@@ -534,7 +534,7 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
   });
 
   it("Ogerpon Teal Dance attaches Grass Energy and draws a card", () => {
-    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Ogerpon Box")!;
+    const deck = TOURNAMENT_535_TOP16.decks.find((entry) => entry.deckName === "Ogerpon Box")!;
     expect(analyzeTournamentDeck(deck).signatureEffects.map((e) => e.effectName)).toEqual(
       expect.arrayContaining(["Teal Dance", "Myriad Leaf Shower"]),
     );
@@ -625,7 +625,7 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
   });
 
   it("N's Zoroark Trade draws after discarding from hand", () => {
-    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "N's Zoroark")!;
+    const deck = TOURNAMENT_535_TOP16.decks.find((entry) => entry.deckName === "N's Zoroark")!;
     expect(analyzeTournamentDeck(deck).signatureEffects.map((e) => e.effectName)).toEqual(
       expect.arrayContaining(["Trade", "Night Joker"]),
     );
@@ -721,7 +721,7 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
   });
 
   it("Alakazam Powerful Hand scales damage with hand size", () => {
-    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Alakazam Dudunsparce")!;
+    const deck = TOURNAMENT_535_TOP16.decks.find((entry) => entry.deckName === "Alakazam Dudunsparce")!;
     expect(analyzeTournamentDeck(deck).signatureEffects.map((e) => e.effectName)).toEqual(
       expect.arrayContaining(["Powerful Hand", "Psychic Draw"]),
     );
@@ -807,7 +807,7 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
   });
 
   it("Cynthia's Garchomp Champion's Call searches Cynthia's Pokémon from deck", () => {
-    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Cynthia's Garchomp")!;
+    const deck = TOURNAMENT_535_TOP16.decks.find((entry) => entry.deckName === "Cynthia's Garchomp")!;
     expect(analyzeTournamentDeck(deck).signatureEffects.map((e) => e.effectName)).toEqual(
       expect.arrayContaining(["Champion's Call", "Corkscrew Dive"]),
     );
@@ -890,7 +890,7 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
   });
 
   it("Greninja Shinobi Blade searches the deck after attacking", () => {
-    const deck = UTRECHT_535_TOP16.decks.find((entry) => entry.deckName === "Greninja")!;
+    const deck = TOURNAMENT_535_TOP16.decks.find((entry) => entry.deckName === "Greninja")!;
     expect(analyzeTournamentDeck(deck).signatureEffects.map((e) => e.effectName)).toEqual(
       expect.arrayContaining(["Shinobi Blade", "Mirage Barrage"]),
     );
@@ -1145,7 +1145,7 @@ describe("Utrecht Top 16 engine smoke playtests", () => {
   });
 
   it("tracks engine-ready signature count across meta archetypes", () => {
-    const analyses = analyzeAllUtrechtTop16();
+    const analyses = analyzeAllTop16();
     const summary = summarizeTop16Analysis(analyses);
     expect(summary.signatureEffects.engineReady).toBe(summary.signatureEffects.total);
     expect(summary.signatureEffects.gaps).toEqual([]);

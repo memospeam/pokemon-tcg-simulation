@@ -3,7 +3,7 @@ import { getStandardEffectText } from "../format/loadStandardCorpus";
 import type { StandardCardIndex } from "../format/prepareStandardCorpus";
 import { findCorpusCard } from "./corpusDeckBuilder";
 import { parseLimitlessDeckList, type DeckSection } from "./limitlessParser";
-import { UTRECHT_535_TOP16, type TournamentDeckPreset } from "./tournamentPresets";
+import { TOURNAMENT_535_TOP16, type TournamentDeckPreset } from "./tournamentPresets";
 
 export interface DeckEffectEntry {
   cardName: string;
@@ -47,7 +47,7 @@ export interface Top16AnalysisSummary {
   };
 }
 
-/** Signature mechanics we expect to smoke-test per Utrecht archetype. */
+/** Signature mechanics we expect to smoke-test per tournament archetype. */
 export const ARCHETYPE_SIGNATURES: Record<string, { attacks?: string[]; abilities?: string[] }> = {
   "Lopunny Dudunsparce": { attacks: ["Gale Thrust"] },
   Dragapult: { attacks: ["Phantom Dive"], abilities: ["Adrena-Brain"] },
@@ -230,8 +230,8 @@ export function analyzeTournamentDeck(
   };
 }
 
-export function analyzeAllUtrechtTop16(): TournamentDeckAnalysis[] {
-  return UTRECHT_535_TOP16.decks.map((deck) => analyzeTournamentDeck(deck));
+export function analyzeAllTop16(): TournamentDeckAnalysis[] {
+  return TOURNAMENT_535_TOP16.decks.map((deck) => analyzeTournamentDeck(deck));
 }
 
 export function summarizeTop16Analysis(analyses: TournamentDeckAnalysis[]): Top16AnalysisSummary {
@@ -256,7 +256,7 @@ export function summarizeTop16Analysis(analyses: TournamentDeckAnalysis[]): Top1
   }
 
   return {
-    tournamentName: UTRECHT_535_TOP16.name,
+    tournamentName: TOURNAMENT_535_TOP16.name,
     deckCount: analyses.length,
     uniqueArchetypes,
     pokemonCardsResolved: analyses.reduce((sum, analysis) => sum + analysis.corpus.pokemonResolved, 0),
@@ -289,7 +289,7 @@ export function formatTop16AnalysisReport(
   analyses: TournamentDeckAnalysis[],
 ): string {
   const lines: string[] = [
-    `# Utrecht Top 16 Playtest Analysis`,
+    `# Tournament Top 16 Playtest Analysis`,
     ``,
     `Tournament: ${summary.tournamentName}`,
     `Decks: ${summary.deckCount} | Archetypes: ${summary.uniqueArchetypes.length}`,

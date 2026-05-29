@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CardDefinition } from "../models/definition";
 import { createCardInstance } from "../models/instance";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
-import { pickBestEnergyTarget } from "./utrechtGameRunner";
+import { pickBestEnergyTarget } from "./metaGameRunner";
 import { buildStrategyContext } from "./deckStrategy";
 import { emptyTurnFlags, type EngineState } from "../engine/types";
 

@@ -8,7 +8,7 @@ import {
   analyzeTournamentDeck,
   type Top16AnalysisSummary,
   type TournamentDeckAnalysis,
-} from "./utrechtTop16Analyzer";
+} from "./top16Analyzer";
 import { CRI_PLAYTEST_DECKS } from "./criDeckPresets";
 import type { TournamentDeckPreset } from "./tournamentPresets";
 

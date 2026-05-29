@@ -10,7 +10,7 @@ import { getTournamentDeckById } from "./tournamentPresets";
 
 const DRAGAPULT_DECK_ID = "utrecht-2-hasan-kunukcu";
 
-function loadUtrechtDeck(deckId: string): BuiltDeck {
+function loadTournamentDeck(deckId: string): BuiltDeck {
   const preset = getTournamentDeckById(deckId)!;
   return buildPlaytestDeckFromCorpusText(preset.label, preset.text);
 }
@@ -110,10 +110,10 @@ function trainerScenarioState(
   };
 }
 
-describe("Utrecht trainer scenarios from real decklists", () => {
-  const dragapultDeck = loadUtrechtDeck(DRAGAPULT_DECK_ID);
+describe("Tournament trainer scenarios from real decklists", () => {
+  const dragapultDeck = loadTournamentDeck(DRAGAPULT_DECK_ID);
 
-  it("plays Boss's Orders from Utrecht Dragapult list and switches opponent Active", () => {
+  it("plays Boss's Orders from Tournament Dragapult list and switches opponent Active", () => {
     const boss = findDefinition(dragapultDeck, "Boss's Orders");
     const benchMon = findDefinition(dragapultDeck, "Munkidori");
     let state = trainerScenarioState(dragapultDeck, {
@@ -136,7 +136,7 @@ describe("Utrecht trainer scenarios from real decklists", () => {
     expect(getPlayer(state, PlayerId.P2).active?.instanceId).toBe(benchCard.instanceId);
   });
 
-  it("plays Buddy-Buddy Poffin from Utrecht Dragapult list and benches Budew", () => {
+  it("plays Buddy-Buddy Poffin from Tournament Dragapult list and benches Budew", () => {
     const poffin = findDefinition(dragapultDeck, "Buddy-Buddy Poffin");
     const budew = findDefinition(dragapultDeck, "Budew");
     let state = trainerScenarioState(dragapultDeck, {
@@ -159,7 +159,7 @@ describe("Utrecht trainer scenarios from real decklists", () => {
     expect(state.definitions[getPlayer(state, PlayerId.P1).bench[0]!.definitionId].name).toBe("Budew");
   });
 
-  it("plays Night Stretcher from Utrecht Dragapult list and recovers discard", () => {
+  it("plays Night Stretcher from Tournament Dragapult list and recovers discard", () => {
     const stretcher = findDefinition(dragapultDeck, "Night Stretcher");
     const dreepy = findDefinition(dragapultDeck, "Dreepy");
     let state = trainerScenarioState(dragapultDeck, {

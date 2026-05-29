@@ -6,7 +6,7 @@ import {
   buildShareUrl,
   parseLocationHash,
 } from "@/lib/deck/tcgmastersUrl";
-import { UTRECHT_535_TOP16, getTournamentDeckById } from "@/lib/deck/tournamentPresets";
+import { TOURNAMENT_535_TOP16, getTournamentDeckById } from "@/lib/deck/tournamentPresets";
 import { useDeckStore } from "@/stores/deckStore";
 import { DeckBuilder } from "../DeckBuilder/DeckBuilder";
 
@@ -101,8 +101,8 @@ export function Lobby({ onPlay }: LobbyProps) {
             <h2>Play Match</h2>
             <p>
               Load tournament decks from{" "}
-              <a href={UTRECHT_535_TOP16.sourceUrl} target="_blank" rel="noreferrer">
-                {UTRECHT_535_TOP16.name} Top 16
+              <a href={TOURNAMENT_535_TOP16.sourceUrl} target="_blank" rel="noreferrer">
+                {TOURNAMENT_535_TOP16.name} Top 16
               </a>
               , the Dragapult mirror preset, or your saved decklists.
             </p>
@@ -160,8 +160,8 @@ export function Lobby({ onPlay }: LobbyProps) {
                   <option value="" disabled>
                     Load deck
                   </option>
-                  <optgroup label={`${UTRECHT_535_TOP16.name} Top 16`}>
-                    {UTRECHT_535_TOP16.decks.map((preset) => (
+                  <optgroup label={`${TOURNAMENT_535_TOP16.name} Top 16`}>
+                    {TOURNAMENT_535_TOP16.decks.map((preset) => (
                       <option key={preset.id} value={preset.id}>
                         {preset.label}
                       </option>

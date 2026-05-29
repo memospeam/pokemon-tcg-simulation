@@ -3,7 +3,7 @@ import type { BuiltDeck } from "@/lib/deck/builder";
 import { clearGameState, loadGameState, saveGameState } from "@/lib/deck/storage";
 import { beginGame, gameReducer, getLegalActions, startActiveGame, type EngineState, type GameAction } from "@/lib/engine";
 import { PlayerId } from "@/lib/models/enums";
-import { autoSetupEngineState, runAISingleTurn } from "@/lib/deck/utrechtGameRunner";
+import { autoSetupEngineState, runAISingleTurn } from "@/lib/deck/metaGameRunner";
 import { buildStrategyContext, type StrategyContext } from "@/lib/deck/deckStrategy";
 import { getDefinition, getPlayer } from "@/lib/engine";
 

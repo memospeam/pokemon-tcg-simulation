@@ -19,13 +19,13 @@ export interface TournamentPresetBundle {
   decks: TournamentDeckPreset[];
 }
 
-export const UTRECHT_535_TOP16 = tournament535 as TournamentPresetBundle;
+export const TOURNAMENT_535_TOP16 = tournament535 as TournamentPresetBundle;
 export const LA_REGIONALS_2026 = tournamentLA as TournamentPresetBundle;
 export const WORLDS_2025 = tournamentWorlds25 as TournamentPresetBundle;
 
 /** All available tournaments, newest first. */
 export const ALL_TOURNAMENTS: TournamentPresetBundle[] = [
-  UTRECHT_535_TOP16,
+  TOURNAMENT_535_TOP16,
   LA_REGIONALS_2026,
   WORLDS_2025,
 ];

@@ -10,7 +10,7 @@ import {
   summarizeCriTrainerCoverage,
 } from "./criDeckAnalyzer";
 import { CRI_PLAYTEST_DECKS, getCriDeckById } from "./criDeckPresets";
-import { runMatchFromBuiltDecks, runTournamentPresetMatch } from "./utrechtGameRunner";
+import { runMatchFromBuiltDecks, runTournamentPresetMatch } from "./metaGameRunner";
 
 describe("Chaos Rising playtest presets", () => {
   it("builds 60-card corpus decks with all Pokémon lines resolved", () => {

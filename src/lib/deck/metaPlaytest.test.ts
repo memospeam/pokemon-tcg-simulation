@@ -37,7 +37,7 @@ const BATCH_OPTIONS = {
   run: DEFAULT_PLAYTEST_RUN,
 };
 
-describe("Utrecht meta playtest", () => {
+describe("Tournament meta playtest", () => {
   it("resolves all 11 archetype representatives", () => {
     expect(META_DECKS).toHaveLength(11);
     for (const deck of META_DECKS) {

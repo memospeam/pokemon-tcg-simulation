@@ -19,7 +19,7 @@ describe("corpus deck builder", () => {
     }
   });
 
-  it("builds playable 60-card decks for all Utrecht Top 16 lists", () => {
+  it("builds playable 60-card decks for all Tournament Top 16 lists", () => {
     const deckIds = [
       "utrecht-1-miloslav-posledni",
       "utrecht-2-hasan-kunukcu",
