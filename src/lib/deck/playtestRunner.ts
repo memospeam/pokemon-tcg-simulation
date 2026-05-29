@@ -57,8 +57,12 @@ export const DEFAULT_PLAYTEST_SETUP: MatchSetupOptions = {
 };
 
 export const DEFAULT_PLAYTEST_RUN: GameRunOptions = {
-  maxTurns: 30,
-  maxActions: 240,
+  // Raised from 30/240: diagnostics showed grindy matchups (Honchkrow,
+  // Hydrapple, mirrors) reaching the 30-turn cap with one player only 1-2
+  // prizes from winning. 45 turns lets those resolve; 360 actions keeps the
+  // per-turn action headroom proportional.
+  maxTurns: 45,
+  maxActions: 360,
 };
 
 /** Small seed set for fast CI batch smokes. */
