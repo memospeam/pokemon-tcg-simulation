@@ -76,7 +76,7 @@ describe("Tournament meta playtest", () => {
     const matchupRows = crossMatchups
       .map(
         (m) =>
-          `| ${m.p1DeckName} vs ${m.p2DeckName} | ${m.games} | ${formatWinRate(m.p1Wins, m.p2Wins)} | ${m.stalls} | ${m.avgTurnCount.toFixed(1)} |`,
+          `| ${m.p1DeckName} vs ${m.p2DeckName} | ${m.games} | ${formatWinRate(m.p1Wins, m.p2Wins)} | ${m.stalls} | ${m.avgTurnCount.toFixed(1)} | ${m.avgPrizeMargin.toFixed(1)} |`,
       )
       .join("\n");
 
@@ -87,6 +87,7 @@ Seeds: ${CI_BATCH_SEEDS.join(", ")} | Decks: ${META_DECKS.length} archetypes
 
 ## Sim health
 Games: ${health.totalGames} | Completion: ${Math.round(health.completionRate * 100)}% | Stalls: ${Math.round(health.stallRate * 100)}% | Setup failures: ${Math.round(health.setupFailureRate * 100)}%
+Draws: ${health.drawsByCap} turn/action-cap, ${health.drawsByStall} stall
 
 ## Tier List
 | Rank | Deck | Win% | W-L-D |
@@ -94,8 +95,8 @@ Games: ${health.totalGames} | Completion: ${Math.round(health.completionRate * 1
 ${tierRows}
 
 ## Cross Matchups
-| Matchup | Games | P1 win rate | Stalls | Avg turns |
-| --- | ---: | --- | ---: | ---: |
+| Matchup | Games | P1 win rate | Stalls | Avg turns | Prize margin |
+| --- | ---: | --- | ---: | ---: | ---: |
 ${matchupRows}
 `;
 

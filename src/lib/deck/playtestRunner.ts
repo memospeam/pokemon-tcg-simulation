@@ -2,12 +2,16 @@ import type { BuiltDeck } from "./builder";
 import { buildPlaytestDeckFromCorpusText } from "./corpusDeckBuilder";
 import type { TournamentDeckPreset } from "./tournamentPresets";
 import { PlayerId } from "../models/enums";
+import { getPlayer } from "../engine/types";
 import {
   runMatchFromBuiltDecks,
   type GameRunOptions,
   type MatchSetupOptions,
   type TournamentMatchResult,
 } from "./metaGameRunner";
+
+/** Standard Pokémon TCG prize count per player. */
+const STARTING_PRIZES = 6;
 
 export interface MatchBatchOptions {
   seeds: number[];
@@ -31,6 +35,12 @@ export interface MatchupStats {
   /** Share of decided games (excludes draws). */
   p1WinRate: number;
   p2WinRate: number;
+  /**
+   * Average prize margin of decided games — how many MORE prizes the winner
+   * took than the loser (1 = nail-biter, 6 = blowout). Distinguishes a deck
+   * that scrapes 100% wins from one that stomps. 0 when no decided games.
+   */
+  avgPrizeMargin: number;
 }
 
 export interface DeckTierEntry {
@@ -49,6 +59,10 @@ export interface SimHealthSummary {
   stallRate: number;
   completionRate: number;
   setupFailureRate: number;
+  /** Draws where the runner hit an unhandled pending action (should be ~0). */
+  drawsByStall: number;
+  /** Draws with no winner and no stall — i.e. ran out the turn/action cap. */
+  drawsByCap: number;
 }
 
 export const DEFAULT_PLAYTEST_SETUP: MatchSetupOptions = {
@@ -72,9 +86,10 @@ export function defaultBatchSeeds(count: number, base = 1): number[] {
   return Array.from({ length: count }, (_, index) => base + index * 13);
 }
 
-function recordMatchResult(stats: Omit<MatchupStats, "avgTurnCount" | "avgActionCount"> & {
+function recordMatchResult(stats: Omit<MatchupStats, "avgTurnCount" | "avgActionCount" | "avgPrizeMargin"> & {
   turnTotal: number;
   actionTotal: number;
+  prizeMarginTotal: number;
 }, result: TournamentMatchResult): void {
   stats.games += 1;
   stats.turnTotal += result.turnCount;
@@ -93,21 +108,31 @@ function recordMatchResult(stats: Omit<MatchupStats, "avgTurnCount" | "avgAction
   } else {
     stats.draws += 1;
   }
+
+  // Prize margin (decided games only): prizes-taken = STARTING_PRIZES − remaining.
+  if (result.winnerId !== null) {
+    const p1Taken = STARTING_PRIZES - getPlayer(result.state, PlayerId.P1).prizes.length;
+    const p2Taken = STARTING_PRIZES - getPlayer(result.state, PlayerId.P2).prizes.length;
+    stats.prizeMarginTotal += Math.abs(p1Taken - p2Taken);
+  }
 }
 
 function finalizeMatchupStats(
-  base: Omit<MatchupStats, "avgTurnCount" | "avgActionCount" | "p1WinRate" | "p2WinRate"> & {
+  base: Omit<MatchupStats, "avgTurnCount" | "avgActionCount" | "p1WinRate" | "p2WinRate" | "avgPrizeMargin"> & {
     turnTotal: number;
     actionTotal: number;
+    prizeMarginTotal: number;
   },
 ): MatchupStats {
   const decided = base.p1Wins + base.p2Wins;
+  const { prizeMarginTotal, ...rest } = base;
   return {
-    ...base,
+    ...rest,
     avgTurnCount: base.games > 0 ? base.turnTotal / base.games : 0,
     avgActionCount: base.games > 0 ? base.actionTotal / base.games : 0,
     p1WinRate: decided > 0 ? base.p1Wins / decided : 0,
     p2WinRate: decided > 0 ? base.p2Wins / decided : 0,
+    avgPrizeMargin: decided > 0 ? prizeMarginTotal / decided : 0,
   };
 }
 
@@ -140,6 +165,7 @@ export function runBuiltDeckMatchupBatch(
     setupFailures: 0,
     turnTotal: 0,
     actionTotal: 0,
+    prizeMarginTotal: 0,
   };
 
   for (const seed of options.seeds) {
@@ -204,6 +230,7 @@ export function summarizeSimHealth(matchups: MatchupStats[]): SimHealthSummary {
     (sum, matchup) => sum + matchup.p1Wins + matchup.p2Wins,
     0,
   );
+  const totalDraws = matchups.reduce((sum, matchup) => sum + matchup.draws, 0);
 
   return {
     matchups,
@@ -211,6 +238,9 @@ export function summarizeSimHealth(matchups: MatchupStats[]): SimHealthSummary {
     stallRate: totalGames > 0 ? stalls / totalGames : 0,
     completionRate: totalGames > 0 ? completed / totalGames : 0,
     setupFailureRate: totalGames > 0 ? setupFailures / totalGames : 0,
+    // Stalls are themselves draws; the rest are turn/action-cap timeouts.
+    drawsByStall: stalls,
+    drawsByCap: Math.max(0, totalDraws - stalls),
   };
 }
 
