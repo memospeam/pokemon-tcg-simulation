@@ -228,6 +228,18 @@ export function payRetreatCost(
         }
         continue;
       }
+      // Flex Psychic/Darkness energy (e.g. some special energies) also counts
+      // toward a Colorless slot — canPayCost includes it in availableColorless,
+      // so payRetreatCost MUST consume it too, or affordable retreats no-op.
+      const flexColorlessIndex = working.findIndex((entry) => entry.flexPsychicDark > 0);
+      if (flexColorlessIndex >= 0) {
+        const entry = working[flexColorlessIndex]!;
+        entry.flexPsychicDark -= 1;
+        if (entry.flexPsychicDark === 0 && Object.keys(entry.colors).length === 0 && entry.rainbow === 0) {
+          discarded.push(working.splice(flexColorlessIndex, 1)[0]!.energy);
+        }
+        continue;
+      }
       return false;
     }
 

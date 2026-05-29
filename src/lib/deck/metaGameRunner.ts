@@ -336,7 +336,13 @@ export function runEngineAutoPlay(
       if (retreatAction) {
         state = gameReducer(state, retreatAction);
         actionCount += 1;
-        continue;
+        // Robustness: if the retreat did NOT actually take (e.g. an
+        // affordability/payment mismatch leaves turnFlags.retreated false),
+        // do NOT `continue` — retrying the identical retreat would loop until
+        // maxActions and draw the game. Fall through to attack / END_TURN.
+        if (state.turnFlags.retreated) {
+          continue;
+        }
       }
     }
 
@@ -501,7 +507,12 @@ export function runAISingleTurn(
     // 6. Retreat to better attacker
     if (!current.turnFlags.retreated && !current.turnFlags.attacked) {
       const retreatAction = pickRetreatAction(current, aiPlayerId, ctx);
-      if (retreatAction) { current = gameReducer(current, retreatAction); continue; }
+      if (retreatAction) {
+        current = gameReducer(current, retreatAction);
+        // Only loop back if the retreat actually took; otherwise fall through
+        // to avoid an infinite no-op retreat loop (see main loop comment).
+        if (current.turnFlags.retreated) continue;
+      }
     }
 
     // 7. Attack
