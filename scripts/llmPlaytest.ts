@@ -43,16 +43,15 @@ const STARTING_PRIZES = 6;
 
 function makePolicy(kind: string, label: string): TurnPolicy {
   if (kind !== "llm") return new HeuristicPolicy();
-  const complete = createAnthropicComplete();
-  let fallbacks = 0;
-  const policy = new LlmPolicy(complete, {
-    maxCalls,
-    onFallback: () => { fallbacks += 1; },
-  });
-  // Attach a getter for reporting via closure.
-  (policy as unknown as { fallbackCount: () => number }).fallbackCount = () => fallbacks;
+  let complete;
+  try {
+    complete = createAnthropicComplete();
+  } catch (err) {
+    console.warn(`  ${label}: ${(err as Error).message} → falling back to HEURISTIC`);
+    return new HeuristicPolicy();
+  }
   console.log(`  ${label}: LLM agent (maxCalls=${maxCalls})`);
-  return policy;
+  return new LlmPolicy(complete, { maxCalls });
 }
 
 (async () => {
