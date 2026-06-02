@@ -1368,6 +1368,86 @@ export function pickBestEnergyForTarget(
   return scored[0]!.energy;
 }
 
+/**
+ * Decide the next MAIN-PHASE action for the active player using the heuristic
+ * decision chain, or `null` to signal "end turn".
+ *
+ * This is the loop body of runAutoMatch, extracted so it can be shared by the
+ * policy seam (HeuristicPolicy) and used as the fallback when an LLM policy
+ * can't produce a legal action. It chooses ONLY the top-level action; the
+ * caller is responsible for applying it (gameReducer) and resolving any
+ * resulting pendingAction via drainAutoPending.
+ *
+ * Order mirrors runAutoMatch exactly: trainer → basic → evolve → energy →
+ * ability → retreat → attack. Returns null when nothing is worth doing.
+ */
+export function pickHeuristicMainAction(
+  state: EngineState,
+  playerId: PlayerId,
+  ctx?: StrategyContext,
+): GameAction | null {
+  const player = getPlayer(state, playerId);
+  if (state.pendingAction) return null; // caller drains pending separately
+
+  // 1-3. Trainer / basic / evolve (only before attacking)
+  if (!state.turnFlags.attacked) {
+    const trainerAction = pickAutoTrainerAction(state, ctx);
+    if (trainerAction) return trainerAction;
+    const basicAction = pickAutoPlayBasicAction(state, ctx);
+    if (basicAction) return basicAction;
+    const evolveAction = pickAutoEvolveAction(state, ctx);
+    if (evolveAction) return evolveAction;
+  }
+
+  // 4. Attach energy (once per turn) to the best target with the best-fit energy.
+  if (
+    !state.turnFlags.energyAttached &&
+    player.hand.some((card) => getDefinition(state, card.definitionId)?.supertype === "Energy")
+  ) {
+    const primaryTarget = pickBestEnergyTarget(state, playerId, ctx);
+    if (primaryTarget) {
+      const targetMon = [...(player.active ? [player.active] : []), ...player.bench]
+        .find((p) => p.instanceId === primaryTarget);
+      const energiesInHand = player.hand.filter(
+        (card) => getDefinition(state, card.definitionId)?.supertype === "Energy",
+      );
+      const bestEnergyForTarget = targetMon
+        ? pickBestEnergyForTarget(state, energiesInHand, targetMon)
+        : energiesInHand[0];
+      if (bestEnergyForTarget) {
+        return {
+          type: "ATTACH_ENERGY",
+          playerId,
+          energyId: bestEnergyForTarget.instanceId,
+          targetId: primaryTarget,
+        };
+      }
+    }
+  }
+
+  // 5. Activatable abilities.
+  const abilityAction = pickAutoAbilityAction(state, ctx);
+  if (abilityAction) return abilityAction;
+
+  // 6. Retreat to a better attacker.
+  if (!state.turnFlags.retreated && !state.turnFlags.attacked) {
+    const retreatAction = pickRetreatAction(state, playerId, ctx);
+    if (retreatAction) return retreatAction;
+  }
+
+  // 7. Attack (only if ATTACK is actually legal).
+  const canAttackThisTurn =
+    !!player.active &&
+    !state.turnFlags.attacked &&
+    getLegalActions(state).some((a) => a.type === "ATTACK");
+  if (canAttackThisTurn) {
+    const bestAttack = pickBestAttack(state, playerId, ctx);
+    if (bestAttack) return { type: "ATTACK", playerId, attackName: bestAttack };
+  }
+
+  return null; // end turn
+}
+
 export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx?: StrategyContext): string | null {
   const player = getPlayer(state, playerId);
   const allPokemon = [
