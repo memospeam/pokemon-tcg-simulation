@@ -22,7 +22,7 @@ import { buildPlaytestDeckFromCorpusText } from "../src/lib/deck/corpusDeckBuild
 import { runPolicyMatchFromBuiltDecks } from "../src/lib/deck/policyMatch";
 import { HeuristicPolicy, type TurnPolicy } from "../src/lib/deck/policy";
 import { LlmPolicy } from "../src/lib/deck/llm/llmPolicy";
-import { createAnthropicComplete } from "../src/lib/deck/llm/client";
+import { createCompleteFromEnv } from "../src/lib/deck/llm/client";
 import { getPlayer } from "../src/lib/engine/types";
 import { PlayerId } from "../src/lib/models/enums";
 
@@ -45,12 +45,13 @@ function makePolicy(kind: string, label: string): TurnPolicy {
   if (kind !== "llm") return new HeuristicPolicy();
   let complete;
   try {
-    complete = createAnthropicComplete();
+    complete = createCompleteFromEnv();
   } catch (err) {
     console.warn(`  ${label}: ${(err as Error).message} → falling back to HEURISTIC`);
     return new HeuristicPolicy();
   }
-  console.log(`  ${label}: LLM agent (maxCalls=${maxCalls})`);
+  const provider = process.env.LLM_PROVIDER ?? "anthropic";
+  console.log(`  ${label}: LLM agent (provider=${provider}, maxCalls=${maxCalls})`);
   return new LlmPolicy(complete, { maxCalls });
 }
 
