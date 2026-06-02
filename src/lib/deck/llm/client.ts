@@ -77,6 +77,8 @@ export interface OpenAICompatibleOptions {
   apiKey?: string;
   maxTokens?: number;
   retries?: number;
+  /** Per-request timeout in ms (default 60000). Prevents a hung local model. */
+  timeoutMs?: number;
 }
 
 /**
@@ -96,14 +98,18 @@ export function createOpenAICompatibleComplete(opts: OpenAICompatibleOptions): C
   const apiKey = opts.apiKey;
   const maxTokens = opts.maxTokens ?? 256;
   const retries = opts.retries ?? 3;
+  const timeoutMs = opts.timeoutMs ?? 60000;
   const url = `${baseUrl.replace(/\/$/, "")}/chat/completions`;
 
   return async (system: string, user: string): Promise<string> => {
     let lastErr: unknown;
     for (let attempt = 0; attempt <= retries; attempt += 1) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const res = await fetch(url, {
           method: "POST",
+          signal: controller.signal,
           headers: {
             "Content-Type": "application/json",
             ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
@@ -118,6 +124,7 @@ export function createOpenAICompatibleComplete(opts: OpenAICompatibleOptions): C
           }),
         });
         if (res.status === 429 || res.status === 503) {
+          clearTimeout(timer);
           await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
           continue;
         }
@@ -125,10 +132,13 @@ export function createOpenAICompatibleComplete(opts: OpenAICompatibleOptions): C
           throw new Error(`LLM endpoint ${res.status}: ${(await res.text()).slice(0, 200)}`);
         }
         const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+        clearTimeout(timer);
         return (data.choices?.[0]?.message?.content ?? "").trim();
       } catch (err) {
         lastErr = err;
         await new Promise((r) => setTimeout(r, 500));
+      } finally {
+        clearTimeout(timer);
       }
     }
     throw lastErr;
