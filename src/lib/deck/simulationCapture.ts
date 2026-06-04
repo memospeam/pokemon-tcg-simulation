@@ -17,8 +17,12 @@ import {
 } from "./metaGameRunner";
 import { buildStrategyContext, type StrategyContext } from "./deckStrategy";
 import { gameReducer, getLegalActions } from "../engine/reducer";
-import { getDefinition, getPlayer, type EngineState } from "../engine/types";
+import { getDefinition, getPlayer, type EngineState, type GameAction } from "../engine/types";
 import { GamePhase, PlayerId } from "../models/enums";
+import type { TurnPolicy } from "./policy";
+
+/** Per-frame callback used for live streaming of a policy-driven match. */
+export type OnFrame = (frame: SimFrame, all: SimFrame[]) => void;
 
 export type ActionCategory =
   | "start"
@@ -47,11 +51,14 @@ function applyAction(
   frames: SimFrame[],
   fallback: string,
   category: ActionCategory,
+  onFrame?: OnFrame,
 ): EngineState {
   const logBefore = state.log.length;
   const next = gameReducer(state, action);
   const logDelta = next.log.slice(logBefore);
-  frames.push({ state: next, label: logDelta.at(-1) ?? fallback, category, logDelta });
+  const frame: SimFrame = { state: next, label: logDelta.at(-1) ?? fallback, category, logDelta };
+  frames.push(frame);
+  onFrame?.(frame, frames);
   return next;
 }
 
@@ -59,12 +66,15 @@ function drainAndCapture(
   state: EngineState,
   frames: SimFrame[],
   ctx?: StrategyContext,
+  onFrame?: OnFrame,
 ): { state: EngineState; steps: number; stalled: boolean } {
   const logBefore = state.log.length;
   const drained = drainAutoPending(state, 12, ctx);
   if (drained.steps > 0) {
     const logDelta = drained.state.log.slice(logBefore);
-    frames.push({ state: drained.state, label: logDelta.at(-1) ?? "Resolve", category: "resolve", logDelta });
+    const frame: SimFrame = { state: drained.state, label: logDelta.at(-1) ?? "Resolve", category: "resolve", logDelta };
+    frames.push(frame);
+    onFrame?.(frame, frames);
   }
   return { ...drained, stalled: isPlayStalled(drained.state) };
 }
@@ -279,4 +289,182 @@ export function capturePresetSimulation(
     { p1Name: p1Preset.player, p2Name: p2Preset.player, p1Deck, p2Deck, seed: options.seed },
     options,
   );
+}
+
+// ─── Policy-driven (async) capture — supports LLM agents ────────────────────
+
+/** Map a chosen action to the broad category used for frame styling. */
+function categoryOf(action: GameAction): ActionCategory {
+  switch (action.type) {
+    case "ATTACK": return "attack";
+    case "ATTACH_ENERGY": return "energy";
+    case "PLAY_TRAINER": return "trainer";
+    case "EVOLVE": return "evolve";
+    case "PLAY_BASIC_TO_BENCH": return "basic";
+    case "USE_ABILITY": return "ability";
+    case "RETREAT": return "retreat";
+    case "END_TURN": return "endturn";
+    default: return "resolve";
+  }
+}
+
+function labelOf(action: GameAction): string {
+  switch (action.type) {
+    case "ATTACK": return `Attack: ${action.attackName}`;
+    case "ATTACH_ENERGY": return "Attach energy";
+    case "PLAY_TRAINER": return "Play trainer";
+    case "EVOLVE": return "Evolve";
+    case "PLAY_BASIC_TO_BENCH": return "Place basic";
+    case "USE_ABILITY": return "Use ability";
+    case "RETREAT": return "Retreat";
+    case "END_TURN": return "End turn";
+    default: return action.type;
+  }
+}
+
+/** Yield to the event loop so the UI can paint each streamed frame. */
+const yieldToUi = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+/**
+ * Async AI-vs-AI capture where each player's main-phase decisions come from a
+ * TurnPolicy (heuristic OR LLM agent). Mirrors runPolicyMatch's loop but emits
+ * a SimFrame after every applied action (via `onFrame`) so the UI can play the
+ * match back in real time as the agents think. Pending sub-choices resolve via
+ * the heuristic drainAutoPending, exactly like the synchronous capture.
+ */
+export async function capturePolicyFrames(
+  initialState: EngineState,
+  p1Policy: TurnPolicy,
+  p2Policy: TurnPolicy,
+  options: {
+    maxTurns?: number;
+    maxActions?: number;
+    maxDecisions?: number;
+    onFrame?: OnFrame;
+    /** Return true to abort the in-flight capture (e.g. user re-ran). */
+    cancel?: () => boolean;
+  } = {},
+): Promise<SimFrame[]> {
+  const frames: SimFrame[] = [];
+  const maxTurns = options.maxTurns ?? 30;
+  const maxActions = options.maxActions ?? 240;
+  const maxDecisions = options.maxDecisions ?? Number.POSITIVE_INFINITY;
+  const onFrame = options.onFrame;
+
+  let state = initialState;
+  const startFrame: SimFrame = { state, label: "Game start", category: "start", logDelta: [] };
+  frames.push(startFrame);
+  onFrame?.(startFrame, frames);
+
+  const ctxCache: Partial<Record<PlayerId, StrategyContext>> = {};
+  function ctxFor(playerId: PlayerId): StrategyContext {
+    if (!ctxCache[playerId]) {
+      const p = getPlayer(state, playerId);
+      const names = [...p.deck, ...p.hand, ...(p.active ? [p.active] : []), ...p.bench, ...p.discard]
+        .map((c) => getDefinition(state, c.definitionId)?.name ?? "");
+      ctxCache[playerId] = buildStrategyContext(names);
+    }
+    return ctxCache[playerId]!;
+  }
+  const policyFor = (playerId: PlayerId): TurnPolicy =>
+    playerId === PlayerId.P1 ? p1Policy : p2Policy;
+
+  let turnCount = 0;
+  let actionCount = 0;
+  let decisions = 0;
+
+  while (
+    actionCount < maxActions &&
+    turnCount < maxTurns &&
+    state.phase === GamePhase.Active &&
+    !state.winnerId
+  ) {
+    if (options.cancel?.()) break;
+
+    if (state.pendingAction) {
+      const ctx = ctxFor(state.pendingAction.playerId);
+      const drained = drainAndCapture(state, frames, ctx, onFrame);
+      state = drained.state;
+      actionCount += drained.steps;
+      if (drained.stalled || state.phase !== GamePhase.Active || state.winnerId) break;
+      continue;
+    }
+
+    const playerId = state.currentPlayerId;
+    const ctx = ctxFor(playerId);
+
+    let action: GameAction | null = null;
+    if (decisions < maxDecisions) {
+      action = await policyFor(playerId).decide(state, playerId, ctx);
+      decisions += 1;
+    }
+
+    if (!action) {
+      const beforeTurn = state.turnNumber;
+      state = applyAction(state, { type: "END_TURN" }, frames, "End turn", "endturn", onFrame);
+      actionCount += 1;
+      if (state.turnNumber > beforeTurn) turnCount += 1;
+      await yieldToUi();
+      continue;
+    }
+
+    const beforeTurn = state.turnNumber;
+    const beforePlayer = state.currentPlayerId;
+    const beforeRetreated = state.turnFlags.retreated;
+
+    state = applyAction(state, action, frames, labelOf(action), categoryOf(action), onFrame);
+    actionCount += 1;
+    await yieldToUi();
+
+    // No-op retreat guard (mirrors runPolicyMatch).
+    if (action.type === "RETREAT" && state.turnFlags.retreated === beforeRetreated) {
+      const beforeT = state.turnNumber;
+      state = applyAction(state, { type: "END_TURN" }, frames, "End turn", "endturn", onFrame);
+      actionCount += 1;
+      if (state.turnNumber > beforeT) turnCount += 1;
+      continue;
+    }
+
+    if (state.pendingAction) {
+      const drained = drainAndCapture(state, frames, ctxFor(state.pendingAction.playerId), onFrame);
+      state = drained.state;
+      actionCount += drained.steps;
+      if (drained.stalled || state.phase !== GamePhase.Active || state.winnerId) break;
+    }
+    if (state.phase !== GamePhase.Active || state.winnerId) break;
+    if (state.currentPlayerId !== beforePlayer || state.turnNumber > beforeTurn) turnCount += 1;
+  }
+
+  return frames;
+}
+
+/**
+ * Build decks from two presets, set up the game, then run an async policy-driven
+ * match (used by the Simulate tab's "LLM agent" mode). The caller supplies the
+ * two policies (e.g. browser LLM policies).
+ */
+export async function capturePresetPolicySimulation(
+  p1Preset: TournamentDeckPreset,
+  p2Preset: TournamentDeckPreset,
+  p1Policy: TurnPolicy,
+  p2Policy: TurnPolicy,
+  options: {
+    seed?: number;
+    maxTurns?: number;
+    maxActions?: number;
+    onFrame?: OnFrame;
+    cancel?: () => boolean;
+  } = {},
+): Promise<SimFrame[]> {
+  const p1Deck = buildPlaytestDeckFromCorpusText(p1Preset.label, p1Preset.text);
+  const p2Deck = buildPlaytestDeckFromCorpusText(p2Preset.label, p2Preset.text);
+  let state = beginMatchFromBuiltDecks({
+    player1Name: p1Preset.player,
+    player2Name: p2Preset.player,
+    player1Deck: p1Deck,
+    player2Deck: p2Deck,
+    seed: options.seed,
+  });
+  state = autoSetupEngineState(state, { placeBenchBasics: true, maxMulligans: 40 });
+  return capturePolicyFrames(state, p1Policy, p2Policy, options);
 }
