@@ -861,6 +861,12 @@ function handlePromoteBench(state: EngineState, playerId: PlayerId, instanceId: 
   const promoted = player.bench.splice(index, 1)[0];
   promoted.zone = Zone.Active;
   player.active = promoted;
+  // Promoting IS a Bench → Active move this turn, so attacks like Mega Lopunny
+  // ex's Gale Thrust ("+170 if this Pokémon moved from the Bench to the Active
+  // Spot this turn") must see the flag — same as a Retreat. turnFlags reset
+  // each turn, so a promote on the opponent's turn (after a KO) won't leak a
+  // bonus into your next turn.
+  markMovedFromBenchToActive(state, promoted.instanceId);
   if (state.pendingAction?.type === "PROMOTE" && state.pendingAction.playerId === playerId) {
     state.pendingAction = null;
   }

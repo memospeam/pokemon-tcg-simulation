@@ -3,7 +3,7 @@ import type { BuiltDeck } from "@/lib/deck/builder";
 import { clearGameState, loadGameState, saveGameState } from "@/lib/deck/storage";
 import { beginGame, gameReducer, getLegalActions, startActiveGame, type EngineState, type GameAction } from "@/lib/engine";
 import { PlayerId } from "@/lib/models/enums";
-import { autoSetupEngineState, runAISingleTurn } from "@/lib/deck/metaGameRunner";
+import { autoSetupEngineState, drainAutoPending, runAISingleTurn } from "@/lib/deck/metaGameRunner";
 import { buildStrategyContext, type StrategyContext } from "@/lib/deck/deckStrategy";
 import { getDefinition, getPlayer } from "@/lib/engine";
 import { runPolicyTurn } from "@/lib/deck/policyMatch";
@@ -97,6 +97,30 @@ export const useGameStore = create<GameStore>((set, get) => {
     }
   }
 
+  /**
+   * Resolve any pending action that belongs to the AI opponent (e.g. the
+   * opponent must PROMOTE a new Active after we KO'd theirs). Such a pending
+   * can appear DURING the human's turn — getLegalActions would otherwise
+   * surface the opponent's bench to the human to choose. The AI must resolve
+   * its own pendings via the heuristic drainAutoPending.
+   */
+  function resolveAiPendings(state: EngineState, humanPlayerId: PlayerId): EngineState {
+    const aiId = humanPlayerId === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
+    let cur = state;
+    let guard = 0;
+    while (
+      guard++ < 20 &&
+      cur.pendingAction != null &&
+      cur.pendingAction.playerId === aiId &&
+      !cur.winnerId
+    ) {
+      const { state: drained, steps } = drainAutoPending(cur, 12, buildAIContext(cur));
+      if (steps === 0) break; // can't resolve → avoid infinite loop
+      cur = drained;
+    }
+    return cur;
+  }
+
   /** Hand control to the opponent after a human action / game start. */
   function advanceAfterHuman(next: EngineState, humanPlayerId: PlayerId | null): void {
     if (humanPlayerId === null) {
@@ -104,6 +128,9 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ ...withActions(next), humanPlayerId: null });
       return;
     }
+    // Auto-resolve opponent-owned pendings (e.g. their post-KO PROMOTE) so the
+    // human is never asked to choose for the opponent.
+    next = resolveAiPendings(next, humanPlayerId);
     next.viewingPlayerId = humanPlayerId;
 
     if (get().aiKind === "llm" && isAiToMove(next, humanPlayerId)) {
