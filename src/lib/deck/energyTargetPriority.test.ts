@@ -221,6 +221,76 @@ describe("pickBestEnergyTarget — primary attacker priority", () => {
     expect(target).toBe(dreepy.instanceId);
   });
 
+  it("does NOT over-attach: holds energy when the only attacker is already fully loaded", () => {
+    // A fully-loaded active attacker (3/3 for its only attack) and NO bench
+    // backup. Attaching a 4th energy is wasted, so the AI should attach nothing.
+    const attackerDef = mockBasic(
+      "Latias ex",
+      [{ name: "Stardust Syndrome", cost: ["Colorless", "Colorless"], convertedEnergyCost: 2, damage: "70" }],
+      "230",
+      ["Colorless"],
+    );
+    const attacker = createCardInstance("attacker-def", PlayerId.P1, Zone.Active);
+    attacker.attachedEnergy = [
+      createCardInstance("e1", PlayerId.P1, Zone.Active),
+      createCardInstance("e2", PlayerId.P1, Zone.Active),
+    ];
+    const energy = createCardInstance("psy-energy", PlayerId.P1, Zone.Hand);
+
+    const state = baseState(
+      { "attacker-def": attackerDef, "psy-energy": mockEnergy(), e1: mockEnergy(), e2: mockEnergy() },
+      attacker,
+      [], // no bench backup
+      [energy],
+    );
+
+    const target = pickBestEnergyTarget(state, PlayerId.P1);
+    expect(target).toBeNull();
+  });
+
+  it("still loads an energy-scaling attacker past its base cost (never 'done')", () => {
+    // An attacker whose damage grows with energy attached to itself keeps
+    // wanting energy even though it can already pay its base cost.
+    const scalerDef = mockBasic(
+      "Raging Bolt ex",
+      [{
+        name: "Bellowing Thunder",
+        cost: ["Fighting", "Fighting"],
+        convertedEnergyCost: 2,
+        damage: "70×",
+      }],
+      "240",
+      ["Fighting"],
+    );
+    // text carries the scaling rule (mockBasic sets text via the attack object)
+    scalerDef.attacks![0]!.text =
+      "This attack does 50 more damage for each Energy attached to this Pokémon.";
+
+    const scaler = createCardInstance("scaler-def", PlayerId.P1, Zone.Active);
+    scaler.attachedEnergy = [
+      createCardInstance("e1", PlayerId.P1, Zone.Active),
+      createCardInstance("e2", PlayerId.P1, Zone.Active),
+      createCardInstance("e3", PlayerId.P1, Zone.Active),
+    ];
+    const energy = createCardInstance("fight-energy", PlayerId.P1, Zone.Hand);
+
+    const state = baseState(
+      {
+        "scaler-def": scalerDef,
+        "fight-energy": mockEnergy("Fighting Energy", ["Fighting"]),
+        e1: mockEnergy("Fighting Energy", ["Fighting"]),
+        e2: mockEnergy("Fighting Energy", ["Fighting"]),
+        e3: mockEnergy("Fighting Energy", ["Fighting"]),
+      },
+      scaler,
+      [],
+      [energy],
+    );
+
+    const target = pickBestEnergyTarget(state, PlayerId.P1);
+    expect(target).toBe(scaler.instanceId);
+  });
+
   it("never picks a Pokémon with zero attacks", () => {
     // Dunsparce has no attacks (pure-ability). It must never receive energy.
     const dunsparceDef = mockBasic("Dunsparce", []);

@@ -1500,12 +1500,21 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
     // Most attackers have a cheap setup attack AND a strong finisher; once the cheap
     // attack is affordable the Pokémon isn't "done" yet — we still want to load up
     // for the big attack.
+    // Does any attack scale its damage with energy ATTACHED TO THIS Pokémon?
+    // (e.g. "does 30 more damage for each Energy attached to this Pokémon").
+    // Such an attacker is never "done" — more energy = more damage — so it is
+    // never treated as fully loaded and is exempt from the over-attach cap.
+    const scalesWithOwnEnergy = attacks.some((atk) =>
+      /for each .*energy attached to this/i.test(atk.text ?? ""),
+    );
+
     const costs = attacks.map((atk) => atk.convertedEnergyCost ?? atk.cost?.length ?? 1);
     const cheapestCost = Math.min(...costs);
     const mostExpensiveCost = Math.max(...costs);
     const energiesNeededForCheapest = Math.max(0, cheapestCost - energyCount);
     const energiesNeededForMax = Math.max(0, mostExpensiveCost - energyCount);
-    const fullyLoaded = energiesNeededForMax === 0; // can use the biggest attack
+    // "Can use the biggest attack" — but a scaling attacker keeps wanting more.
+    const fullyLoaded = energiesNeededForMax === 0 && !scalesWithOwnEnergy;
 
     // Base score — bringing a NEW attacker online is the highest-leverage attach.
     let score: number;
@@ -1598,12 +1607,22 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
       }
     }
 
+    // DON'T OVER-ATTACH: a Pokémon that can already use its biggest attack
+    // gains nothing from another energy. Cap it below the skip threshold so the
+    // attachment is redirected to a backup attacker — or held in hand when
+    // there's no better home — instead of being wasted on (and tied up by) an
+    // already-maxed attacker. (Scaling attackers are never `fullyLoaded`.)
+    if (fullyLoaded) {
+      score = Math.min(score, -90);
+    }
+
     return { id: pokemon.instanceId, score };
   }).sort((a, b) => b.score - a.score);
 
-  // Skip only when every option is a deeply-negative target (true no-energy
-  // Pokémon like Dusknoir / Munkidori). Mildly-negative scores still attach —
-  // a sub-optimal energy is better than wasting the turn's only attachment.
+  // Skip when every option is a deeply-negative target: true no-energy Pokémon
+  // (Dusknoir / Munkidori, scored ≤ -200) OR an already-fully-loaded board where
+  // attaching more would be wasted (capped at -90). Mildly-negative scores still
+  // attach — a sub-optimal energy beats wasting the turn's only attachment.
   const best = scored[0];
   if (!best || best.score < -80) return null;
   return best.id;
