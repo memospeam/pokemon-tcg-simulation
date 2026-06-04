@@ -1748,8 +1748,12 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
         // Draws to 8 if all Pokémon in play are TR — enormous hand refresh
         score = 65;
       } else if (name.includes("team rocket's proton")) {
-        // T1 bench fill: search 3 Basic TR Pokémon from deck
-        score = player.bench.length < 2 ? 68 : 22;
+        // Proton is the ONE Supporter playable on the FIRST turn going first
+        // (engine exempts it via isProtonSupporter). It searches 3 Basic TR
+        // Pokémon to fill the bench — the highest-priority turn-1 play, so it
+        // must beat every item (Transceiver/Poffin ~70). Always play it first.
+        if (state.turnNumber === 1) score = 100;
+        else score = player.bench.length < 2 ? 68 : 22;
       } else if (name.includes("team rocket's giovanni")) {
         // Boss pull: opponent's best bench Pokémon goes active
         score = opponent.bench.length > 0 ? 58 : 20;
