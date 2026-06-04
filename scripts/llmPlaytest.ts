@@ -22,7 +22,7 @@ import { buildPlaytestDeckFromCorpusText } from "../src/lib/deck/corpusDeckBuild
 import { runPolicyMatchFromBuiltDecks } from "../src/lib/deck/policyMatch";
 import { HeuristicPolicy, type TurnPolicy } from "../src/lib/deck/policy";
 import { LlmPolicy } from "../src/lib/deck/llm/llmPolicy";
-import { createCompleteFromEnv } from "../src/lib/deck/llm/client";
+import { createCompleteFromEnv } from "../src/lib/deck/llm/clientAnthropic";
 import { getPlayer } from "../src/lib/engine/types";
 import { PlayerId } from "../src/lib/models/enums";
 
@@ -92,7 +92,15 @@ function makePolicy(kind: string, label: string): TurnPolicy {
     else if (result.winnerId === PlayerId.P2) p2Wins += 1;
     else draws += 1;
     console.log(`  → ${winner} | turns ${result.turnCount} | prize margin ${margin} | ${secs}s | stalled=${result.stalled}`);
-    console.log(`     last actions: ${transcript.slice(-6).join(" · ")}`);
+    if (process.argv.includes("--full")) {
+      console.log("  FULL TRANSCRIPT:");
+      transcript.forEach((line, i) => console.log(`    ${(i + 1).toString().padStart(3)}. ${line}`));
+      console.log("  FINAL LOG (last 12):");
+      result.state.log.slice(-12).forEach((l) => console.log(`      · ${l}`));
+      console.log(`  Final prizes — P1: ${me.prizes.length}, P2: ${opp.prizes.length}`);
+    } else {
+      console.log(`     last actions: ${transcript.slice(-6).join(" · ")}`);
+    }
   }
 
   console.log(`\n=== ${p1Preset.deckName}(${p1Kind}) ${p1Wins} - ${p2Wins} ${p2Preset.deckName}(${p2Kind}) | draws ${draws} ===`);

@@ -20,7 +20,12 @@ export function App() {
     }
   }, [loadSaved]);
 
-  function handlePlay(player1Name: string, player2Name: string, vsAI = false) {
+  function handlePlay(
+    player1Name: string,
+    player2Name: string,
+    vsAI = false,
+    aiKind: "heuristic" | "llm" = "heuristic",
+  ) {
     if (!player1Deck || !player2Deck) return;
     startMatch({
       player1Name,
@@ -28,6 +33,7 @@ export function App() {
       player1Deck,
       player2Deck,
       vsAI,
+      aiKind,
     });
     setTab("play");
   }
@@ -85,7 +91,7 @@ export function App() {
       </nav>
 
       <main>
-        {tab === "lobby" && <Lobby onPlay={(p1, p2, vsAI) => handlePlay(p1, p2, vsAI)} />}
+        {tab === "lobby" && <Lobby onPlay={(p1, p2, vsAI, aiKind) => handlePlay(p1, p2, vsAI, aiKind)} />}
         {tab === "play" && <GameBoard />}
         {tab === "builder" && <DeckBuilder />}
         {tab === "sim" && <SimPlayback />}

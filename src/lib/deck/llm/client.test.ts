@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createOpenAICompatibleComplete, createCompleteFromEnv } from "./client";
+import { createOpenAICompatibleComplete } from "./client";
+import { createCompleteFromEnv } from "./clientAnthropic";
 
 afterEach(() => {
   vi.restoreAllMocks();

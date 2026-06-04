@@ -11,7 +11,7 @@ import { useDeckStore } from "@/stores/deckStore";
 import { DeckBuilder } from "../DeckBuilder/DeckBuilder";
 
 interface LobbyProps {
-  onPlay: (player1Name: string, player2Name: string, vsAI?: boolean) => void;
+  onPlay: (player1Name: string, player2Name: string, vsAI?: boolean, aiKind?: "heuristic" | "llm") => void;
 }
 
 export function Lobby({ onPlay }: LobbyProps) {
@@ -30,6 +30,7 @@ export function Lobby({ onPlay }: LobbyProps) {
   const [showBuilder, setShowBuilder] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [vsAI, setVsAI] = useState(false);
+  const [useLlm, setUseLlm] = useState(false);
 
   async function loadDecks(
     p1: { name: string; text: string },
@@ -212,13 +213,24 @@ export function Lobby({ onPlay }: LobbyProps) {
             {" "}Play vs AI (Player 1 = you, Player 2 = AI)
           </label>
 
+          {vsAI && (
+            <label className="lobby-mode-toggle">
+              <input
+                type="checkbox"
+                checked={useLlm}
+                onChange={(e) => setUseLlm(e.target.checked)}
+              />
+              {" "}Opponent = LLM agent (reads card text; needs Ollama/Groq — see README)
+            </label>
+          )}
+
           <button
             type="button"
             disabled={!canPlay || loadingSlot !== null}
-            onClick={() => onPlay(player1Name, player2Name, vsAI)}
+            onClick={() => onPlay(player1Name, player2Name, vsAI, vsAI && useLlm ? "llm" : "heuristic")}
             className="action-dock__primary"
           >
-            {vsAI ? "⚔️ Play vs AI" : "Play (both sides)"}
+            {vsAI ? (useLlm ? "🤖 Play vs LLM" : "⚔️ Play vs AI") : "Play (both sides)"}
           </button>
         </div>
       </section>

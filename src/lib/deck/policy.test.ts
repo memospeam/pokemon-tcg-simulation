@@ -8,7 +8,7 @@ import {
   runMatchFromBuiltDecks,
 } from "./metaGameRunner";
 import { HeuristicPolicy } from "./policy";
-import { runPolicyMatchFromBuiltDecks } from "./policyMatch";
+import { runPolicyMatchFromBuiltDecks, runPolicyTurn } from "./policyMatch";
 import { buildStrategyContext } from "./deckStrategy";
 import { getDefinition, getPlayer } from "../engine/types";
 import { PlayerId } from "../models/enums";
@@ -58,5 +58,29 @@ describe("HeuristicPolicy + runPolicyMatch", () => {
     expect(result.stalled).toBe(false);
     expect(result.turnCount).toBeGreaterThan(0);
     expect([PlayerId.P1, PlayerId.P2, null]).toContain(result.winnerId);
+  });
+
+  it("runPolicyTurn plays ONE turn then hands control back (used by play-vs-LLM)", async () => {
+    const a = built(DRAGAPULT);
+    let state = beginMatchFromBuiltDecks({
+      player1Name: "A", player2Name: "B", player1Deck: a.deck, player2Deck: a.deck, seed: 11,
+    });
+    state = autoSetupEngineState(state, { placeBenchBasics: true, maxMulligans: 40 });
+
+    const turnPlayer = state.currentPlayerId;
+    const ctx = buildStrategyContext(
+      [...getPlayer(state, turnPlayer).hand].map((c) => getDefinition(state, c.definitionId)?.name ?? ""),
+    );
+    const after = await runPolicyTurn(state, new HeuristicPolicy(), ctx);
+
+    // The turn must have ended: either the other player is now active, the
+    // turn number advanced, the game finished, or a pending now belongs to the
+    // opponent (human-input handoff).
+    const handedBack =
+      after.currentPlayerId !== turnPlayer ||
+      after.turnNumber > state.turnNumber ||
+      !!after.winnerId ||
+      (after.pendingAction != null && after.pendingAction.playerId !== turnPlayer);
+    expect(handedBack).toBe(true);
   });
 });

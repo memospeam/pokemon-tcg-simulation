@@ -164,6 +164,51 @@ export async function runPolicyMatch(
   };
 }
 
+/**
+ * Run ONE turn for the current player using `policy` (async), then return.
+ * Mirrors runAISingleTurn's stop conditions: ends when the turn flips, the
+ * game finishes, or a pending action belongs to the OTHER player (e.g. the
+ * human must PROMOTE after a KO) — so the caller (UI) can hand control back.
+ * Used by the in-app "play vs LLM" flow.
+ */
+export async function runPolicyTurn(
+  state: EngineState,
+  policy: TurnPolicy,
+  ctx: StrategyContext,
+): Promise<EngineState> {
+  const turnPlayer = state.currentPlayerId;
+  const startTurn = state.turnNumber;
+  let cur = state;
+  let steps = 0;
+  const maxSteps = 150;
+
+  while (steps < maxSteps && cur.phase === GamePhase.Active && !cur.winnerId) {
+    steps += 1;
+    if (cur.turnNumber > startTurn) break; // turn ended
+
+    if (cur.pendingAction) {
+      if (cur.pendingAction.playerId !== turnPlayer) break; // human input needed
+      const drained = drainAutoPending(cur, 12, ctx);
+      if (drained.steps === 0) break; // can't resolve → avoid infinite loop
+      cur = drained.state;
+      continue;
+    }
+    if (cur.currentPlayerId !== turnPlayer) break;
+
+    const action = await policy.decide(cur, turnPlayer, ctx);
+    if (!action) {
+      cur = gameReducer(cur, { type: "END_TURN" });
+      continue;
+    }
+    const beforeRetreated = cur.turnFlags.retreated;
+    cur = gameReducer(cur, action);
+    if (action.type === "RETREAT" && cur.turnFlags.retreated === beforeRetreated) {
+      cur = gameReducer(cur, { type: "END_TURN" }); // no-op retreat guard
+    }
+  }
+  return cur;
+}
+
 /** Convenience: build decks → setup → run a policy match. */
 export async function runPolicyMatchFromBuiltDecks(
   input: {
