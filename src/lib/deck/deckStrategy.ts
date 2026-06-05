@@ -261,17 +261,17 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     archetype: "ogerpon-box",
     displayName: "Ogerpon Box",
     winCondition:
-      "Flexible toolbox — Teal Dance accelerates Grass energy from deck, Crispin + Energy Switch powers any attacker. Lillie's Clefairy ex Full Moon Rondo (180+ with 8 bench) with Fairy Zone ability = 360 vs Dragon types (OHKOs Dragapult ex). Cyrano searches correct attacker for each matchup.",
+      "Flexible toolbox built around ONE loaded attacker at a time. Default closer: Mega Kangaskhan ex Rapid-Fire Combo (200+, costs 3 Colorless so ANY energy works, 300 HP tank). Teal Dance + Crispin + Energy Switch funnel energy onto the chosen attacker — don't spread it. Latias ex (Eon Blade 200) and Iron Leaves ex (Prism Edge 180) are alternate closers; Lillie's Clefairy ex Fairy Zone OHKOs Dragon types.",
     playstyle: "toolbox",
-    signatureCards: ["teal mask ogerpon ex", "lillie's clefairy ex", "mega kangaskhan ex"],
-    primaryAttacker: "Teal Mask Ogerpon ex",
-    signatureAttack: "Myriad Leaf Shower",
+    signatureCards: ["mega kangaskhan ex", "teal mask ogerpon ex", "lillie's clefairy ex"],
+    primaryAttacker: "Mega Kangaskhan ex",
+    signatureAttack: "Rapid-Fire Combo",
     preferGoingSecond: false,
     gamePlan: [
-      "T1: Teal Dance (attach Grass from deck). Crispin → attach 2 energies. Area Zero Underdepths stadium (8-bench slots). Identify matchup — if Dragapult, prioritize Lillie's Clefairy ex.",
-      "T2: Cyrano → search ex attacker → put directly active. Energy Switch to redistribute energy to correct attacker. Lillie's Pearl → Lillie's Clefairy ex if facing Dragon types.",
-      "vs Dragapult: Lillie's Clefairy ex Full Moon Rondo = 20 + 20×bench = 180. Fairy Zone makes Dragapult ex take ×2 = 360. One-shot KO.",
-      "vs everything else: Wellspring Ogerpon Torrential Pump (double-target), Mega Kangaskhan ex (high damage). Boss's Orders → Manaphy first, then support Pokémon.",
+      "T1: Teal Dance (attach Grass from hand to a Grass Pokémon, draw 1). Crispin → fetch 2 energies. Area Zero Underdepths stadium. Bench the attacker you want (default Mega Kangaskhan ex).",
+      "T2: FOCUS all energy on ONE attacker — Mega Kangaskhan ex needs 3 of ANY energy for Rapid-Fire Combo (200+). Use Energy Switch to consolidate energy onto it, NOT to spread across Wellspring/Teal Mask/bench. Run Errand draws 2.",
+      "Pick the closer for the matchup: vs Dragapult → Lillie's Clefairy ex (Fairy Zone ×2 = OHKO); otherwise Mega Kangaskhan ex (200+) or Latias ex Eon Blade (200). Boss's Orders → Manaphy/support first.",
+      "Avoid weak chip attacks: never settle for Wellspring's Sob (20) — load the 3rd energy and swing for 100–200 instead.",
     ],
     trainerScoreAdjust: {
       "crispin": 25,                  // Energy acceleration core
@@ -284,16 +284,19 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
       "night stretcher": 8,
     },
     attackerRoles: [
-      { pokemonName: "Teal Mask Ogerpon ex", role: "setup", energyPriority: 60, benchFirst: false },
-      { pokemonName: "Lillie's Clefairy ex", role: "secondary", energyPriority: 85, benchFirst: true },
-      { pokemonName: "Mega Kangaskhan ex", role: "secondary", energyPriority: 80, benchFirst: true },
-      { pokemonName: "Wellspring Mask Ogerpon ex", role: "primary", energyPriority: 90, benchFirst: false },
-      { pokemonName: "Latias ex", role: "tech", energyPriority: 40, benchFirst: true },
+      // ONE primary so energy concentrates (avoids the Sob-20 spread). Mega
+      // Kangaskhan ex takes any energy (3 Colorless) and tanks at 300 HP.
+      { pokemonName: "Mega Kangaskhan ex", role: "primary", energyPriority: 95, benchFirst: false },
+      { pokemonName: "Latias ex", role: "secondary", energyPriority: 55, benchFirst: true },
+      { pokemonName: "Iron Leaves ex", role: "secondary", energyPriority: 52, benchFirst: true },
+      { pokemonName: "Wellspring Mask Ogerpon ex", role: "secondary", energyPriority: 50, benchFirst: false },
+      { pokemonName: "Lillie's Clefairy ex", role: "tech", energyPriority: 45, benchFirst: true },
+      { pokemonName: "Teal Mask Ogerpon ex", role: "setup", energyPriority: 30, benchFirst: false },
     ],
-    benchPriority: ["lillie's clefairy ex", "teal mask ogerpon ex", "latias ex", "meowth ex"],
+    benchPriority: ["mega kangaskhan ex", "teal mask ogerpon ex", "lillie's clefairy ex", "latias ex", "meowth ex"],
     bossPriority: ["manaphy", "dragapult ex", "dudunsparce", "fan rotom", "fezandipiti ex"],
-    ultraBallKeep: ["teal mask ogerpon ex", "lillie's clefairy ex", "mega kangaskhan ex"],
-    searchPriority: ["teal mask ogerpon ex", "lillie's clefairy ex", "mega kangaskhan ex", "latias ex"],
+    ultraBallKeep: ["mega kangaskhan ex", "teal mask ogerpon ex", "lillie's clefairy ex"],
+    searchPriority: ["mega kangaskhan ex", "teal mask ogerpon ex", "lillie's clefairy ex", "latias ex"],
     matchupNotes: {
       dragapult: "Favorable — Lillie's Clefairy ex Fairy Zone OHKO. Set up Area Zero + Clefairy ex fast.",
       lopunny: "Slightly unfavorable — Lopunny's tank loop is hard to break.",

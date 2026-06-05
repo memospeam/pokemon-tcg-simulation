@@ -1095,23 +1095,61 @@ export function pickAutoAbilityAction(
     // === DAMAGE ABILITIES (value scales with KO potential) ===
 
     else if (abilityLower.includes("cursed blast")) {
-      // Place 13 damage counters on any opponent Pokémon, then Dusknoir KOs itself.
-      // Only worth it if we get meaningful value — never sacrifice Dusknoir casually.
-      // Dusknoir (PRE 37): 150 HP. "Dying" = ≤ 70 HP remaining (≥80 damage taken).
-      // This is conservative — only sacrifice when truly at risk of being KO'd next turn.
-      const dusknoirHp = pokemon ? remainingHp(state, pokemon) : 9999;
-      const dusknoirDying = dusknoirHp <= 70; // ≥80 damage taken — opponent likely KOs next turn
-      const canKONow = allOpponent.some((p) => remainingHp(state, p) <= 130);
-      // Set-up KO: Cursed Blast 130 + Phantom Dive active 120 = 250 on active
-      //            Cursed Blast 130 + Phantom Dive bench 50 = 180 on bench
-      const setsUpActiveKO = opponent.active != null && remainingHp(state, opponent.active) <= 250;
-      const setsUpBenchKO = opponent.bench.some((p) => remainingHp(state, p) <= 180);
-      const setsUpKO = setsUpActiveKO || setsUpBenchKO;
-      if (canKONow) score = 95;                       // Immediate KO — always worth the sacrifice
-      else if (dusknoirDying && setsUpKO) score = 85; // Dying anyway; secure the KO setup
-      else if (dusknoirDying) score = 72;             // Dying anyway — put 13 counters somewhere
-      else if (setsUpKO) score = 65;                  // Healthy Dusknoir, sets up a KO next turn
-      // else: score stays 0 — don't sacrifice Dusknoir without meaningful outcome
+      // Cursed Blast places damage counters on 1 opponent Pokémon, then KOs the
+      // user ITSELF — so the opponent takes a prize. It is only worth firing
+      // when it KOs an opponent Pokémon in return (taking a prize back); never
+      // sacrifice it for chip damage. The counter count differs by Pokémon:
+      //   Dusknoir = 13 counters (130 dmg),  Dusclops = 5 counters (50 dmg).
+      const selfName = pokemon
+        ? getDefinitionSafe(state, pokemon.definitionId).name.toLowerCase()
+        : "";
+      const blastDamage = selfName.includes("dusknoir") ? 130 : 50;
+
+      // Which opponent Pokémon does the blast outright KO right now (active or
+      // bench), using the damage already on them?
+      const koTargets = allOpponent.filter((p) => remainingHp(state, p) <= blastDamage);
+      const kosAnEx = koTargets.some((p) =>
+        /\bex\b/.test(getDefinitionSafe(state, p.definitionId).name.toLowerCase()),
+      );
+
+      const selfHp = pokemon ? remainingHp(state, pokemon) : 9999;
+      const selfDying = selfHp <= 70; // ≥80 damage taken — likely KO'd next turn anyway
+
+      // PHANTOM DIVE COMBO: if Dragapult ex is Active and will attack this turn,
+      // its Phantom Dive spreads 6 counters (60) onto a Benched Pokémon AFTER
+      // this ability resolves (abilities fire before the attack). So Cursed
+      // Blast can target a BENCH Pokémon that the COMBINED (blast + 60) finishes
+      // — this is the whole point of the small Dusclops (50): 50 + 60 = 110.
+      const canPhantomDiveThisTurn =
+        !state.turnFlags.attacked &&
+        getLegalActions(state).some(
+          (a) => a.type === "ATTACK" && a.attackName?.toLowerCase().includes("phantom dive"),
+        );
+      const comboKoBench = canPhantomDiveThisTurn
+        ? opponent.bench.filter((p) => remainingHp(state, p) <= blastDamage + 60)
+        : [];
+      const comboKosEx = comboKoBench.some((p) =>
+        /\bex\b/.test(getDefinitionSafe(state, p.definitionId).name.toLowerCase()),
+      );
+
+      if (koTargets.length > 0) {
+        // Direct KO — take a prize back for the self-KO. Prefer trading into a
+        // 2-prize ex; even a single-prize KO is a fair trade.
+        score = kosAnEx ? 95 : 80;
+      } else if (comboKoBench.length > 0) {
+        // Bench finisher: blast softens it now, Phantom Dive's spread KOs it
+        // this same turn. Strongly prefer removing a 2-prize bench ex.
+        score = comboKosEx ? 88 : 68;
+      } else if (selfDying) {
+        // It will be KO'd next turn regardless — only spend it if the counters
+        // SET UP a KO that next turn's Phantom Dive can finish.
+        const setsUpBenchKO = opponent.bench.some(
+          (p) => remainingHp(state, p) <= blastDamage + 60,
+        );
+        score = setsUpBenchKO ? 60 : 0;
+      }
+      // else: healthy Dusknoir/Dusclops with no KO available → hold (score 0).
+      // Don't give the opponent a free prize for chip damage.
 
     } else if (abilityLower.includes("mortal shuriken")) {
       // Discard Basic Water Energy, place 6 damage counters on any opponent Pokémon
@@ -2093,8 +2131,10 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     }
     case "CHOOSE_OPPONENT_POKEMON_DAMAGE": {
       if (pending.options.length === 0) return null;
-      // Pick best target: prefer KO'd by this damage, then most damaged (closest to KO)
-      const damage = (pending.amount ?? 13) * 10;
+      // Pick best target: prefer KO'd by this damage, then most damaged (closest to KO).
+      // pending.amount is already the DAMAGE (e.g. Cursed Blast = 130), not a counter
+      // count — do NOT multiply by 10 again.
+      const damage = pending.amount ?? 130;
       const opponent = getPlayer(state, getOpponentId(playerId));
       const allOppInPlay = [...(opponent.active ? [opponent.active] : []), ...opponent.bench];
       const validTargets = allOppInPlay.filter((p) => pending.options.includes(p.instanceId));
