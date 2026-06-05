@@ -174,8 +174,8 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     preferGoingSecond: false,
     gamePlan: [
       "T1: Poffin → Buneary + Dunsparce. Hilda → search Mega Lopunny ex + Mist Energy. Attach Mist Energy to BENCH Lopunny (blocks Phantom Dive counters).",
-      "T2: Wally's Compassion → evolve Buneary → Mega Lopunny ex immediately. Air Balloon for free retreat. Move Lopunny bench → active → Gale Thrust for 280.",
-      "Loop: Wally's Compassion heals Lopunny. Dudunsparce Run Away Draw (draw 3 + Enriching Energy draws 4 = 7 cards). Hilda next Lopunny + Mist Energy. Promote new Lopunny, repeat.",
+      "T2: Wally's Compassion → evolve Buneary → Mega Lopunny ex immediately. Attach Air Balloon to Mega Lopunny ex (free retreat). Move Lopunny bench → active → Gale Thrust for 280.",
+      "Loop: with Air Balloon on Lopunny, retreat it FREE to the bench, promote a pivot (Dudunsparce → Run Away Draw to refuel, or Abra → Teleporter), then move Lopunny bench → active again so Gale Thrust re-earns its +170 moved-from-bench bonus. Wally's Compassion heals Lopunny each cycle.",
       "Always have Mist Energy on bench Lopunny — prevents Phantom Dive counter placement.",
     ],
     trainerScoreAdjust: {
@@ -216,6 +216,7 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     gamePlan: [
       "T1 (going first): TR Proton → search 3 Basic TR Pokémon from deck (fill bench with Murkrow ×2 + Porygon). TR Factory stadium. TR Transceiver → TR Ariana. Ariana draws 8 + Factory +2 = 10 cards.",
       "T2: Evolve Murkrow → Honchkrow. TR Giovanni → Honchkrow active + pull opponent's best Pokémon up. Roto-Stick top 4 for Supporters. Need 4 TR Supporters in hand. Ignition Energy to attack. Rocket Feathers: discard 4 Supporters = 240 damage.",
+      "EFFICIENCY: Rocket Feathers discards the loaded Supporters when it fires, so attack (and commit the attacking Energy) ONLY on a turn it KOs the opponent's Active. If it isn't lethal yet, hold — keep loading TR Supporters and don't throw the hand away on chip damage.",
       "Recovery: TR Archer fires when Honchkrow is KO'd — shuffle both hands, you draw 5, opponent draws 3. Reload. Promote next Honchkrow.",
       "Late: TR Porygon2 R Command = 20 × TR Supporters in discard. With 12 discarded = 240 damage. Never stops threatening.",
     ],
@@ -346,17 +347,17 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     archetype: "zoroark",
     displayName: "N's Zoroark ex",
     winCondition:
-      "N's Zoroark ex Night Joker copies the opponent's active attacker's best attack. N's Zekrom disrupts opponent's energy. Pecharunt ex Propagation loops attacks from discard. Flexible attack coverage.",
+      "N's Zoroark ex's Night Joker copies one of YOUR OWN Benched N's Pokémon's attacks — primarily N's Zekrom's Rampaging Thunder (250). Keep N's Zekrom on the Bench as the damage battery (only Zoroark ex needs Darkness Energy). Rampaging Thunder locks the attacker out of attacking next turn, so use Pecharunt ex's Subjugating Chains to swap a FRESH Zoroark ex into the Active spot and swing 250 every turn.",
     playstyle: "toolbox",
     signatureCards: ["n's zoroark ex", "n's zorua", "n's zekrom", "pecharunt ex"],
     primaryAttacker: "N's Zoroark ex",
     signatureAttack: "Night Joker",
     preferGoingSecond: true,
     gamePlan: [
-      "T1: Bench N's Zorua ×2 + N's Zekrom. Attach energy.",
-      "T2: Evolve Zorua → N's Zoroark ex. Use Night Joker to copy opponent's best attack.",
-      "T3+: Zoroark ex Night Joker adapts to any matchup. N's Zekrom disrupts energy. Pecharunt ex extends the game.",
-      "N's Darmanitan provides fire coverage. Munkidori/Fezandipiti ex are utility.",
+      "T1: Bench N's Zorua ×2 and N's Zekrom (the Night Joker damage source). Attach Darkness Energy to a Zorua/Zoroark line, NOT to Zekrom (it can't be powered).",
+      "T2: Evolve Zorua → N's Zoroark ex. Night Joker → copy N's Zekrom's Rampaging Thunder for 250. Use Trade (discard 1, draw 2) to dig — but don't over-draw into a deck-out.",
+      "Loop: Rampaging Thunder locks this Zoroark out of attacking next turn → Pecharunt ex Subjugating Chains swaps a fresh Benched N's Zoroark ex (with Energy) into Active so it can Night Joker → 250 again. Always keep N's Zekrom Benched.",
+      "Tech: N's Darmanitan for Fire coverage, Munkidori/Fezandipiti ex utility, Boss's Orders to target the right Pokémon. Conserve deck — stop using Trade when the deck is low.",
     ],
     trainerScoreAdjust: {
       "boss's orders": 12,
@@ -382,9 +383,9 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     ultraBallKeep: ["n's zoroark ex", "n's zekrom", "pecharunt ex"],
     searchPriority: ["n's zoroark ex", "n's zekrom", "n's zorua", "pecharunt ex"],
     matchupNotes: {
-      dragapult: "Even — Night Joker copies Phantom Dive. Iono disrupts their hand.",
-      lopunny: "Unfavorable — hard to OHKO Lopunny before healing.",
-      honchkrow: "Even — Zoroark ex can copy Rocket Feathers-type damage.",
+      dragapult: "Even — Rampaging Thunder (250) two-shots Dragapult ex. Watch your deck count: Phantom Dive trades into long games, so don't over-Trade into a deck-out.",
+      lopunny: "Unfavorable — hard to OHKO 330 HP Lopunny before its Wally heal cycle.",
+      honchkrow: "Even — 250 swings race the single-prize attacker; take favorable 2-for-1 prize trades.",
     },
   },
 

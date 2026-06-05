@@ -263,6 +263,15 @@ export function runEngineAutoPlay(
     }
 
     if (!state.pendingAction && !state.turnFlags.attacked) {
+      const toolAction = pickAutoToolAction(state, ctx);
+      if (toolAction) {
+        state = gameReducer(state, toolAction);
+        actionCount += 1;
+        continue;
+      }
+    }
+
+    if (!state.pendingAction && !state.turnFlags.attacked) {
       const basicAction = pickAutoPlayBasicAction(state, ctx);
       if (basicAction) {
         state = gameReducer(state, basicAction);
@@ -451,6 +460,12 @@ export function runAISingleTurn(
         current = drained;
         continue;
       }
+    }
+
+    // 1b. Attach a Pokémon Tool (e.g. Air Balloon → Mega Lopunny ex)
+    if (!current.turnFlags.attacked) {
+      const toolAction = pickAutoToolAction(current, ctx);
+      if (toolAction) { current = gameReducer(current, toolAction); continue; }
     }
 
     // 2. Bench Basic Pokémon
@@ -708,6 +723,64 @@ export function pickAutoEvolveAction(state: EngineState, ctx?: StrategyContext):
 }
 
 /**
+ * Decide which Pokémon Tool to attach this turn (the ATTACH_TOOL action).
+ *
+ * Pokémon Tools are played via ATTACH_TOOL (tool + target), NOT PLAY_TRAINER,
+ * so they need their own picker. The headline case is Air Balloon on Mega
+ * Lopunny ex: it grants free retreat, powering the Gale Thrust bench↔active
+ * loop (retreat Lopunny → pivot through Dudunsparce's Run Away Draw / Abra's
+ * Teleporter → bring Lopunny back to Active for the +170 moved-from-bench bonus).
+ */
+export function pickAutoToolAction(
+  state: EngineState,
+  ctx?: StrategyContext,
+): Extract<GameAction, { type: "ATTACH_TOOL" }> | null {
+  const playerId = state.currentPlayerId;
+  const player = getPlayer(state, playerId);
+  const actions = getLegalActions(state).filter(
+    (a): a is Extract<GameAction, { type: "ATTACH_TOOL" }> => a.type === "ATTACH_TOOL",
+  );
+  if (actions.length === 0) return null;
+
+  const inPlay = [...(player.active ? [player.active] : []), ...player.bench];
+
+  const scored = actions
+    .map((action) => {
+      const toolCard = player.hand.find((c) => c.instanceId === action.toolId);
+      const toolName = toolCard
+        ? getDefinition(state, toolCard.definitionId)?.name?.toLowerCase() ?? ""
+        : "";
+      const target = inPlay.find((p) => p.instanceId === action.targetId);
+      const targetName = target
+        ? getDefinition(state, target.definitionId)?.name?.toLowerCase() ?? ""
+        : "";
+      const isActive = player.active?.instanceId === action.targetId;
+      const isLopunny = targetName.includes("mega lopunny ex");
+      let score = 10;
+
+      if (toolName.includes("air balloon")) {
+        // Free retreat — best on Mega Lopunny ex to power the Gale Thrust loop;
+        // prefer the ACTIVE Lopunny (it needs to retreat this/next turn).
+        if (isLopunny) score = isActive ? 95 : 90;
+        else if (isActive) score = 32;
+        else score = 12;
+      } else if (toolName.includes("rescue board")) {
+        // −1 retreat: also helps the Lopunny loop / the active attacker.
+        score = isLopunny ? 60 : isActive ? 26 : 10;
+      } else {
+        // Generic damage/HP tools (Defiance Band, Bravery Charm, Maximum Belt,
+        // Hero's Cape, …) — put them on the current attacker.
+        score = isActive ? 28 : 12;
+      }
+      return { action, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  if ((scored[0]?.score ?? 0) <= 0) return null;
+  return scored[0]!.action;
+}
+
+/**
  * Decide whether to retreat and which bench Pokémon to promote.
  *
  * Key use-cases:
@@ -937,10 +1010,14 @@ function shouldSkipAttack(state: EngineState, playerId: PlayerId, ctx: StrategyC
         ? remainingHp(state, getPlayer(state, getOpponentId(playerId)).active!)
         : 9999;
       const expectedDamage = trCount * 60;
-      // Attack if: can KO with current count, OR 3+ supporters loaded, OR 2+ and long game, OR desperate
+      // Honchkrow is a one-shot KO deck — Rocket Feathers should fire ONLY when
+      // it KOs the opponent's Active (each swing discards the loaded TR
+      // Supporters, so a non-lethal attack throws the hand away for nothing).
+      // Otherwise keep loading Supporters. A deck-out / very-late-game valve
+      // prevents stalling into a draw.
       const canKO = expectedDamage >= opponentHp;
-      const desperate = player.deck.length <= 10 || state.turnNumber >= 12;
-      if (!canKO && !desperate && trCount < 3) return true; // keep loading hand
+      const desperate = player.deck.length <= 6 || state.turnNumber >= 16;
+      if (!canKO && !desperate) return true; // not lethal yet → keep loading hand
     }
   }
 
@@ -1001,10 +1078,17 @@ export function pickAutoAbilityAction(
       else if (player.hand.length >= 3) score = 55;  // Moderate hand → probably still worth it
       else if (player.hand.length === 2) score = 30; // Risky: discarding one of only two cards
       // else score = 0: hand ≤ 1 — can't afford to discard
-      // Zoroark: Trade is the primary draw/cycle engine — use it more aggressively
-      // (find N's Zorua, N's Zekrom, and key trainers faster)
-      if (ctx?.archetype === "zoroark" && player.hand.length >= 2) {
-        score = Math.max(score + 10, 45);
+      // Zoroark: Trade is the primary draw/cycle engine — use it more
+      // aggressively to find N's Zorua, N's Zekrom, and key trainers. BUT
+      // drawing 2 every turn can deck us out (Zoroark games go long against
+      // trade-heavy decks), so once the deck thins, only Trade when the hand is
+      // genuinely short on cards — don't burn the deck for value.
+      if (ctx?.archetype === "zoroark") {
+        if (player.deck.length <= 14 && player.hand.length >= 4) {
+          score = 0; // conserve the deck — hand is fine
+        } else if (player.hand.length >= 2) {
+          score = Math.max(score + 10, 45);
+        }
       }
     }
 
@@ -1104,6 +1188,22 @@ export function pickAutoAbilityAction(
         else if (activeDying && benchBetter) score = 75;
         else if (benchBetter) score = 45;
         // else score stays 0 — no point swapping to a worse attacker.
+
+        // ── Zoroark loop ──
+        // After Night Joker copies N's Zekrom's Rampaging Thunder (250), the
+        // active Zoroark ex is locked out of attacking next turn. If it can't
+        // attack this turn but a FRESH Benched N's Zoroark ex (with Energy) can,
+        // pivot to it via Subjugating Chains so we keep swinging 250 every turn.
+        // (Same archetype priority, so the generic "strictly better" rule above
+        // never triggers this — it must be handled explicitly.)
+        if (ctx?.archetype === "zoroark" && activeName.includes("n's zoroark ex")) {
+          const activeCanAttack = getLegalActions(state).some((a) => a.type === "ATTACK");
+          const freshBenchZoroark = eligibleBenchDark.some((b) => {
+            const bName = getDefinition(state, b.definitionId)?.name?.toLowerCase() ?? "";
+            return bName.includes("n's zoroark ex") && b.attachedEnergy.length > 0;
+          });
+          if (!activeCanAttack && freshBenchZoroark) score = Math.max(score, 85);
+        }
       }
 
     } else if (abilityLower.includes("r command")) {
@@ -1389,10 +1489,12 @@ export function pickHeuristicMainAction(
   const player = getPlayer(state, playerId);
   if (state.pendingAction) return null; // caller drains pending separately
 
-  // 1-3. Trainer / basic / evolve (only before attacking)
+  // 1-3. Trainer / tool / basic / evolve (only before attacking)
   if (!state.turnFlags.attacked) {
     const trainerAction = pickAutoTrainerAction(state, ctx);
     if (trainerAction) return trainerAction;
+    const toolAction = pickAutoToolAction(state, ctx);
+    if (toolAction) return toolAction;
     const basicAction = pickAutoPlayBasicAction(state, ctx);
     if (basicAction) return basicAction;
     const evolveAction = pickAutoEvolveAction(state, ctx);

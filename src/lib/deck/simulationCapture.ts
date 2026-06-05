@@ -7,6 +7,7 @@ import {
   drainAutoPending,
   isPlayStalled,
   pickAutoTrainerAction,
+  pickAutoToolAction,
   pickAutoAbilityAction,
   pickAutoPlayBasicAction,
   pickAutoEvolveAction,
@@ -162,6 +163,16 @@ export function captureSimulationFrames(
         state = drained.state;
         actionCount += drained.steps;
         if (drained.stalled || state.phase !== GamePhase.Active || state.winnerId) break;
+        continue;
+      }
+    }
+
+    // 1b. Attach a Pokémon Tool (e.g. Air Balloon → Mega Lopunny ex)
+    if (!state.turnFlags.attacked) {
+      const toolAction = pickAutoToolAction(state, ctx);
+      if (toolAction) {
+        state = applyAction(state, toolAction, frames, "Attach tool", "trainer");
+        actionCount += 1;
         continue;
       }
     }
