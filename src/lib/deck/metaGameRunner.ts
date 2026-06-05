@@ -2045,10 +2045,19 @@ function pickBestSearchDeckCard(
   ctx?: StrategyContext,
 ): string {
   const player = getPlayer(state, playerId);
-  const inPlayNames = new Set([
+  const inPlayDefNames = [
     ...(player.active ? [getDefinition(state, player.active.definitionId)?.name?.toLowerCase() ?? ""] : []),
     ...player.bench.map((p) => getDefinition(state, p.definitionId)?.name?.toLowerCase() ?? ""),
-  ]);
+  ];
+  const inPlayNames = new Set(inPlayDefNames);
+  // How many copies of each Pokémon (by name) are already in play, and which
+  // pre-evolutions we hold in hand — used for diminishing-returns and
+  // evolution-readiness scoring below.
+  const inPlayCounts = new Map<string, number>();
+  for (const n of inPlayDefNames) inPlayCounts.set(n, (inPlayCounts.get(n) ?? 0) + 1);
+  const handNames = new Set(
+    player.hand.map((c) => getDefinition(state, c.definitionId)?.name?.toLowerCase() ?? ""),
+  );
 
   const scored = options.map((instanceId) => {
     const card = player.deck.find((c) => c.instanceId === instanceId);
@@ -2063,7 +2072,24 @@ function pickBestSearchDeckCard(
       else if (def.subtypes.includes("Stage 1")) score = 80;
       else if (name.includes(" ex") || def.subtypes.includes("ex")) score = 75;
       else if (isBasicPokemon(def)) score = 60;
-      if (def.evolvesFrom && inPlayNames.has(def.evolvesFrom.toLowerCase())) score += 15;
+
+      // Evolution readiness: an Evolution Pokémon is only useful if we can
+      // actually put it into play. Strongly prefer one whose pre-evolution is
+      // already in play (e.g. Dudunsparce when Dunsparce is benched); penalise
+      // one we can't deploy (e.g. searching a 3rd Mega Lopunny ex with no
+      // Buneary in play or hand).
+      if (def.evolvesFrom) {
+        const pre = def.evolvesFrom.toLowerCase();
+        if (inPlayNames.has(pre)) score += 30;
+        else if (handNames.has(pre)) score += 8;
+        else score -= 25;
+      }
+
+      // Diminishing returns: a 2nd copy of an attacker is fine, but don't keep
+      // grabbing copies of something we already have multiples of in play
+      // (e.g. a 3rd Mega Lopunny ex when 2 are already down).
+      const copies = inPlayCounts.get(name) ?? 0;
+      score -= 20 * Math.max(0, copies - 1);
       // Archetype-aware: boost key attacker lines
       if (ctx) {
         score += getArchetypeSearchPriority(ctx.archetype, name);

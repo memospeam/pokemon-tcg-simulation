@@ -194,8 +194,10 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     ],
     benchPriority: ["buneary", "mega lopunny ex", "dunsparce", "dudunsparce", "fan rotom"],
     bossPriority: ["manaphy", "dudunsparce", "fan rotom", "meowth ex", "fezandipiti ex"],
-    ultraBallKeep: ["mega lopunny ex", "dudunsparce ex"],
-    searchPriority: ["mega lopunny ex", "dudunsparce ex", "fan rotom", "buneary"],
+    ultraBallKeep: ["mega lopunny ex", "dudunsparce", "buneary"],
+    // Deck runs plain "Dudunsparce" (not "Dudunsparce ex") — the old "dudunsparce ex"
+    // entry never matched, so the draw engine was never prioritised by search.
+    searchPriority: ["mega lopunny ex", "buneary", "dudunsparce", "fan rotom"],
     matchupNotes: {
       dragapult: "Favorable — 330 HP + Wally heal tanks Phantom Dive. Battle Cage blocks bench spread.",
       honchkrow: "Even — Honchkrow can load 4–5 Supporters for 270+ damage one-shot.",
