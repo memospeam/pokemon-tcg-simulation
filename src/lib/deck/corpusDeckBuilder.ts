@@ -24,6 +24,17 @@ export function findCorpusCard(
   );
 }
 
+/**
+ * Look a card up by name only — used as a fallback to classify a Trainer's
+ * subtype (Item / Tool / Supporter / Stadium) when the deck list cites a
+ * printing (set + number) that is not in the current Standard corpus. A card's
+ * subtype is the same across reprints, so name alone is sufficient here.
+ */
+export function findCorpusCardByName(name: string): StandardCardIndex | undefined {
+  const lower = name.toLowerCase();
+  return loadStandardCorpus().cards.find((entry) => entry.name.toLowerCase() === lower);
+}
+
 export function validateDeckTextAgainstCorpus(text: string): {
   missing: string[];
   resolved: number;
@@ -334,14 +345,22 @@ function corpusCardToDefinition(
   };
 }
 
-function stubTrainerDefinition(line: ParsedDeckLine): CardDefinition {
+function stubTrainerDefinition(line: ParsedDeckLine, corpusSubtypes?: string[]): CardDefinition {
   const setCode = normalizeSetCode(line.setCode ?? "TST") ?? "TST";
   const apiId = `${setCode}-${line.number ?? line.name}`.toLowerCase().replace(/\s+/g, "-");
+  // Pokémon Tools attach to a Pokémon — they must NOT be classified as Items,
+  // or the engine resolves + discards them and the tool effect (e.g. Air
+  // Balloon's −2 retreat) never applies. Detect tools from the corpus subtypes.
+  const isToolCard = corpusSubtypes?.some((s) => s === "Tool" || s === "Pokémon Tool") ?? false;
   let subtypes = ["Item"];
   if (SUPPORTER_NAMES.has(line.name) || line.name.includes("Determination")) {
     subtypes = ["Supporter"];
   } else if (STADIUM_NAMES.has(line.name)) {
     subtypes = ["Stadium"];
+  } else if (isToolCard) {
+    // Preserve the corpus subtypes so ACE SPEC tools (e.g. Forest Seal Stone)
+    // keep that marker.
+    subtypes = [...corpusSubtypes!];
   } else if (/ace spec/i.test(line.name) || line.name === "Unfair Stamp" || line.name === "Night Stretcher") {
     subtypes = ["Item", "ACE SPEC"];
   }
@@ -384,7 +403,15 @@ function lineToDefinition(
     return { definition: stubEnergyDefinition(line) };
   }
   if (line.section === "Trainer") {
-    return { definition: stubTrainerDefinition(line) };
+    // Consult the corpus so Tools are classified correctly instead of
+    // defaulting to Item. Fall back to a name-only lookup when the cited
+    // printing (set + number) isn't in the current Standard corpus (e.g. an
+    // older Air Balloon reprint).
+    const corpus =
+      (line.setCode && line.number
+        ? findCorpusCard(line.setCode, line.number, line.name)
+        : undefined) ?? findCorpusCardByName(line.name);
+    return { definition: stubTrainerDefinition(line, corpus?.subtypes) };
   }
 
   if (!line.setCode || !line.number) {
