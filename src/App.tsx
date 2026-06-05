@@ -93,7 +93,7 @@ export function App() {
       <main>
         {tab === "lobby" && <Lobby onPlay={(p1, p2, vsAI, aiKind) => handlePlay(p1, p2, vsAI, aiKind)} />}
         {tab === "play" && <GameBoard />}
-        {tab === "builder" && <DeckBuilder />}
+        {tab === "builder" && <DeckBuilder onUseDeck={() => setTab("lobby")} />}
         {tab === "sim" && <SimPlayback />}
         {tab === "analyze" && <MetaAnalyzer />}
       </main>

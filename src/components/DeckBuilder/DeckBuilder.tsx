@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { buildDeckFromText } from "@/lib/deck/builder";
 import { deckListToText, parseLimitlessDeckList } from "@/lib/deck/limitlessParser";
-import { deleteSavedDeck, loadSavedDecks, saveDeckToLibrary } from "@/lib/deck/storage";
+import { useDeckStore } from "@/stores/deckStore";
 import type { BuiltDeck } from "@/lib/deck/builder";
 
 const SAMPLE_DECK = `Pokémon: 18
@@ -35,15 +35,20 @@ Energy: 10
 
 interface DeckBuilderProps {
   onDeckBuilt?: (deck: BuiltDeck) => void;
+  /** Called after the built deck is set as Player 1's deck (e.g. navigate to the Lobby). */
+  onUseDeck?: () => void;
 }
 
-export function DeckBuilder({ onDeckBuilt }: DeckBuilderProps) {
+export function DeckBuilder({ onDeckBuilt, onUseDeck }: DeckBuilderProps) {
+  // Saved decks live in the shared store so that saving here is immediately
+  // reflected in the Lobby's "Load deck" dropdown (no manual refresh needed).
+  const { savedDecks, saveDeck, removeDeck, setPlayer1Deck } = useDeckStore();
   const [name, setName] = useState("My Deck");
   const [text, setText] = useState(SAMPLE_DECK);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deck, setDeck] = useState<BuiltDeck | null>(null);
-  const [savedDecks, setSavedDecks] = useState(loadSavedDecks());
+  const [justSaved, setJustSaved] = useState(false);
 
   const groupedCards = useMemo(() => {
     if (!deck) return [];
@@ -84,7 +89,18 @@ export function DeckBuilder({ onDeckBuilt }: DeckBuilderProps) {
 
   function handleSave() {
     if (!deck) return;
-    setSavedDecks(saveDeckToLibrary(deck));
+    saveDeck(deck);
+    setJustSaved(true);
+    setTimeout(() => setJustSaved(false), 2000);
+  }
+
+  function handleUseToPlay() {
+    if (!deck) return;
+    // Make this the Player 1 deck and (optionally) jump to the Lobby to pick an
+    // opponent and start the match.
+    if (!savedDecks.some((d) => d.name === deck.name)) saveDeck(deck);
+    setPlayer1Deck(deck);
+    onUseDeck?.();
   }
 
   function handleLoadSaved(savedText: string, savedName: string) {
@@ -93,7 +109,7 @@ export function DeckBuilder({ onDeckBuilt }: DeckBuilderProps) {
   }
 
   function handleDeleteSaved(id: string) {
-    setSavedDecks(deleteSavedDeck(id));
+    removeDeck(id);
   }
 
   function handleExport() {
@@ -142,7 +158,16 @@ export function DeckBuilder({ onDeckBuilt }: DeckBuilderProps) {
               {deck.validation.valid ? "Valid deck" : "Invalid deck"}
             </div>
             <button type="button" onClick={handleSave}>
-              Save to My Decks
+              {justSaved ? "Saved ✓" : "Save to My Decks"}
+            </button>
+            <button
+              type="button"
+              className="action-dock__primary"
+              onClick={handleUseToPlay}
+              disabled={!deck.validation.valid}
+              title={deck.validation.valid ? "Save & use as Player 1, then go to the Lobby" : "Deck must be valid to play"}
+            >
+              ▶ Use to play
             </button>
             <button type="button" onClick={handleExport}>
               Export text
