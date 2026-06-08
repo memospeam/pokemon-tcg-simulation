@@ -6,6 +6,7 @@ import { getDefinitionSafe } from "../rules";
 import { logMessage } from "../helpers";
 import { allPokemonInPlay, getDefinition, getPlayer, type EngineState } from "../types";
 import { parseStadiumFullText } from "./parseTextTrainer";
+import { resolveBenchKnockouts } from "./execute";
 import type { ParsedEffect } from "./types";
 
 export type StadiumKind =
@@ -108,6 +109,12 @@ export function applyRiskyRuinsOnBenchPlay(
     state,
     `${def.name} took 20 damage from Risky Ruins (2 damage counters).`,
   );
+  // Resolve the KO immediately — Risky Ruins can bring a Benched Pokémon to its
+  // HP, and without this it would persist on the Bench as a "zombie" (dead but
+  // still in play). resolveBenchKnockouts is idempotent (no-op when nothing is
+  // KO'd). The execute.ts↔stadiumEffects import cycle is safe here because the
+  // binding is only used at call-time, never at module init.
+  resolveBenchKnockouts(state);
 }
 
 export function shouldBlockBenchEffectDamage(

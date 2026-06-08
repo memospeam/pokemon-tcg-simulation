@@ -1052,6 +1052,8 @@ function executeSingleEffect(
       player.bench.length = 0;
       for (const pokemon of bench) {
         pokemon.zone = Zone.Deck;
+        pokemon.damageCounters = 0;
+        pokemon.statusConditions = [];
         for (const energy of pokemon.attachedEnergy) {
           moveToDiscard(player, energy);
         }

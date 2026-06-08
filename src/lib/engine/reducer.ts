@@ -1752,6 +1752,10 @@ function handleEndTurn(state: EngineState): EngineState {
   clearModifiersWhenTurnEnds(state, previous);
   discardIgnitionEnergyAtEndOfTurn(state, previous);
   runPokemonCheckup(state);
+  // Safety net: ensure no Benched Pokémon survives the turn at lethal damage
+  // (incremental bench damage from Risky Ruins + Phantom Dive spread + Munkidori
+  // can reach exactly lethal between the per-effect KO checks). Idempotent.
+  resolveBenchKnockouts(state);
   state.currentPlayerId = getOpponentId(previous);
   state.turnNumber += 1;
   state.turnFlags = emptyTurnFlags();
