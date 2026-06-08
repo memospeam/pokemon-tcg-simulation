@@ -348,21 +348,27 @@ function corpusCardToDefinition(
 function stubTrainerDefinition(line: ParsedDeckLine, corpusSubtypes?: string[]): CardDefinition {
   const setCode = normalizeSetCode(line.setCode ?? "TST") ?? "TST";
   const apiId = `${setCode}-${line.number ?? line.name}`.toLowerCase().replace(/\s+/g, "-");
-  // Pokémon Tools attach to a Pokémon — they must NOT be classified as Items,
-  // or the engine resolves + discards them and the tool effect (e.g. Air
-  // Balloon's −2 retreat) never applies. Detect tools from the corpus subtypes.
-  const isToolCard = corpusSubtypes?.some((s) => s === "Tool" || s === "Pokémon Tool") ?? false;
-  let subtypes = ["Item"];
-  if (SUPPORTER_NAMES.has(line.name) || line.name.includes("Determination")) {
-    subtypes = ["Supporter"];
-  } else if (STADIUM_NAMES.has(line.name)) {
-    subtypes = ["Stadium"];
-  } else if (isToolCard) {
-    // Preserve the corpus subtypes so ACE SPEC tools (e.g. Forest Seal Stone)
-    // keep that marker.
-    subtypes = [...corpusSubtypes!];
-  } else if (/ace spec/i.test(line.name) || line.name === "Unfair Stamp" || line.name === "Night Stretcher") {
-    subtypes = ["Item", "ACE SPEC"];
+
+  let subtypes: string[];
+  if (corpusSubtypes && corpusSubtypes.length > 0) {
+    // Authoritative: use the real Trainer subtype from the Standard corpus
+    // (Supporter / Item / Stadium / Pokémon Tool / ACE SPEC). The old
+    // hard-coded name lists missed many Supporters and Stadiums and silently
+    // mislabelled them as Items — a Supporter mislabelled as an Item never sets
+    // turnFlags.supporterPlayed, so the AI could play it AND a real Supporter
+    // in the same turn (two Supporters/turn); Stadiums-as-Items never entered
+    // the Stadium zone or applied their effects.
+    subtypes = [...corpusSubtypes];
+  } else {
+    // Fallback for cards not present in the corpus: name-based heuristics.
+    subtypes = ["Item"];
+    if (SUPPORTER_NAMES.has(line.name) || line.name.includes("Determination")) {
+      subtypes = ["Supporter"];
+    } else if (STADIUM_NAMES.has(line.name)) {
+      subtypes = ["Stadium"];
+    } else if (/ace spec/i.test(line.name) || line.name === "Unfair Stamp" || line.name === "Night Stretcher") {
+      subtypes = ["Item", "ACE SPEC"];
+    }
   }
 
   return {
