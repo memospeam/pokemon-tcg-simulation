@@ -2179,9 +2179,10 @@ export function resolveBenchKnockouts(state: EngineState): void {
           attacker.hand.push(prize);
         }
       }
-      for (const energy of benchMon.attachedEnergy) {
-        moveToDiscard(player, energy);
-      }
+      // discardPokemonAttachments already moves attached Energy AND Tools to
+      // the discard and clears the arrays — do NOT also loop attachedEnergy
+      // here, or each Energy is discarded twice (duplicate instances in the
+      // discard pile / inflated card count). Matches the Active-KO path.
       discardPokemonAttachments(state, player, benchMon);
       moveToDiscard(player, benchMon);
       player.bench.splice(i, 1);
