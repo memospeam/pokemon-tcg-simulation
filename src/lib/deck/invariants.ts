@@ -21,7 +21,7 @@ import {
   isTool,
 } from "../models/definition";
 import type { CardInstance } from "../models/instance";
-import { getDefinition, getPlayer, type EngineState } from "../engine/types";
+import { getDefinition, getPlayer, remainingHp, type EngineState } from "../engine/types";
 import { getMaxBenchSize } from "../engine/effects/stadiumEffects";
 import type { SimFrame } from "./simulationCapture";
 
@@ -135,14 +135,14 @@ export function checkStateInvariants(
         }
       }
     }
-    // Unresolved-KO (soft): a BENCHED Pokémon at/over its HP should always be
+    // Unresolved-KO (soft): a BENCHED Pokémon with no HP left should always be
     // cleaned up by resolveBenchKnockouts. The Active is intentionally excluded
     // — it can legitimately sit at lethal damage mid-attack-resolution before
-    // the KO is processed.
+    // the KO is processed. NOTE: damageCounters is the damage AMOUNT in HP (not
+    // a counter count), so compare via remainingHp — never multiply by 10.
     for (const mon of p.bench) {
-      const hp = parseInt(getDefinition(state, mon.definitionId)?.hp ?? "0", 10) || 0;
-      if (hp > 0 && mon.damageCounters * 10 >= hp) {
-        v.push({ kind: "unresolved-ko", severity: "soft", turnNumber: tn, detail: `benched ${defName(state, mon)} has ${mon.damageCounters * 10} damage ≥ ${hp} HP but wasn't KO'd` });
+      if (remainingHp(state, mon) <= 0) {
+        v.push({ kind: "unresolved-ko", severity: "soft", turnNumber: tn, detail: `benched ${defName(state, mon)} has 0 HP left but wasn't KO'd` });
       }
     }
 
