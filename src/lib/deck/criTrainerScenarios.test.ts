@@ -355,6 +355,64 @@ Energy : 2
     expect(state.pendingAction).toBeNull();
   });
 
+  it("Crispin fetches the colours a bench attacker needs (Dragapult: Fire+Psychic, not Darkness)", () => {
+    // Dragapult deck runs Fire + Psychic + Darkness energy. Phantom Dive costs
+    // Fire+Psychic. With Dreepy active and Dragapult ex on the bench, Crispin
+    // must put energy toward Dragapult in its colours — never waste it on the
+    // active Dreepy or fetch the irrelevant Darkness.
+    const deck = buildPlaytestDeckFromCorpusText(
+      "Crispin colour-targeting test",
+      `Pokémon : 2
+1 Dragapult ex TWM 130
+1 Dreepy TWM 128
+
+Trainer : 1
+1 Crispin SCR 133
+
+Energy : 3
+1 Fire Energy MEE 2
+1 Psychic Energy MEE 5
+1 Darkness Energy MEE 7`,
+    );
+    const crispin = findDefinition(deck, "Crispin");
+    const dragapult = findDefinition(deck, "Dragapult ex");
+    const fire = findDefinition(deck, "Fire Energy");
+    const psychic = findDefinition(deck, "Psychic Energy");
+    const darkness = findDefinition(deck, "Darkness Energy");
+
+    let state = criTrainerScenarioState(deck, { p1HandTrainer: crispin, activeName: "Dreepy" });
+
+    // Bench the real attacker and seed the deck with all three energy types.
+    const dragapultInPlay = createCardInstance(dragapult.apiId, PlayerId.P1, Zone.Bench);
+    getPlayer(state, PlayerId.P1).bench.push(dragapultInPlay);
+    const deckPile = getPlayer(state, PlayerId.P1).deck;
+    deckPile.unshift(createCardInstance(darkness.apiId, PlayerId.P1, Zone.Deck));
+    deckPile.unshift(createCardInstance(psychic.apiId, PlayerId.P1, Zone.Deck));
+    deckPile.unshift(createCardInstance(fire.apiId, PlayerId.P1, Zone.Deck));
+
+    const crispinCard = getPlayer(state, PlayerId.P1).hand[0]!;
+    state = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: crispinCard.instanceId });
+
+    const p1 = getPlayer(state, PlayerId.P1);
+    const benchDrag = p1.bench.find((c) => c.instanceId === dragapultInPlay.instanceId)!;
+    const attachedTypes = benchDrag.attachedEnergy.map(
+      (e) => getDefinitionSafe(state, e.definitionId).types?.[0],
+    );
+    // Dragapult (the bench attacker) — not Dreepy — receives the energy.
+    expect(benchDrag.attachedEnergy).toHaveLength(1);
+    expect(p1.active!.attachedEnergy).toHaveLength(0);
+    // The attached colour is one Phantom Dive needs (Fire or Psychic), never Darkness.
+    expect(["Fire", "Psychic"]).toContain(attachedTypes[0]);
+    // The other searched energy in hand is the complementary cost colour.
+    const handEnergyTypes = p1.hand
+      .filter((c) => getDefinitionSafe(state, c.definitionId).supertype === "Energy")
+      .map((c) => getDefinitionSafe(state, c.definitionId).types?.[0]);
+    expect(handEnergyTypes).toHaveLength(1);
+    expect(["Fire", "Psychic"]).toContain(handEnergyTypes[0]);
+    expect(handEnergyTypes[0]).not.toBe(attachedTypes[0]);
+    expect(state.pendingAction).toBeNull();
+  });
+
   it("plays Rare Candy and evolves a Basic Pokémon", () => {
     const candy = findDefinition(greninjaDeck, "Rare Candy");
     const greninjaEx = findDefinition(greninjaDeck, "Mega Greninja ex");

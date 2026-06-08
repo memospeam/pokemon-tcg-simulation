@@ -174,8 +174,8 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     preferGoingSecond: false,
     gamePlan: [
       "T1: Poffin → Buneary + Dunsparce. Hilda → search Mega Lopunny ex + Mist Energy. Attach Mist Energy to BENCH Lopunny (blocks Phantom Dive counters).",
-      "T2: Wally's Compassion → evolve Buneary → Mega Lopunny ex immediately. Air Balloon for free retreat. Move Lopunny bench → active → Gale Thrust for 280.",
-      "Loop: Wally's Compassion heals Lopunny. Dudunsparce Run Away Draw (draw 3 + Enriching Energy draws 4 = 7 cards). Hilda next Lopunny + Mist Energy. Promote new Lopunny, repeat.",
+      "T2: Wally's Compassion → evolve Buneary → Mega Lopunny ex immediately. Attach Air Balloon to Mega Lopunny ex (free retreat). Move Lopunny bench → active → Gale Thrust for 280.",
+      "Loop: with Air Balloon on Lopunny, retreat it FREE to the bench, promote a pivot (Dudunsparce → Run Away Draw to refuel, or Abra → Teleporter), then move Lopunny bench → active again so Gale Thrust re-earns its +170 moved-from-bench bonus. Wally's Compassion heals Lopunny each cycle.",
       "Always have Mist Energy on bench Lopunny — prevents Phantom Dive counter placement.",
     ],
     trainerScoreAdjust: {
@@ -194,8 +194,10 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     ],
     benchPriority: ["buneary", "mega lopunny ex", "dunsparce", "dudunsparce", "fan rotom"],
     bossPriority: ["manaphy", "dudunsparce", "fan rotom", "meowth ex", "fezandipiti ex"],
-    ultraBallKeep: ["mega lopunny ex", "dudunsparce ex"],
-    searchPriority: ["mega lopunny ex", "dudunsparce ex", "fan rotom", "buneary"],
+    ultraBallKeep: ["mega lopunny ex", "dudunsparce", "buneary"],
+    // Deck runs plain "Dudunsparce" (not "Dudunsparce ex") — the old "dudunsparce ex"
+    // entry never matched, so the draw engine was never prioritised by search.
+    searchPriority: ["mega lopunny ex", "buneary", "dudunsparce", "fan rotom"],
     matchupNotes: {
       dragapult: "Favorable — 330 HP + Wally heal tanks Phantom Dive. Battle Cage blocks bench spread.",
       honchkrow: "Even — Honchkrow can load 4–5 Supporters for 270+ damage one-shot.",
@@ -216,6 +218,7 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     gamePlan: [
       "T1 (going first): TR Proton → search 3 Basic TR Pokémon from deck (fill bench with Murkrow ×2 + Porygon). TR Factory stadium. TR Transceiver → TR Ariana. Ariana draws 8 + Factory +2 = 10 cards.",
       "T2: Evolve Murkrow → Honchkrow. TR Giovanni → Honchkrow active + pull opponent's best Pokémon up. Roto-Stick top 4 for Supporters. Need 4 TR Supporters in hand. Ignition Energy to attack. Rocket Feathers: discard 4 Supporters = 240 damage.",
+      "EFFICIENCY: Rocket Feathers discards the loaded Supporters when it fires, so attack (and commit the attacking Energy) ONLY on a turn it KOs the opponent's Active. If it isn't lethal yet, hold — keep loading TR Supporters and don't throw the hand away on chip damage.",
       "Recovery: TR Archer fires when Honchkrow is KO'd — shuffle both hands, you draw 5, opponent draws 3. Reload. Promote next Honchkrow.",
       "Late: TR Porygon2 R Command = 20 × TR Supporters in discard. With 12 discarded = 240 damage. Never stops threatening.",
     ],
@@ -260,17 +263,17 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     archetype: "ogerpon-box",
     displayName: "Ogerpon Box",
     winCondition:
-      "Flexible toolbox — Teal Dance accelerates Grass energy from deck, Crispin + Energy Switch powers any attacker. Lillie's Clefairy ex Full Moon Rondo (180+ with 8 bench) with Fairy Zone ability = 360 vs Dragon types (OHKOs Dragapult ex). Cyrano searches correct attacker for each matchup.",
+      "Flexible toolbox built around ONE loaded attacker at a time. Default closer: Mega Kangaskhan ex Rapid-Fire Combo (200+, costs 3 Colorless so ANY energy works, 300 HP tank). Teal Dance + Crispin + Energy Switch funnel energy onto the chosen attacker — don't spread it. Latias ex (Eon Blade 200) and Iron Leaves ex (Prism Edge 180) are alternate closers; Lillie's Clefairy ex Fairy Zone OHKOs Dragon types.",
     playstyle: "toolbox",
-    signatureCards: ["teal mask ogerpon ex", "lillie's clefairy ex", "mega kangaskhan ex"],
-    primaryAttacker: "Teal Mask Ogerpon ex",
-    signatureAttack: "Myriad Leaf Shower",
+    signatureCards: ["mega kangaskhan ex", "teal mask ogerpon ex", "lillie's clefairy ex"],
+    primaryAttacker: "Mega Kangaskhan ex",
+    signatureAttack: "Rapid-Fire Combo",
     preferGoingSecond: false,
     gamePlan: [
-      "T1: Teal Dance (attach Grass from deck). Crispin → attach 2 energies. Area Zero Underdepths stadium (8-bench slots). Identify matchup — if Dragapult, prioritize Lillie's Clefairy ex.",
-      "T2: Cyrano → search ex attacker → put directly active. Energy Switch to redistribute energy to correct attacker. Lillie's Pearl → Lillie's Clefairy ex if facing Dragon types.",
-      "vs Dragapult: Lillie's Clefairy ex Full Moon Rondo = 20 + 20×bench = 180. Fairy Zone makes Dragapult ex take ×2 = 360. One-shot KO.",
-      "vs everything else: Wellspring Ogerpon Torrential Pump (double-target), Mega Kangaskhan ex (high damage). Boss's Orders → Manaphy first, then support Pokémon.",
+      "T1: Teal Dance (attach Grass from hand to a Grass Pokémon, draw 1). Crispin → fetch 2 energies. Area Zero Underdepths stadium. Bench the attacker you want (default Mega Kangaskhan ex).",
+      "T2: FOCUS all energy on ONE attacker — Mega Kangaskhan ex needs 3 of ANY energy for Rapid-Fire Combo (200+). Use Energy Switch to consolidate energy onto it, NOT to spread across Wellspring/Teal Mask/bench. Run Errand draws 2.",
+      "Pick the closer for the matchup: vs Dragapult → Lillie's Clefairy ex (Fairy Zone ×2 = OHKO); otherwise Mega Kangaskhan ex (200+) or Latias ex Eon Blade (200). Boss's Orders → Manaphy/support first.",
+      "Avoid weak chip attacks: never settle for Wellspring's Sob (20) — load the 3rd energy and swing for 100–200 instead.",
     ],
     trainerScoreAdjust: {
       "crispin": 25,                  // Energy acceleration core
@@ -283,16 +286,19 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
       "night stretcher": 8,
     },
     attackerRoles: [
-      { pokemonName: "Teal Mask Ogerpon ex", role: "setup", energyPriority: 60, benchFirst: false },
-      { pokemonName: "Lillie's Clefairy ex", role: "secondary", energyPriority: 85, benchFirst: true },
-      { pokemonName: "Mega Kangaskhan ex", role: "secondary", energyPriority: 80, benchFirst: true },
-      { pokemonName: "Wellspring Mask Ogerpon ex", role: "primary", energyPriority: 90, benchFirst: false },
-      { pokemonName: "Latias ex", role: "tech", energyPriority: 40, benchFirst: true },
+      // ONE primary so energy concentrates (avoids the Sob-20 spread). Mega
+      // Kangaskhan ex takes any energy (3 Colorless) and tanks at 300 HP.
+      { pokemonName: "Mega Kangaskhan ex", role: "primary", energyPriority: 95, benchFirst: false },
+      { pokemonName: "Latias ex", role: "secondary", energyPriority: 55, benchFirst: true },
+      { pokemonName: "Iron Leaves ex", role: "secondary", energyPriority: 52, benchFirst: true },
+      { pokemonName: "Wellspring Mask Ogerpon ex", role: "secondary", energyPriority: 50, benchFirst: false },
+      { pokemonName: "Lillie's Clefairy ex", role: "tech", energyPriority: 45, benchFirst: true },
+      { pokemonName: "Teal Mask Ogerpon ex", role: "setup", energyPriority: 30, benchFirst: false },
     ],
-    benchPriority: ["lillie's clefairy ex", "teal mask ogerpon ex", "latias ex", "meowth ex"],
+    benchPriority: ["mega kangaskhan ex", "teal mask ogerpon ex", "lillie's clefairy ex", "latias ex", "meowth ex"],
     bossPriority: ["manaphy", "dragapult ex", "dudunsparce", "fan rotom", "fezandipiti ex"],
-    ultraBallKeep: ["teal mask ogerpon ex", "lillie's clefairy ex", "mega kangaskhan ex"],
-    searchPriority: ["teal mask ogerpon ex", "lillie's clefairy ex", "mega kangaskhan ex", "latias ex"],
+    ultraBallKeep: ["mega kangaskhan ex", "teal mask ogerpon ex", "lillie's clefairy ex"],
+    searchPriority: ["mega kangaskhan ex", "teal mask ogerpon ex", "lillie's clefairy ex", "latias ex"],
     matchupNotes: {
       dragapult: "Favorable — Lillie's Clefairy ex Fairy Zone OHKO. Set up Area Zero + Clefairy ex fast.",
       lopunny: "Slightly unfavorable — Lopunny's tank loop is hard to break.",
@@ -346,17 +352,17 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     archetype: "zoroark",
     displayName: "N's Zoroark ex",
     winCondition:
-      "N's Zoroark ex Night Joker copies the opponent's active attacker's best attack. N's Zekrom disrupts opponent's energy. Pecharunt ex Propagation loops attacks from discard. Flexible attack coverage.",
+      "N's Zoroark ex's Night Joker copies one of YOUR OWN Benched N's Pokémon's attacks — primarily N's Zekrom's Rampaging Thunder (250). Keep N's Zekrom on the Bench as the damage battery (only Zoroark ex needs Darkness Energy). Rampaging Thunder locks the attacker out of attacking next turn, so use Pecharunt ex's Subjugating Chains to swap a FRESH Zoroark ex into the Active spot and swing 250 every turn.",
     playstyle: "toolbox",
     signatureCards: ["n's zoroark ex", "n's zorua", "n's zekrom", "pecharunt ex"],
     primaryAttacker: "N's Zoroark ex",
     signatureAttack: "Night Joker",
     preferGoingSecond: true,
     gamePlan: [
-      "T1: Bench N's Zorua ×2 + N's Zekrom. Attach energy.",
-      "T2: Evolve Zorua → N's Zoroark ex. Use Night Joker to copy opponent's best attack.",
-      "T3+: Zoroark ex Night Joker adapts to any matchup. N's Zekrom disrupts energy. Pecharunt ex extends the game.",
-      "N's Darmanitan provides fire coverage. Munkidori/Fezandipiti ex are utility.",
+      "T1: Bench N's Zorua ×2 and N's Zekrom (the Night Joker damage source). Attach Darkness Energy to a Zorua/Zoroark line, NOT to Zekrom (it can't be powered).",
+      "T2: Evolve Zorua → N's Zoroark ex. Night Joker → copy N's Zekrom's Rampaging Thunder for 250. Use Trade (discard 1, draw 2) to dig — but don't over-draw into a deck-out.",
+      "Loop: Rampaging Thunder locks this Zoroark out of attacking next turn → Pecharunt ex Subjugating Chains swaps a fresh Benched N's Zoroark ex (with Energy) into Active so it can Night Joker → 250 again. Always keep N's Zekrom Benched.",
+      "Tech: N's Darmanitan for Fire coverage, Munkidori/Fezandipiti ex utility, Boss's Orders to target the right Pokémon. Conserve deck — stop using Trade when the deck is low.",
     ],
     trainerScoreAdjust: {
       "boss's orders": 12,
@@ -382,9 +388,9 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
     ultraBallKeep: ["n's zoroark ex", "n's zekrom", "pecharunt ex"],
     searchPriority: ["n's zoroark ex", "n's zekrom", "n's zorua", "pecharunt ex"],
     matchupNotes: {
-      dragapult: "Even — Night Joker copies Phantom Dive. Iono disrupts their hand.",
-      lopunny: "Unfavorable — hard to OHKO Lopunny before healing.",
-      honchkrow: "Even — Zoroark ex can copy Rocket Feathers-type damage.",
+      dragapult: "Even — Rampaging Thunder (250) two-shots Dragapult ex. Watch your deck count: Phantom Dive trades into long games, so don't over-Trade into a deck-out.",
+      lopunny: "Unfavorable — hard to OHKO 330 HP Lopunny before its Wally heal cycle.",
+      honchkrow: "Even — 250 swings race the single-prize attacker; take favorable 2-for-1 prize trades.",
     },
   },
 

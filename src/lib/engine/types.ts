@@ -509,6 +509,12 @@ export function setZone(card: CardInstance, zone: Zone): void {
 
 export function moveToDiscard(player: PlayerState, card: CardInstance): void {
   setZone(card, Zone.Discard);
+  // A card in the discard pile carries no in-play state. Reset combat state so
+  // returning it to hand/deck later (Night Stretcher, Super Rod, …) yields a
+  // fresh card — otherwise a KO'd Pokémon (damage ≥ HP) comes back and is "dead
+  // on arrival" when re-played (a benched zombie).
+  card.damageCounters = 0;
+  card.statusConditions = [];
   player.discard.push(card);
 }
 

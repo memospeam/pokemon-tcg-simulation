@@ -8,6 +8,17 @@ import type { PlayerId } from "../../models/enums";
 import { discardPokemonAttachments } from "./toolEffects";
 import { getMaxBenchSize } from "./stadiumEffects";
 
+/**
+ * Clear a Pokémon's in-play combat state. Call this whenever a Pokémon leaves
+ * play to an off-board zone (deck / hand) so it doesn't return "dead on arrival"
+ * with stale damage (a benched/active zombie). damageCounters is the damage
+ * AMOUNT in HP.
+ */
+export function resetPokemonCombatState(pokemon: CardInstance): void {
+  pokemon.damageCounters = 0;
+  pokemon.statusConditions = [];
+}
+
 export function removePokemonFromPlay(player: PlayerState, pokemon: CardInstance): void {
   if (player.active?.instanceId === pokemon.instanceId) {
     player.active = null;
@@ -27,6 +38,7 @@ export function shufflePokemonAndAttachmentsToDeck(
   const player = getPlayer(state, playerId);
   removePokemonFromPlay(player, pokemon);
   pokemon.zone = Zone.Deck;
+  resetPokemonCombatState(pokemon);
   for (const energy of pokemon.attachedEnergy) {
     energy.zone = Zone.Deck;
   }
@@ -46,6 +58,7 @@ export function returnPokemonToHand(
   removePokemonFromPlay(player, pokemon);
   discardPokemonAttachments(state, player, pokemon);
   pokemon.zone = Zone.Hand;
+  resetPokemonCombatState(pokemon);
   player.hand.push(pokemon);
 }
 

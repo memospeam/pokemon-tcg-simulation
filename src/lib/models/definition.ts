@@ -79,7 +79,12 @@ export function isItemTrainer(def: CardDefinition): boolean {
 }
 
 export function isTool(def: CardDefinition): boolean {
-  return def.supertype === "Trainer" && def.subtypes.includes("Tool");
+  // The Pokémon TCG API labels tools "Pokémon Tool"; some sources shorten it to
+  // "Tool". Accept both so Tools are never mistaken for Items.
+  return (
+    def.supertype === "Trainer" &&
+    def.subtypes.some((s) => s === "Tool" || s === "Pokémon Tool")
+  );
 }
 
 export function isTeamRocketPokemon(def: CardDefinition): boolean {

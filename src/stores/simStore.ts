@@ -6,7 +6,15 @@ interface SimStore {
   currentIndex: number;
   isPlaying: boolean;
   speedMs: number;
+  /** True while an async (LLM) match is still being captured/streamed. */
+  isLive: boolean;
   load: (frames: SimFrame[], startAtEnd?: boolean) => void;
+  /** Begin a live streamed match: clear frames, start playing from frame 0. */
+  beginLive: () => void;
+  /** Append one streamed frame (live mode). */
+  pushFrame: (frame: SimFrame) => void;
+  /** Mark the streamed capture as finished. */
+  endLive: () => void;
   stepTo: (index: number) => void;
   stepDelta: (delta: 1 | -1) => void;
   play: () => void;
@@ -19,8 +27,12 @@ export const useSimStore = create<SimStore>((set, get) => ({
   currentIndex: 0,
   isPlaying: false,
   speedMs: 500,
+  isLive: false,
   load: (frames, startAtEnd = false) =>
-    set({ frames, currentIndex: startAtEnd ? Math.max(0, frames.length - 1) : 0, isPlaying: false }),
+    set({ frames, currentIndex: startAtEnd ? Math.max(0, frames.length - 1) : 0, isPlaying: false, isLive: false }),
+  beginLive: () => set({ frames: [], currentIndex: 0, isPlaying: true, isLive: true }),
+  pushFrame: (frame) => set((s) => ({ frames: [...s.frames, frame] })),
+  endLive: () => set({ isLive: false }),
   stepTo: (index) => {
     const { frames } = get();
     set({ currentIndex: Math.max(0, Math.min(index, frames.length - 1)), isPlaying: false });

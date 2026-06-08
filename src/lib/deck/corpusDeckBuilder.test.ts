@@ -35,6 +35,38 @@ describe("corpus deck builder", () => {
     }
   });
 
+  it("classifies Pokémon Tools as tools — not Items — even for reprinted printings", () => {
+    // Regression: every Trainer was stubbed as ["Item"], so Air Balloon (a
+    // Pokémon Tool) was treated as a resolve-and-discard Item and never attached
+    // — its −2 retreat never applied. Tools must be classified by their corpus
+    // subtype, with a name fallback for printings outside the Standard corpus
+    // (Air Balloon's SVI 156 reprint isn't in the corpus; only BLK/MEG/ASC are).
+    const text = `Pokémon : 1
+1 Dreepy TWM 128
+
+Trainer : 4
+1 Air Balloon SVI 156
+1 Rescue Board TEF 159
+1 Ultra Ball SVI 196
+1 Boss's Orders PAL 172
+
+Energy : 1
+1 Psychic Energy MEE 5`;
+    const built = buildPlaytestDeckFromCorpusText("Tool classification", text);
+    const byName = (name: string) =>
+      [...built.definitions.values()].find((d) => d.name === name)!;
+
+    // Tools — subtype must mark them as a Pokémon Tool, never "Item".
+    for (const toolName of ["Air Balloon", "Rescue Board"]) {
+      const def = byName(toolName);
+      expect(def.subtypes, toolName).toContain("Pokémon Tool");
+      expect(def.subtypes, toolName).not.toContain("Item");
+    }
+    // Genuine Items / Supporters keep their classification.
+    expect(byName("Ultra Ball").subtypes).toEqual(["Item"]);
+    expect(byName("Boss's Orders").subtypes).toEqual(["Supporter"]);
+  });
+
   it("preserves MEGA ex subtypes from corpus for CRI evolution lines", () => {
     const greninjaText = `Pokémon : 3
 1 Froakie CRI 20

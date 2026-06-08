@@ -263,6 +263,15 @@ export function runEngineAutoPlay(
     }
 
     if (!state.pendingAction && !state.turnFlags.attacked) {
+      const toolAction = pickAutoToolAction(state, ctx);
+      if (toolAction) {
+        state = gameReducer(state, toolAction);
+        actionCount += 1;
+        continue;
+      }
+    }
+
+    if (!state.pendingAction && !state.turnFlags.attacked) {
       const basicAction = pickAutoPlayBasicAction(state, ctx);
       if (basicAction) {
         state = gameReducer(state, basicAction);
@@ -451,6 +460,12 @@ export function runAISingleTurn(
         current = drained;
         continue;
       }
+    }
+
+    // 1b. Attach a Pokémon Tool (e.g. Air Balloon → Mega Lopunny ex)
+    if (!current.turnFlags.attacked) {
+      const toolAction = pickAutoToolAction(current, ctx);
+      if (toolAction) { current = gameReducer(current, toolAction); continue; }
     }
 
     // 2. Bench Basic Pokémon
@@ -708,6 +723,64 @@ export function pickAutoEvolveAction(state: EngineState, ctx?: StrategyContext):
 }
 
 /**
+ * Decide which Pokémon Tool to attach this turn (the ATTACH_TOOL action).
+ *
+ * Pokémon Tools are played via ATTACH_TOOL (tool + target), NOT PLAY_TRAINER,
+ * so they need their own picker. The headline case is Air Balloon on Mega
+ * Lopunny ex: it grants free retreat, powering the Gale Thrust bench↔active
+ * loop (retreat Lopunny → pivot through Dudunsparce's Run Away Draw / Abra's
+ * Teleporter → bring Lopunny back to Active for the +170 moved-from-bench bonus).
+ */
+export function pickAutoToolAction(
+  state: EngineState,
+  ctx?: StrategyContext,
+): Extract<GameAction, { type: "ATTACH_TOOL" }> | null {
+  const playerId = state.currentPlayerId;
+  const player = getPlayer(state, playerId);
+  const actions = getLegalActions(state).filter(
+    (a): a is Extract<GameAction, { type: "ATTACH_TOOL" }> => a.type === "ATTACH_TOOL",
+  );
+  if (actions.length === 0) return null;
+
+  const inPlay = [...(player.active ? [player.active] : []), ...player.bench];
+
+  const scored = actions
+    .map((action) => {
+      const toolCard = player.hand.find((c) => c.instanceId === action.toolId);
+      const toolName = toolCard
+        ? getDefinition(state, toolCard.definitionId)?.name?.toLowerCase() ?? ""
+        : "";
+      const target = inPlay.find((p) => p.instanceId === action.targetId);
+      const targetName = target
+        ? getDefinition(state, target.definitionId)?.name?.toLowerCase() ?? ""
+        : "";
+      const isActive = player.active?.instanceId === action.targetId;
+      const isLopunny = targetName.includes("mega lopunny ex");
+      let score = 10;
+
+      if (toolName.includes("air balloon")) {
+        // Free retreat — best on Mega Lopunny ex to power the Gale Thrust loop;
+        // prefer the ACTIVE Lopunny (it needs to retreat this/next turn).
+        if (isLopunny) score = isActive ? 95 : 90;
+        else if (isActive) score = 32;
+        else score = 12;
+      } else if (toolName.includes("rescue board")) {
+        // −1 retreat: also helps the Lopunny loop / the active attacker.
+        score = isLopunny ? 60 : isActive ? 26 : 10;
+      } else {
+        // Generic damage/HP tools (Defiance Band, Bravery Charm, Maximum Belt,
+        // Hero's Cape, …) — put them on the current attacker.
+        score = isActive ? 28 : 12;
+      }
+      return { action, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  if ((scored[0]?.score ?? 0) <= 0) return null;
+  return scored[0]!.action;
+}
+
+/**
  * Decide whether to retreat and which bench Pokémon to promote.
  *
  * Key use-cases:
@@ -937,10 +1010,14 @@ function shouldSkipAttack(state: EngineState, playerId: PlayerId, ctx: StrategyC
         ? remainingHp(state, getPlayer(state, getOpponentId(playerId)).active!)
         : 9999;
       const expectedDamage = trCount * 60;
-      // Attack if: can KO with current count, OR 3+ supporters loaded, OR 2+ and long game, OR desperate
+      // Honchkrow is a one-shot KO deck — Rocket Feathers should fire ONLY when
+      // it KOs the opponent's Active (each swing discards the loaded TR
+      // Supporters, so a non-lethal attack throws the hand away for nothing).
+      // Otherwise keep loading Supporters. A deck-out / very-late-game valve
+      // prevents stalling into a draw.
       const canKO = expectedDamage >= opponentHp;
-      const desperate = player.deck.length <= 10 || state.turnNumber >= 12;
-      if (!canKO && !desperate && trCount < 3) return true; // keep loading hand
+      const desperate = player.deck.length <= 6 || state.turnNumber >= 16;
+      if (!canKO && !desperate) return true; // not lethal yet → keep loading hand
     }
   }
 
@@ -1001,33 +1078,78 @@ export function pickAutoAbilityAction(
       else if (player.hand.length >= 3) score = 55;  // Moderate hand → probably still worth it
       else if (player.hand.length === 2) score = 30; // Risky: discarding one of only two cards
       // else score = 0: hand ≤ 1 — can't afford to discard
-      // Zoroark: Trade is the primary draw/cycle engine — use it more aggressively
-      // (find N's Zorua, N's Zekrom, and key trainers faster)
-      if (ctx?.archetype === "zoroark" && player.hand.length >= 2) {
-        score = Math.max(score + 10, 45);
+      // Zoroark: Trade is the primary draw/cycle engine — use it more
+      // aggressively to find N's Zorua, N's Zekrom, and key trainers. BUT
+      // drawing 2 every turn can deck us out (Zoroark games go long against
+      // trade-heavy decks), so once the deck thins, only Trade when the hand is
+      // genuinely short on cards — don't burn the deck for value.
+      if (ctx?.archetype === "zoroark") {
+        if (player.deck.length <= 14 && player.hand.length >= 4) {
+          score = 0; // conserve the deck — hand is fine
+        } else if (player.hand.length >= 2) {
+          score = Math.max(score + 10, 45);
+        }
       }
     }
 
     // === DAMAGE ABILITIES (value scales with KO potential) ===
 
     else if (abilityLower.includes("cursed blast")) {
-      // Place 13 damage counters on any opponent Pokémon, then Dusknoir KOs itself.
-      // Only worth it if we get meaningful value — never sacrifice Dusknoir casually.
-      // Dusknoir (PRE 37): 150 HP. "Dying" = ≤ 70 HP remaining (≥80 damage taken).
-      // This is conservative — only sacrifice when truly at risk of being KO'd next turn.
-      const dusknoirHp = pokemon ? remainingHp(state, pokemon) : 9999;
-      const dusknoirDying = dusknoirHp <= 70; // ≥80 damage taken — opponent likely KOs next turn
-      const canKONow = allOpponent.some((p) => remainingHp(state, p) <= 130);
-      // Set-up KO: Cursed Blast 130 + Phantom Dive active 120 = 250 on active
-      //            Cursed Blast 130 + Phantom Dive bench 50 = 180 on bench
-      const setsUpActiveKO = opponent.active != null && remainingHp(state, opponent.active) <= 250;
-      const setsUpBenchKO = opponent.bench.some((p) => remainingHp(state, p) <= 180);
-      const setsUpKO = setsUpActiveKO || setsUpBenchKO;
-      if (canKONow) score = 95;                       // Immediate KO — always worth the sacrifice
-      else if (dusknoirDying && setsUpKO) score = 85; // Dying anyway; secure the KO setup
-      else if (dusknoirDying) score = 72;             // Dying anyway — put 13 counters somewhere
-      else if (setsUpKO) score = 65;                  // Healthy Dusknoir, sets up a KO next turn
-      // else: score stays 0 — don't sacrifice Dusknoir without meaningful outcome
+      // Cursed Blast places damage counters on 1 opponent Pokémon, then KOs the
+      // user ITSELF — so the opponent takes a prize. It is only worth firing
+      // when it KOs an opponent Pokémon in return (taking a prize back); never
+      // sacrifice it for chip damage. The counter count differs by Pokémon:
+      //   Dusknoir = 13 counters (130 dmg),  Dusclops = 5 counters (50 dmg).
+      const selfName = pokemon
+        ? getDefinitionSafe(state, pokemon.definitionId).name.toLowerCase()
+        : "";
+      const blastDamage = selfName.includes("dusknoir") ? 130 : 50;
+
+      // Which opponent Pokémon does the blast outright KO right now (active or
+      // bench), using the damage already on them?
+      const koTargets = allOpponent.filter((p) => remainingHp(state, p) <= blastDamage);
+      const kosAnEx = koTargets.some((p) =>
+        /\bex\b/.test(getDefinitionSafe(state, p.definitionId).name.toLowerCase()),
+      );
+
+      const selfHp = pokemon ? remainingHp(state, pokemon) : 9999;
+      const selfDying = selfHp <= 70; // ≥80 damage taken — likely KO'd next turn anyway
+
+      // PHANTOM DIVE COMBO: if Dragapult ex is Active and will attack this turn,
+      // its Phantom Dive spreads 6 counters (60) onto a Benched Pokémon AFTER
+      // this ability resolves (abilities fire before the attack). So Cursed
+      // Blast can target a BENCH Pokémon that the COMBINED (blast + 60) finishes
+      // — this is the whole point of the small Dusclops (50): 50 + 60 = 110.
+      const canPhantomDiveThisTurn =
+        !state.turnFlags.attacked &&
+        getLegalActions(state).some(
+          (a) => a.type === "ATTACK" && a.attackName?.toLowerCase().includes("phantom dive"),
+        );
+      const comboKoBench = canPhantomDiveThisTurn
+        ? opponent.bench.filter((p) => remainingHp(state, p) <= blastDamage + 60)
+        : [];
+      const comboKosEx = comboKoBench.some((p) =>
+        /\bex\b/.test(getDefinitionSafe(state, p.definitionId).name.toLowerCase()),
+      );
+
+      if (koTargets.length > 0) {
+        // Direct KO — take a prize back for the self-KO. Prefer trading into a
+        // 2-prize ex; even a single-prize KO is a fair trade.
+        score = kosAnEx ? 95 : 80;
+      } else if (comboKoBench.length > 0) {
+        // Bench finisher: blast softens it now, Phantom Dive's spread KOs it
+        // this same turn. Strongly prefer removing a 2-prize bench ex.
+        score = comboKosEx ? 88 : 68;
+      } else if (selfDying) {
+        // It will be KO'd next turn regardless — only spend it if the counters
+        // SET UP a KO that next turn's Phantom Dive can finish.
+        const setsUpBenchKO = opponent.bench.some(
+          (p) => remainingHp(state, p) <= blastDamage + 60,
+        );
+        score = setsUpBenchKO ? 60 : 0;
+      }
+      // else: healthy Dusknoir/Dusclops with no KO available → hold (score 0).
+      // Don't give the opponent a free prize for chip damage.
 
     } else if (abilityLower.includes("mortal shuriken")) {
       // Discard Basic Water Energy, place 6 damage counters on any opponent Pokémon
@@ -1104,6 +1226,22 @@ export function pickAutoAbilityAction(
         else if (activeDying && benchBetter) score = 75;
         else if (benchBetter) score = 45;
         // else score stays 0 — no point swapping to a worse attacker.
+
+        // ── Zoroark loop ──
+        // After Night Joker copies N's Zekrom's Rampaging Thunder (250), the
+        // active Zoroark ex is locked out of attacking next turn. If it can't
+        // attack this turn but a FRESH Benched N's Zoroark ex (with Energy) can,
+        // pivot to it via Subjugating Chains so we keep swinging 250 every turn.
+        // (Same archetype priority, so the generic "strictly better" rule above
+        // never triggers this — it must be handled explicitly.)
+        if (ctx?.archetype === "zoroark" && activeName.includes("n's zoroark ex")) {
+          const activeCanAttack = getLegalActions(state).some((a) => a.type === "ATTACK");
+          const freshBenchZoroark = eligibleBenchDark.some((b) => {
+            const bName = getDefinition(state, b.definitionId)?.name?.toLowerCase() ?? "";
+            return bName.includes("n's zoroark ex") && b.attachedEnergy.length > 0;
+          });
+          if (!activeCanAttack && freshBenchZoroark) score = Math.max(score, 85);
+        }
       }
 
     } else if (abilityLower.includes("r command")) {
@@ -1389,10 +1527,12 @@ export function pickHeuristicMainAction(
   const player = getPlayer(state, playerId);
   if (state.pendingAction) return null; // caller drains pending separately
 
-  // 1-3. Trainer / basic / evolve (only before attacking)
+  // 1-3. Trainer / tool / basic / evolve (only before attacking)
   if (!state.turnFlags.attacked) {
     const trainerAction = pickAutoTrainerAction(state, ctx);
     if (trainerAction) return trainerAction;
+    const toolAction = pickAutoToolAction(state, ctx);
+    if (toolAction) return toolAction;
     const basicAction = pickAutoPlayBasicAction(state, ctx);
     if (basicAction) return basicAction;
     const evolveAction = pickAutoEvolveAction(state, ctx);
@@ -1500,12 +1640,21 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
     // Most attackers have a cheap setup attack AND a strong finisher; once the cheap
     // attack is affordable the Pokémon isn't "done" yet — we still want to load up
     // for the big attack.
+    // Does any attack scale its damage with energy ATTACHED TO THIS Pokémon?
+    // (e.g. "does 30 more damage for each Energy attached to this Pokémon").
+    // Such an attacker is never "done" — more energy = more damage — so it is
+    // never treated as fully loaded and is exempt from the over-attach cap.
+    const scalesWithOwnEnergy = attacks.some((atk) =>
+      /for each .*energy attached to this/i.test(atk.text ?? ""),
+    );
+
     const costs = attacks.map((atk) => atk.convertedEnergyCost ?? atk.cost?.length ?? 1);
     const cheapestCost = Math.min(...costs);
     const mostExpensiveCost = Math.max(...costs);
     const energiesNeededForCheapest = Math.max(0, cheapestCost - energyCount);
     const energiesNeededForMax = Math.max(0, mostExpensiveCost - energyCount);
-    const fullyLoaded = energiesNeededForMax === 0; // can use the biggest attack
+    // "Can use the biggest attack" — but a scaling attacker keeps wanting more.
+    const fullyLoaded = energiesNeededForMax === 0 && !scalesWithOwnEnergy;
 
     // Base score — bringing a NEW attacker online is the highest-leverage attach.
     let score: number;
@@ -1598,12 +1747,22 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
       }
     }
 
+    // DON'T OVER-ATTACH: a Pokémon that can already use its biggest attack
+    // gains nothing from another energy. Cap it below the skip threshold so the
+    // attachment is redirected to a backup attacker — or held in hand when
+    // there's no better home — instead of being wasted on (and tied up by) an
+    // already-maxed attacker. (Scaling attackers are never `fullyLoaded`.)
+    if (fullyLoaded) {
+      score = Math.min(score, -90);
+    }
+
     return { id: pokemon.instanceId, score };
   }).sort((a, b) => b.score - a.score);
 
-  // Skip only when every option is a deeply-negative target (true no-energy
-  // Pokémon like Dusknoir / Munkidori). Mildly-negative scores still attach —
-  // a sub-optimal energy is better than wasting the turn's only attachment.
+  // Skip when every option is a deeply-negative target: true no-energy Pokémon
+  // (Dusknoir / Munkidori, scored ≤ -200) OR an already-fully-loaded board where
+  // attaching more would be wasted (capped at -90). Mildly-negative scores still
+  // attach — a sub-optimal energy beats wasting the turn's only attachment.
   const best = scored[0];
   if (!best || best.score < -80) return null;
   return best.id;
@@ -1886,10 +2045,19 @@ function pickBestSearchDeckCard(
   ctx?: StrategyContext,
 ): string {
   const player = getPlayer(state, playerId);
-  const inPlayNames = new Set([
+  const inPlayDefNames = [
     ...(player.active ? [getDefinition(state, player.active.definitionId)?.name?.toLowerCase() ?? ""] : []),
     ...player.bench.map((p) => getDefinition(state, p.definitionId)?.name?.toLowerCase() ?? ""),
-  ]);
+  ];
+  const inPlayNames = new Set(inPlayDefNames);
+  // How many copies of each Pokémon (by name) are already in play, and which
+  // pre-evolutions we hold in hand — used for diminishing-returns and
+  // evolution-readiness scoring below.
+  const inPlayCounts = new Map<string, number>();
+  for (const n of inPlayDefNames) inPlayCounts.set(n, (inPlayCounts.get(n) ?? 0) + 1);
+  const handNames = new Set(
+    player.hand.map((c) => getDefinition(state, c.definitionId)?.name?.toLowerCase() ?? ""),
+  );
 
   const scored = options.map((instanceId) => {
     const card = player.deck.find((c) => c.instanceId === instanceId);
@@ -1904,7 +2072,24 @@ function pickBestSearchDeckCard(
       else if (def.subtypes.includes("Stage 1")) score = 80;
       else if (name.includes(" ex") || def.subtypes.includes("ex")) score = 75;
       else if (isBasicPokemon(def)) score = 60;
-      if (def.evolvesFrom && inPlayNames.has(def.evolvesFrom.toLowerCase())) score += 15;
+
+      // Evolution readiness: an Evolution Pokémon is only useful if we can
+      // actually put it into play. Strongly prefer one whose pre-evolution is
+      // already in play (e.g. Dudunsparce when Dunsparce is benched); penalise
+      // one we can't deploy (e.g. searching a 3rd Mega Lopunny ex with no
+      // Buneary in play or hand).
+      if (def.evolvesFrom) {
+        const pre = def.evolvesFrom.toLowerCase();
+        if (inPlayNames.has(pre)) score += 30;
+        else if (handNames.has(pre)) score += 8;
+        else score -= 25;
+      }
+
+      // Diminishing returns: a 2nd copy of an attacker is fine, but don't keep
+      // grabbing copies of something we already have multiples of in play
+      // (e.g. a 3rd Mega Lopunny ex when 2 are already down).
+      const copies = inPlayCounts.get(name) ?? 0;
+      score -= 20 * Math.max(0, copies - 1);
       // Archetype-aware: boost key attacker lines
       if (ctx) {
         score += getArchetypeSearchPriority(ctx.archetype, name);
@@ -1972,8 +2157,10 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     }
     case "CHOOSE_OPPONENT_POKEMON_DAMAGE": {
       if (pending.options.length === 0) return null;
-      // Pick best target: prefer KO'd by this damage, then most damaged (closest to KO)
-      const damage = (pending.amount ?? 13) * 10;
+      // Pick best target: prefer KO'd by this damage, then most damaged (closest to KO).
+      // pending.amount is already the DAMAGE (e.g. Cursed Blast = 130), not a counter
+      // count — do NOT multiply by 10 again.
+      const damage = pending.amount ?? 130;
       const opponent = getPlayer(state, getOpponentId(playerId));
       const allOppInPlay = [...(opponent.active ? [opponent.active] : []), ...opponent.bench];
       const validTargets = allOppInPlay.filter((p) => pending.options.includes(p.instanceId));

@@ -5,9 +5,9 @@
  * cap exceeded, or a thrown client error — falls back to the deterministic
  * heuristic so a game never crashes or hangs.
  */
-import type { EngineState, GameAction } from "../../engine/types";
+import { getDefinition, getOpponentId, getPlayer, type EngineState, type GameAction } from "../../engine/types";
 import type { PlayerId } from "../../models/enums";
-import type { StrategyContext } from "../deckStrategy";
+import { buildStrategyContext, type StrategyContext } from "../deckStrategy";
 import { pickHeuristicMainAction } from "../metaGameRunner";
 import type { TurnPolicy } from "../policy";
 import type { CompleteFn } from "./client";
@@ -17,6 +17,16 @@ import {
   parseActionChoice,
   renderActionMenu,
 } from "./observation";
+import { buildStrategyBrief } from "./strategyBrief";
+
+/** Detect the opponent's archetype from their in-play (active + bench) cards. */
+function opponentArchetype(state: EngineState, playerId: PlayerId) {
+  const opp = getPlayer(state, getOpponentId(playerId));
+  const names = [...(opp.active ? [opp.active] : []), ...opp.bench].map(
+    (c) => getDefinition(state, c.definitionId)?.name ?? "",
+  );
+  return buildStrategyContext(names).archetype;
+}
 
 const SYSTEM_PROMPT = [
   "You are an expert Pokémon Trading Card Game player driving one side of a match.",
@@ -66,7 +76,12 @@ export class LlmPolicy implements TurnPolicy {
     }
     this.calls += 1;
 
-    const user = `${buildObservation(state, playerId)}\n\nLEGAL ACTIONS:\n${renderActionMenu(candidates)}\n\nWhich action number do you choose?`;
+    // Inject the deck's tournament-researched play guide (win condition,
+    // turn-by-turn plan, matchup note vs the detected opponent) so the LLM
+    // "studies the meta guide" alongside the live board + card text.
+    const brief = buildStrategyBrief(ctx.profile, opponentArchetype(state, playerId));
+    const guide = brief ? `${brief}\n\n` : "";
+    const user = `${guide}${buildObservation(state, playerId)}\n\nLEGAL ACTIONS:\n${renderActionMenu(candidates)}\n\nWhich action number do you choose?`;
 
     let reply: string;
     try {

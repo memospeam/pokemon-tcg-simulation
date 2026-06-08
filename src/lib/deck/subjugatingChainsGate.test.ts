@@ -124,6 +124,33 @@ describe("Pecharunt ex Subjugating Chains — AI gating", () => {
     }
   });
 
+  it("DOES fire to pivot when the active Zoroark ex can't attack but a fresh bench Zoroark ex can", () => {
+    // Zoroark loop: the active N's Zoroark ex is attack-locked (here: no Energy
+    // → no legal ATTACK, standing in for Rampaging Thunder's "can't attack next
+    // turn"). A fresh Benched N's Zoroark ex HAS Energy. Subjugating Chains must
+    // pivot the fresh one into the Active spot so we keep swinging.
+    const darkEnergyDef: CardDefinition = {
+      apiId: "dark-e", name: "Darkness Energy", supertype: "Energy", subtypes: ["Basic"], types: ["Darkness"],
+      set: { id: "t", name: "t" }, number: "1", images: { small: "", large: "" },
+    };
+    const lockedZoroark = createCardInstance("N's Zoroark ex", PlayerId.P1, Zone.Active); // 0 energy
+    const freshZoroark = createCardInstance("N's Zoroark ex", PlayerId.P1, Zone.Bench);
+    freshZoroark.attachedEnergy = [
+      createCardInstance("dark-e", PlayerId.P1, Zone.Bench),
+      createCardInstance("dark-e", PlayerId.P1, Zone.Bench),
+    ];
+    const pecharunt = createCardInstance("Pecharunt ex", PlayerId.P1, Zone.Bench);
+    const ctx = buildStrategyContext(["N's Zoroark ex", "Pecharunt ex"]);
+    const state = buildState(
+      { "N's Zoroark ex": zoroarkDef, "Pecharunt ex": pecharuntDef, "dark-e": darkEnergyDef },
+      lockedZoroark, [freshZoroark, pecharunt],
+    );
+
+    const picked = pickAutoAbilityAction(state, ctx);
+    expect(picked).not.toBeNull();
+    expect(picked!.abilityName.toLowerCase()).toBe("subjugating chains");
+  });
+
   it("does NOT fire when bench has only a non-Darkness Pokémon (Munkidori)", () => {
     // Active Pecharunt ex, bench has only Munkidori (Psychic) — engine would
     // find 0 eligible targets and abort. AI must refuse.

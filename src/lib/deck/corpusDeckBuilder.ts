@@ -24,6 +24,17 @@ export function findCorpusCard(
   );
 }
 
+/**
+ * Look a card up by name only — used as a fallback to classify a Trainer's
+ * subtype (Item / Tool / Supporter / Stadium) when the deck list cites a
+ * printing (set + number) that is not in the current Standard corpus. A card's
+ * subtype is the same across reprints, so name alone is sufficient here.
+ */
+export function findCorpusCardByName(name: string): StandardCardIndex | undefined {
+  const lower = name.toLowerCase();
+  return loadStandardCorpus().cards.find((entry) => entry.name.toLowerCase() === lower);
+}
+
 export function validateDeckTextAgainstCorpus(text: string): {
   missing: string[];
   resolved: number;
@@ -334,16 +345,30 @@ function corpusCardToDefinition(
   };
 }
 
-function stubTrainerDefinition(line: ParsedDeckLine): CardDefinition {
+function stubTrainerDefinition(line: ParsedDeckLine, corpusSubtypes?: string[]): CardDefinition {
   const setCode = normalizeSetCode(line.setCode ?? "TST") ?? "TST";
   const apiId = `${setCode}-${line.number ?? line.name}`.toLowerCase().replace(/\s+/g, "-");
-  let subtypes = ["Item"];
-  if (SUPPORTER_NAMES.has(line.name) || line.name.includes("Determination")) {
-    subtypes = ["Supporter"];
-  } else if (STADIUM_NAMES.has(line.name)) {
-    subtypes = ["Stadium"];
-  } else if (/ace spec/i.test(line.name) || line.name === "Unfair Stamp" || line.name === "Night Stretcher") {
-    subtypes = ["Item", "ACE SPEC"];
+
+  let subtypes: string[];
+  if (corpusSubtypes && corpusSubtypes.length > 0) {
+    // Authoritative: use the real Trainer subtype from the Standard corpus
+    // (Supporter / Item / Stadium / Pokémon Tool / ACE SPEC). The old
+    // hard-coded name lists missed many Supporters and Stadiums and silently
+    // mislabelled them as Items — a Supporter mislabelled as an Item never sets
+    // turnFlags.supporterPlayed, so the AI could play it AND a real Supporter
+    // in the same turn (two Supporters/turn); Stadiums-as-Items never entered
+    // the Stadium zone or applied their effects.
+    subtypes = [...corpusSubtypes];
+  } else {
+    // Fallback for cards not present in the corpus: name-based heuristics.
+    subtypes = ["Item"];
+    if (SUPPORTER_NAMES.has(line.name) || line.name.includes("Determination")) {
+      subtypes = ["Supporter"];
+    } else if (STADIUM_NAMES.has(line.name)) {
+      subtypes = ["Stadium"];
+    } else if (/ace spec/i.test(line.name) || line.name === "Unfair Stamp" || line.name === "Night Stretcher") {
+      subtypes = ["Item", "ACE SPEC"];
+    }
   }
 
   return {
@@ -384,7 +409,15 @@ function lineToDefinition(
     return { definition: stubEnergyDefinition(line) };
   }
   if (line.section === "Trainer") {
-    return { definition: stubTrainerDefinition(line) };
+    // Consult the corpus so Tools are classified correctly instead of
+    // defaulting to Item. Fall back to a name-only lookup when the cited
+    // printing (set + number) isn't in the current Standard corpus (e.g. an
+    // older Air Balloon reprint).
+    const corpus =
+      (line.setCode && line.number
+        ? findCorpusCard(line.setCode, line.number, line.name)
+        : undefined) ?? findCorpusCardByName(line.name);
+    return { definition: stubTrainerDefinition(line, corpus?.subtypes) };
   }
 
   if (!line.setCode || !line.number) {

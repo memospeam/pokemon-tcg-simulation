@@ -1925,6 +1925,16 @@ button {
   border-bottom-color: rgba(100, 116, 139, 0.25);
 }
 
+/* Live AI-vs-AI playback in progress (winner hidden until it ends). */
+.sim-result--live {
+  background: rgba(245, 158, 11, 0.12);
+  border-bottom-color: rgba(245, 158, 11, 0.3);
+}
+
+.sim-result--live .sim-result__winner {
+  color: #fbbf24;
+}
+
 .sim-result__winner {
   font-weight: 700;
   font-size: 0.95rem;

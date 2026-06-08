@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { capturePresetSimulation } from "@/lib/deck/simulationCapture";
+import { capturePresetSimulation, capturePresetPolicySimulation } from "@/lib/deck/simulationCapture";
 import { ALL_TOURNAMENTS } from "@/lib/deck/tournamentPresets";
+import { createBrowserLlmPolicy } from "@/lib/deck/llm/browserPolicy";
 import { useSimStore } from "@/stores/simStore";
-import { getOpponentId, getPlayer } from "@/lib/engine";
+import { getOpponentId, getPlayer, type EngineState } from "@/lib/engine";
 import { PlayerId } from "@/lib/models/enums";
 import { PlayerMat } from "@/components/GameBoard/PlayerMat";
 import { TurnBanner } from "@/components/GameBoard/TurnBanner";
@@ -27,9 +28,13 @@ const SPEEDS = [
 ];
 const NOOP = () => {};
 
+type AiKind = "heuristic" | "llm";
+
 export function SimPlayback() {
-  const { frames, currentIndex, isPlaying, speedMs, load, stepTo, stepDelta, play, pause, setSpeed } =
-    useSimStore();
+  const {
+    frames, currentIndex, isPlaying, speedMs, isLive,
+    load, beginLive, pushFrame, endLive, stepTo, stepDelta, play, pause, setSpeed,
+  } = useSimStore();
 
   const [tournament, setTournament] = useState(DEFAULT_TOURNAMENT);
   const decks = tournament.decks;
@@ -37,10 +42,15 @@ export function SimPlayback() {
   const [p2Id, setP2Id] = useState(decks[7]?.id ?? "");
   const [seed, setSeed] = useState(42);
   const [noLimit, setNoLimit] = useState(false);
+  const [aiKind, setAiKind] = useState<AiKind>("heuristic");
   const [running, setRunning] = useState(false);
   const [viewingId, setViewingId] = useState<PlayerId>(PlayerId.P1);
   const [result, setResult] = useState<SimResult | null>(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
+
+  // Cancel flag for an in-flight async (LLM) capture, flipped when a new run
+  // starts or the component unmounts.
+  const cancelRef = useRef<{ cancelled: boolean }>({ cancelled: false });
 
   const handleTournamentChange = useCallback((id: string) => {
     const t = ALL_TOURNAMENTS.find((t) => String(t.tournamentId) === id) ?? DEFAULT_TOURNAMENT;
@@ -56,7 +66,10 @@ export function SimPlayback() {
     if (!isPlaying) return;
     timerRef.current = setTimeout(() => {
       if (currentIndex >= frames.length - 1) {
-        pause();
+        // At the latest frame. If a live (LLM) capture is still streaming, wait
+        // for the next frame (this effect re-runs when frames.length grows);
+        // otherwise the playback has reached the end → pause.
+        if (!isLive) pause();
       } else {
         stepDelta(1);
       }
@@ -64,31 +77,75 @@ export function SimPlayback() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [isPlaying, currentIndex, speedMs, frames.length, stepDelta, pause]);
+  }, [isPlaying, currentIndex, speedMs, frames.length, isLive, stepDelta, pause]);
+
+  // Abort any in-flight LLM capture on unmount.
+  useEffect(() => () => { cancelRef.current.cancelled = true; }, []);
+
+  const finishResult = useCallback((frames2: { state: EngineState }[]) => {
+    const lastState = frames2.at(-1)?.state;
+    setResult({
+      winnerName: lastState?.winnerId ? getPlayer(lastState, lastState.winnerId).name : null,
+      turnCount: lastState?.turnNumber ?? 0,
+      frameCount: frames2.length,
+      stalled: !!lastState && !lastState.winnerId,
+    });
+  }, []);
 
   const handleRun = useCallback(() => {
     const p1Preset = decks.find((d) => d.id === p1Id);
     const p2Preset = decks.find((d) => d.id === p2Id);
     if (!p1Preset || !p2Preset) return;
+
+    // Cancel any previous in-flight LLM capture.
+    cancelRef.current.cancelled = true;
+    const cancelToken = { cancelled: false };
+    cancelRef.current = cancelToken;
+
+    setResult(null);
     setRunning(true);
-    // run synchronously in next microtask so React can show the loading state
-    setTimeout(() => {
-      const captured = capturePresetSimulation(p1Preset, p2Preset, {
-        seed,
-        maxTurns: noLimit ? 500 : 30,
-        maxActions: noLimit ? 2500 : 240,
+    const maxTurns = noLimit ? 500 : 30;
+    const maxActions = noLimit ? 2500 : 240;
+
+    if (aiKind === "heuristic") {
+      // Synchronous heuristic capture → load all frames, then auto-play.
+      setTimeout(() => {
+        const captured = capturePresetSimulation(p1Preset, p2Preset, { seed, maxTurns, maxActions });
+        load(captured, false);
+        finishResult(captured);
+        setRunning(false);
+        play();
+      }, 0);
+      return;
+    }
+
+    // LLM agents: stream frames live as the two agents think.
+    beginLive();
+    const p1Policy = createBrowserLlmPolicy();
+    const p2Policy = createBrowserLlmPolicy();
+    void capturePresetPolicySimulation(p1Preset, p2Preset, p1Policy, p2Policy, {
+      seed,
+      maxTurns,
+      maxActions,
+      onFrame: (frame) => {
+        if (!cancelToken.cancelled) pushFrame(frame);
+      },
+      cancel: () => cancelToken.cancelled,
+    })
+      .then((captured) => {
+        if (cancelToken.cancelled) return;
+        finishResult(captured);
+      })
+      .catch(() => {
+        // LlmPolicy already falls back to heuristic internally; this guards any
+        // unexpected error so the UI never gets stuck "running".
+      })
+      .finally(() => {
+        if (cancelToken.cancelled) return;
+        endLive();
+        setRunning(false);
       });
-      load(captured, true);
-      const lastState = captured.at(-1)?.state;
-      setResult({
-        winnerName: lastState?.winnerId ? getPlayer(lastState, lastState.winnerId).name : null,
-        turnCount: lastState?.turnNumber ?? 0,
-        frameCount: captured.length,
-        stalled: !!lastState && !lastState.winnerId,
-      });
-      setRunning(false);
-    }, 0);
-  }, [p1Id, p2Id, seed, noLimit, load]);
+  }, [p1Id, p2Id, seed, noLimit, aiKind, decks, load, play, beginLive, pushFrame, endLive, finishResult]);
 
   const currentFrame = frames[currentIndex];
   const game = currentFrame?.state ?? null;
@@ -100,6 +157,9 @@ export function SimPlayback() {
 
   const total = frames.length;
   const winner = game?.winnerId ? getPlayer(game, game.winnerId).name : null;
+  // Only reveal the final outcome once the live playback has reached the end —
+  // showing it up-front would spoil the AI-vs-AI match.
+  const atEnd = total > 0 && currentIndex >= total - 1;
 
   return (
     <div className="sim-screen">
@@ -155,30 +215,66 @@ export function SimPlayback() {
           No turn limit
         </label>
 
+        <select
+          value={aiKind}
+          onChange={(e) => setAiKind(e.target.value as AiKind)}
+          className="sim-setup__select sim-setup__ai"
+          title="Which AI drives both players"
+        >
+          <option value="heuristic">AI: Heuristic</option>
+          <option value="llm">AI: LLM agent</option>
+        </select>
+
         <button type="button" onClick={handleRun} disabled={running} className="sim-setup__run">
-          {running ? "Running…" : "Run Simulation"}
+          {running ? (aiKind === "llm" ? "Thinking…" : "Running…") : "Run Simulation"}
         </button>
       </div>
 
-      {/* Result banner */}
-      {result && (
-        <div className={`sim-result${result.winnerName ? "" : " sim-result--stall"}`}>
-          {result.winnerName ? (
-            <>
-              <span className="sim-result__winner">Winner: {result.winnerName}</span>
-              <span className="sim-result__meta">Turn {result.turnCount} · {result.frameCount} steps</span>
-            </>
-          ) : (
-            <>
-              <span className="sim-result__winner">Stalled (no winner)</span>
-              <span className="sim-result__meta">Turn {result.turnCount} · {result.frameCount} steps</span>
-            </>
-          )}
-          <button type="button" className="sim-result__replay" onClick={() => stepTo(0)}>
-            ⏮ Replay from start
-          </button>
-        </div>
-      )}
+      {/* Result banner. While the match is still playing/streaming we show a
+          live progress line (no spoiler); the outcome appears only once
+          playback reaches the final frame. */}
+      {(result || isLive) && (() => {
+        // "In progress" = capture still streaming, OR playback hasn't reached
+        // the end of a finished capture yet.
+        const inProgress = isLive || !atEnd;
+        const tag = aiKind === "llm" ? "AI vs AI · LLM" : "AI vs AI";
+        return (
+          <div
+            className={`sim-result${inProgress ? " sim-result--live" : result?.winnerName ? "" : " sim-result--stall"}`}
+          >
+            {inProgress ? (
+              <>
+                <span className="sim-result__winner">
+                  {isPlaying ? `▶ Live · ${tag}` : `⏸ Paused · ${tag}`}
+                </span>
+                <span className="sim-result__meta">
+                  Turn {game?.turnNumber ?? 0} · step {currentIndex + 1} / {total}
+                  {isLive ? " · thinking…" : ""}
+                </span>
+              </>
+            ) : result?.winnerName ? (
+              <>
+                <span className="sim-result__winner">Winner: {result.winnerName}</span>
+                <span className="sim-result__meta">Turn {result.turnCount} · {result.frameCount} steps</span>
+              </>
+            ) : (
+              <>
+                <span className="sim-result__winner">Stalled (no winner)</span>
+                <span className="sim-result__meta">Turn {result?.turnCount ?? 0} · {result?.frameCount ?? 0} steps</span>
+              </>
+            )}
+            {!isLive && (
+              <button
+                type="button"
+                className="sim-result__replay"
+                onClick={() => { stepTo(0); play(); }}
+              >
+                ⏮ Replay from start
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Board + Analysis */}
       {game && self && opponent && (

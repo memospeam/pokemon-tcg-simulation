@@ -11,6 +11,7 @@
     "prepare:standard": "vitest run scripts/prepare-standard-effects.test.ts --config vitest.corpus.config.ts",
     "report:coverage": "vitest run scripts/report-coverage.test.ts",
     "report:cri-meta": "vitest run scripts/cri-meta-readiness.test.ts",
+    "report:invariants": "vitest run scripts/report-invariants.test.ts --config vitest.corpus.config.ts",
     "test:cri-playtest": "vitest run src/lib/deck/criPlaytest.test.ts src/lib/deck/criPlaytestBatch.test.ts src/lib/deck/criTrainerScenarios.test.ts src/lib/deck/criTrainerT3T4Scenarios.test.ts",
     "generate:tournament-535": "node scripts/generate-tournament-535-decks.mjs",
     "generate:limitless-decks": "node scripts/generate-limitless-decks.mjs",

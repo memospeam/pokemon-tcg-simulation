@@ -656,10 +656,46 @@ export function continuePerrinSearchPick(state: EngineState, playerId: PlayerId,
   finishDeckSearchShuffle(state, playerId, "Perrin");
 }
 
+/** Non-Colorless attack-cost colours this Pokémon still needs (unmet by attached energy). */
+function crispinColorNeeds(state: EngineState, mon: CardInstance): string[] {
+  const def = getDefinitionSafe(state, mon.definitionId);
+  const have: Record<string, number> = {};
+  for (const e of mon.attachedEnergy) {
+    const t = getDefinitionSafe(state, e.definitionId).types?.[0] ?? "Colorless";
+    have[t] = (have[t] ?? 0) + 1;
+  }
+  const need: string[] = [];
+  for (const atk of def.attacks ?? []) {
+    const remaining: Record<string, number> = { ...have };
+    for (const c of atk.cost ?? []) {
+      if (c === "Colorless") continue;
+      if ((remaining[c] ?? 0) > 0) remaining[c]! -= 1;
+      else if (!need.includes(c)) need.push(c);
+    }
+  }
+  return need;
+}
+
+/** All non-Colorless colours appearing in this Pokémon's attack costs. */
+function crispinAttackColors(state: EngineState, mon: CardInstance): Set<string> {
+  const def = getDefinitionSafe(state, mon.definitionId);
+  const colors = new Set<string>();
+  for (const atk of def.attacks ?? []) {
+    for (const c of atk.cost ?? []) if (c !== "Colorless") colors.add(c);
+  }
+  return colors;
+}
+
+/** Largest attack damage across this Pokémon's attacks (proxy for "real attacker"). */
+function crispinMaxDamage(state: EngineState, mon: CardInstance): number {
+  const def = getDefinitionSafe(state, mon.definitionId);
+  return Math.max(0, ...(def.attacks ?? []).map((a) => parseInt(a.damage ?? "", 10) || 0));
+}
+
 function applyCrispinSV(state: EngineState, playerId: PlayerId): void {
   const player = getPlayer(state, playerId);
 
-  // Collect basic energy cards from deck grouped by type
+  // Collect basic energy cards from deck grouped by type.
   const energyByType = new Map<string, CardInstance>();
   for (const card of player.deck) {
     const def = getDefinitionSafe(state, card.definitionId);
@@ -668,52 +704,86 @@ function applyCrispinSV(state: EngineState, playerId: PlayerId): void {
     if (!energyByType.has(type)) energyByType.set(type, card);
   }
 
-  const types = [...energyByType.keys()];
-
-  if (types.length === 0) {
+  const availableTypes = [...energyByType.keys()];
+  if (availableTypes.length === 0) {
     shufflePlayerDeck(state, playerId);
     logMessage(state, "Crispin: no Basic Energy found in deck.");
     return;
   }
 
-  // Pull one energy from deck → hand
-  const handEnergy = energyByType.get(types[0]!)!;
-  const handIdx = player.deck.indexOf(handEnergy);
-  player.deck.splice(handIdx, 1);
-  handEnergy.zone = Zone.Hand;
-  player.hand.push(handEnergy);
-  logMessage(
-    state,
-    `Crispin: put ${getDefinitionSafe(state, handEnergy.definitionId).name} into hand.`,
-  );
-
-  if (types.length === 1) {
-    // Only one energy type — nothing to attach
-    shufflePlayerDeck(state, playerId);
-    return;
+  // Choose the attach target + which two energy TYPES to fetch. Prefer giving
+  // the biggest real attacker (e.g. bench Dragapult ex needing Fire+Psychic) a
+  // colour it still needs, so it gets closer to attacking THIS turn — the
+  // second searched Energy goes to hand and can be attached during the normal
+  // energy step to complete a multi-type cost the same turn. This replaces the
+  // old "first energy in deck order → active" behaviour that wasted Crispin on
+  // the wrong Pokémon and the wrong colours.
+  let target: CardInstance | null = null;
+  let attachType: string | null = null;
+  let handType: string | null = null;
+  let bestScore = -1;
+  for (const mon of allPokemonInPlay(player)) {
+    const needs = crispinColorNeeds(state, mon).filter((t) => energyByType.has(t));
+    if (needs.length === 0) continue;
+    // Prefer the biggest-damage attacker (the win condition, e.g. Dragapult ex's
+    // 200 over Dreepy's chip damage); tie-break toward the active, which can
+    // swing this turn.
+    const score = crispinMaxDamage(state, mon) + (mon.instanceId === player.active?.instanceId ? 1 : 0);
+    if (score <= bestScore) continue;
+    bestScore = score;
+    target = mon;
+    attachType = needs[0]!;
+    // The hand energy must be a DIFFERENT type. Prefer a second colour the
+    // target also needs (to finish its cost), then any colour in its attacks,
+    // then any other available type.
+    const colors = crispinAttackColors(state, mon);
+    handType =
+      needs.find((t) => t !== attachType) ??
+      availableTypes.find((t) => t !== attachType && colors.has(t)) ??
+      availableTypes.find((t) => t !== attachType) ??
+      null;
   }
 
-  // Pull a second energy of a different type → attach to a Pokémon in play
-  const attachEnergy = energyByType.get(types[1]!)!;
-  const attachIdx = player.deck.indexOf(attachEnergy);
-  player.deck.splice(attachIdx, 1);
-
-  const target =
-    player.active ??
-    player.bench.find(() => true) ??
-    null;
-
+  // Fallback: no Pokémon in play needs a colour we can supply → old behaviour
+  // (attach to the active / first bench, fetch the first two available types).
   if (!target) {
-    // No Pokémon in play — put in hand instead
-    attachEnergy.zone = Zone.Hand;
-    player.hand.push(attachEnergy);
-    logMessage(state, "Crispin: no Pokémon in play — both energies added to hand.");
-  } else {
-    attachEnergyToPokemon(state, playerId, attachEnergy, target);
-    logMessage(
-      state,
-      `Crispin: attached ${getDefinitionSafe(state, attachEnergy.definitionId).name} to ${getDefinitionSafe(state, target.definitionId).name}.`,
-    );
+    target = player.active ?? player.bench[0] ?? null;
+    attachType = availableTypes[0]!;
+    handType = availableTypes.find((t) => t !== attachType) ?? null;
+  }
+
+  // Put the "other" searched energy into hand (Crispin fetches up to 2 of
+  // different types). Skipped when only one energy type exists in the deck.
+  if (handType) {
+    const handEnergy = energyByType.get(handType)!;
+    const handIdx = player.deck.indexOf(handEnergy);
+    if (handIdx >= 0) {
+      player.deck.splice(handIdx, 1);
+      handEnergy.zone = Zone.Hand;
+      player.hand.push(handEnergy);
+      logMessage(state, `Crispin: put ${getDefinitionSafe(state, handEnergy.definitionId).name} into hand.`);
+    }
+  }
+
+  // Attach the chosen energy to the chosen target.
+  const attachEnergy = attachType ? energyByType.get(attachType)! : null;
+  if (attachEnergy) {
+    const attachIdx = player.deck.indexOf(attachEnergy);
+    if (attachIdx >= 0) {
+      player.deck.splice(attachIdx, 1);
+      if (target) {
+        attachEnergyToPokemon(state, playerId, attachEnergy, target);
+        logMessage(
+          state,
+          `Crispin: attached ${getDefinitionSafe(state, attachEnergy.definitionId).name} to ${getDefinitionSafe(state, target.definitionId).name}.`,
+        );
+      } else {
+        // No Pokémon in play — put it in hand instead.
+        attachEnergy.zone = Zone.Hand;
+        player.hand.push(attachEnergy);
+        logMessage(state, "Crispin: no Pokémon in play — energy added to hand.");
+      }
+    }
   }
 
   shufflePlayerDeck(state, playerId);

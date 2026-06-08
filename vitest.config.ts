@@ -14,6 +14,7 @@ export default defineConfig({
       "**/node_modules/**",
       "scripts/prepare-standard-effects.test.ts",
       "scripts/fetchAttackCosts.test.ts",
+      "scripts/report-invariants.test.ts",
     ],
     testTimeout: 30000,
   },
