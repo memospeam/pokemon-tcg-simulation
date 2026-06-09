@@ -231,7 +231,12 @@ export function analyzeTournamentDeck(
 }
 
 export function analyzeAllTop16(): TournamentDeckAnalysis[] {
-  return TOURNAMENT_535_TOP16.decks.map((deck) => analyzeTournamentDeck(deck));
+  // Only real tournament placements (>= 1). Featured/masterclass presets added
+  // to the bundle for Simulate/Lobby use placement 0 and are excluded here so
+  // the "Top 16" analysis stays the genuine tournament field.
+  return TOURNAMENT_535_TOP16.decks
+    .filter((deck) => deck.placement > 0)
+    .map((deck) => analyzeTournamentDeck(deck));
 }
 
 export function summarizeTop16Analysis(analyses: TournamentDeckAnalysis[]): Top16AnalysisSummary {
