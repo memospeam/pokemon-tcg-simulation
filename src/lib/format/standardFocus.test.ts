@@ -27,10 +27,13 @@ describe("Standard format focus — Chaos Rising", () => {
     expect(normalizeSetCode("ME4")).toBe("CRI");
   });
 
-  it("indexes Chaos Rising cards in the Standard corpus", () => {
+  it("indexes the complete Chaos Rising set, including the Special Energies", () => {
     const criCards = getStandardCardsBySet("CRI");
-    expect(criCards.length).toBe(CRI_POKEMON_CORPUS_COUNT);
-    expect(CRI_POKEMON_CORPUS_COUNT + CRI_SPECIAL_ENERGY_NUMBERS.length).toBe(CRI_SET_PRINTED_TOTAL);
+    expect(criCards.length).toBe(CRI_SET_PRINTED_TOTAL);
+    const energies = criCards.filter((card) => card.supertype === "Energy");
+    expect(energies.map((card) => card.number).sort()).toEqual([...CRI_SPECIAL_ENERGY_NUMBERS]);
+    expect(energies.every((card) => card.subtypes.includes("Special"))).toBe(true);
+    expect(criCards.length - energies.length).toBe(CRI_POKEMON_CORPUS_COUNT);
     const withMark = criCards.filter((card) => card.regulationMark);
     expect(withMark.length).toBeGreaterThan(0);
     expect(withMark.every((card) => isStandardRegulationMark(card.regulationMark))).toBe(true);

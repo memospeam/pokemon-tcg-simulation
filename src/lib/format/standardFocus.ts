@@ -92,9 +92,11 @@ export function summarizeFocusExpansion(
 }
 
 /**
- * Chaos Rising (CRI) set has 122 cards in pokemontcg.io; the Standard Pokémon corpus
- * indexes 119 — slots 84–86 are Special Energy (Bubbly Water, Magnetic Metal, Nitro Fire)
- * and are excluded from `STANDARD_FORMAT.pokemonQuery`.
+ * Chaos Rising (CRI) has 122 cards in pokemontcg.io, and the Standard corpus
+ * indexes all of them: 119 Pokémon/Trainer cards from the fetch queries plus
+ * the 3 Special Energies (slots 84–86: Bubbly Water, Magnetic Metal, Nitro
+ * Fire), which are added to the index directly because
+ * `STANDARD_FORMAT.pokemonQuery`/`trainerQuery` never fetch supertype:Energy.
  */
 export const CRI_SET_PRINTED_TOTAL = 122;
 export const CRI_POKEMON_CORPUS_COUNT = 119;

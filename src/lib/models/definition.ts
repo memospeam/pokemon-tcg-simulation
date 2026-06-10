@@ -143,6 +143,22 @@ export function isBasicEnergy(def: CardDefinition): boolean {
   return def.supertype === "Energy" && def.subtypes.includes("Basic");
 }
 
+// CRI (Chaos Rising) Special Energy — recognized by name, like the other
+// special energies in engine/effects/specialEnergyEffects.ts. These live here
+// (a leaf module) because stadiumEffects/abilityHooks also need them and
+// importing specialEnergyEffects from there would create an import cycle.
+export function isBubblyWaterEnergy(def: CardDefinition | undefined): boolean {
+  return def?.name.toLowerCase().includes("bubbly water energy") ?? false;
+}
+
+export function isMagneticMetalEnergy(def: CardDefinition | undefined): boolean {
+  return def?.name.toLowerCase().includes("magnetic metal energy") ?? false;
+}
+
+export function isNitroFireEnergy(def: CardDefinition | undefined): boolean {
+  return def?.name.toLowerCase().includes("nitro fire energy") ?? false;
+}
+
 export function isAceSpec(def: CardDefinition): boolean {
   return def.subtypes.includes("ACE SPEC");
 }

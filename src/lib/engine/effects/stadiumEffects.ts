@@ -1,5 +1,5 @@
 import type { CardDefinition } from "../../models/definition";
-import { hasRuleBox, isBasicPokemon, isColorlessPokemon, isPokemonExOrV, isStage2, isStadium } from "../../models/definition";
+import { hasRuleBox, isBasicPokemon, isBubblyWaterEnergy, isColorlessPokemon, isPokemonExOrV, isStage2, isStadium } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import { PlayerId, Zone } from "../../models/enums";
 import { getDefinitionSafe } from "../rules";
@@ -191,12 +191,28 @@ export function hasFestivalGroundsSpecialConditionImmunity(
   return pokemon.attachedEnergy.length > 0;
 }
 
+/** Bubbly Water Energy: the Water Pokémon it is attached to can't be affected
+ *  by any Special Conditions. */
+export function hasBubblyWaterSpecialConditionImmunity(
+  state: EngineState,
+  pokemon: CardInstance,
+): boolean {
+  const def = getDefinitionSafe(state, pokemon.definitionId);
+  if (!(def.types?.includes("Water") ?? false)) return false;
+  return pokemon.attachedEnergy.some((energy) =>
+    isBubblyWaterEnergy(getDefinition(state, energy.definitionId) ?? undefined),
+  );
+}
+
 export function applySpecialCondition(
   state: EngineState,
   pokemon: CardInstance,
   status: string,
 ): boolean {
   if (hasFestivalGroundsSpecialConditionImmunity(state, pokemon)) {
+    return false;
+  }
+  if (hasBubblyWaterSpecialConditionImmunity(state, pokemon)) {
     return false;
   }
   if (!pokemon.statusConditions.includes(status)) {

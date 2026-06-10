@@ -28,6 +28,7 @@ import {
 } from "./pokemonZoneHelpers";
 import { pokemonMatchesNameFilter, evolvePokemonFromDeck } from "./attackFlow";
 import { applySpecialCondition, getMaxBenchSize } from "./stadiumEffects";
+import { returnNitroFireAfterSelfAttackDiscard } from "./specialEnergyEffects";
 import type { EffectContext, ParsedEffect } from "./types";
 import { countersToDamage } from "./types";
 import { executeBulk8Effect } from "./executeBulk8";
@@ -306,6 +307,9 @@ function executeSingleEffect(
       for (const energy of targets) {
         discardAttachedEnergy(state, pokemon.ownerId, pokemon.instanceId, energy.instanceId, false);
       }
+      if (effect.from !== "opponent_active") {
+        returnNitroFireAfterSelfAttackDiscard(state, pokemon, targets);
+      }
       return "complete";
     }
 
@@ -317,6 +321,7 @@ function executeSingleEffect(
         discardAttachedEnergy(state, pokemon.ownerId, pokemon.instanceId, energy.instanceId, false);
       }
       logMessage(state, "Discarded all Energy from Active Pokémon.");
+      returnNitroFireAfterSelfAttackDiscard(state, pokemon, targets);
       return "complete";
     }
 
@@ -856,6 +861,7 @@ function executeSingleEffect(
       for (let i = 0; i < coinCount; i += 1) {
         if (!flipCoin(state)) tails += 1;
       }
+      const discarded: CardInstance[] = [];
       for (let i = 0; i < tails * effect.perTails; i += 1) {
         if (ctx.sourcePokemon.attachedEnergy.length === 0) break;
         const energy = ctx.sourcePokemon.attachedEnergy[0]!;
@@ -866,10 +872,12 @@ function executeSingleEffect(
           energy.instanceId,
           false,
         );
+        discarded.push(energy);
       }
       if (tails > 0) {
         logMessage(state, `Discarded ${tails} Energy after ${tails} tail flip(s).`);
       }
+      returnNitroFireAfterSelfAttackDiscard(state, ctx.sourcePokemon, discarded);
       return "complete";
     }
 
