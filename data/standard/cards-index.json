@@ -68349,5 +68349,348 @@
       "text": "Once during each player's turn, that player may discard 2 cards from their hand in order to draw a card.",
       "textId": "trainer-2dbb5f83"
     }
+  },
+  {
+    "apiId": "sv5-161",
+    "name": "Mist Energy",
+    "set": "TEF",
+    "number": "161",
+    "regulationMark": "H",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Colorless Energy.    Prevent all effects of attacks used by your opponent's Pokémon done to the Pokémon this card is attached to. (Existing effects are not removed. Damage is not an effect.)",
+      "textId": "energy-cbb2c8bf"
+    }
+  },
+  {
+    "apiId": "sv5-162",
+    "name": "Neo Upper Energy",
+    "set": "TEF",
+    "number": "162",
+    "regulationMark": "H",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special",
+      "ACE SPEC"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "You can't have more than 1 ACE SPEC card in your deck.\nAs long as this card is attached to a Pokémon, it provides Colorless Energy.  If this card is attached to a Stage 2 Pokémon, this card provides every type of Energy but provides only 2 Energy at a time.\nACE SPEC: You can't have more than 1 ACE SPEC card in your deck.",
+      "textId": "energy-7c1da1d8"
+    }
+  },
+  {
+    "apiId": "sv6-166",
+    "name": "Boomerang Energy",
+    "set": "TWM",
+    "number": "166",
+    "regulationMark": "H",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Colorless Energy.    If this card is discarded by an effect of an attack used by the Pokémon this card is attached to, attach this card from your discard pile to that Pokémon after attacking.",
+      "textId": "energy-7d4eb9c5"
+    }
+  },
+  {
+    "apiId": "sv6-167",
+    "name": "Legacy Energy",
+    "set": "TWM",
+    "number": "167",
+    "regulationMark": "H",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special",
+      "ACE SPEC"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "You can't have more than 1 ACE SPEC card in your deck.\nAs long as this card is attached to a Pokémon, it provides every type of Energy but provides only 1 Energy at a time.    If the Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, that player takes 1 fewer Prize card. This effect of your Legacy Energy can't be applied more than once per game.\nACE SPEC: You can't have more than 1 ACE SPEC card in your deck.",
+      "textId": "energy-8351393b"
+    }
+  },
+  {
+    "apiId": "sv6-226",
+    "name": "Luminous Energy",
+    "set": "TWM",
+    "number": "226",
+    "regulationMark": "H",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides every type of Energy but provides only 1 Energy at a time.  If the Pokémon this card is attached to has any other Special Energy attached, this card provides Colorless Energy instead.",
+      "textId": "energy-45d2a83e"
+    }
+  },
+  {
+    "apiId": "sv8-191",
+    "name": "Enriching Energy",
+    "set": "SSP",
+    "number": "191",
+    "regulationMark": "H",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special",
+      "ACE SPEC"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Colorless Energy.  When you attach this card from your hand to a Pokémon, draw 4 cards.\nACE SPEC: You can't have more than 1 ACE SPEC card in your deck.",
+      "textId": "energy-ef17c894"
+    }
+  },
+  {
+    "apiId": "sv9-159",
+    "name": "Spiky Energy",
+    "set": "JTG",
+    "number": "159",
+    "regulationMark": "I",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Colorless Energy.  If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), put 2 damage counters on the Attacking Pokémon.",
+      "textId": "energy-19fab9ed"
+    }
+  },
+  {
+    "apiId": "sv9-190",
+    "name": "Spiky Energy",
+    "set": "JTG",
+    "number": "190",
+    "regulationMark": "I",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Colorless Energy.  If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), put 2 damage counters on the Attacking Pokémon.",
+      "textId": "energy-19fab9ed"
+    }
+  },
+  {
+    "apiId": "sv10-182",
+    "name": "Team Rocket's Energy",
+    "set": "DRI",
+    "number": "182",
+    "regulationMark": "I",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "This card can only be attached to a Team Rocket's Pokémon. If this card is attached to anything other than a Team Rocket's Pokémon, discard this card.  As long as this card is attached to a Pokémon, it provides 2 in any combination of Psychic Energy and Darkness Energy.",
+      "textId": "energy-f6daec7d"
+    }
+  },
+  {
+    "apiId": "rsv10pt5-86",
+    "name": "Ignition Energy",
+    "set": "WHT",
+    "number": "86",
+    "regulationMark": "I",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "If this card is attached to 1 of your Pokémon, discard it at the end of your turn.  As long as this card is attached to a Pokémon, it provides Colorless Energy.  If this card is attached to an Evolution Pokémon, it provides ColorlessColorlessColorless Energy instead.",
+      "textId": "energy-afab786f"
+    }
+  },
+  {
+    "apiId": "zsv10pt5-86",
+    "name": "Prism Energy",
+    "set": "BLK",
+    "number": "86",
+    "regulationMark": "I",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Colorless Energy.  If this card is attached to a Basic Pokémon, this card provides every type of Energy but provides only 1 Energy at a time.",
+      "textId": "energy-205d0a27"
+    }
+  },
+  {
+    "apiId": "me2-124",
+    "name": "Ignition Energy",
+    "set": "PFL",
+    "number": "124",
+    "regulationMark": "I",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "If this card is attached to 1 of your Pokémon, discard it at the end of your turn.  As long as this card is attached to a Pokémon, it provides Colorless Energy.  If this card is attached to an Evolution Pokémon, it provides ColorlessColorlessColorless Energy instead.",
+      "textId": "energy-afab786f"
+    }
+  },
+  {
+    "apiId": "me2pt5-217",
+    "name": "Team Rocket's Energy",
+    "set": "ASC",
+    "number": "217",
+    "regulationMark": "I",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "This card can only be attached to a Team Rocket's Pokémon. If this card is attached to anything other than a Team Rocket's Pokémon, discard this card.  As long as this card is attached to a Pokémon, it provides 2 in any combination of Psychic Energy and Darkness Energy.",
+      "textId": "energy-f6daec7d"
+    }
+  },
+  {
+    "apiId": "me2pt5-216",
+    "name": "Prism Energy",
+    "set": "ASC",
+    "number": "216",
+    "regulationMark": "I",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Colorless Energy.  If this card is attached to a Basic Pokémon, this card provides every type of Energy but provides only 1 Energy at a time.",
+      "textId": "energy-205d0a27"
+    }
+  },
+  {
+    "apiId": "me3-86",
+    "name": "Growing Grass Energy",
+    "set": "POR",
+    "number": "86",
+    "regulationMark": "J",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Grass Energy. The Grass Pokémon this card is attached to gets +20 HP.",
+      "textId": "energy-c8985a6b"
+    }
+  },
+  {
+    "apiId": "me3-87",
+    "name": "Rocky Fighting Energy",
+    "set": "POR",
+    "number": "87",
+    "regulationMark": "J",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Fighting Energy. Prevent all effects of attacks used by your opponent's Pokémon done to the Fighting Pokémon this card is attached to. (Existing effects are not removed. Damage is not an effect.)",
+      "textId": "energy-29bb5793"
+    }
+  },
+  {
+    "apiId": "me3-88",
+    "name": "Telepathic Psychic Energy",
+    "set": "POR",
+    "number": "88",
+    "regulationMark": "J",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Psychic Energy. When you attach this card from your hand to a Psychic Pokémon, search your deck for up to 2 Basic Psychic Pokémon and put them onto your Bench. Then, shuffle your deck.",
+      "textId": "energy-f0fc9573"
+    }
+  },
+  {
+    "apiId": "me4-84",
+    "name": "Bubbly Water Energy",
+    "set": "CRI",
+    "number": "84",
+    "regulationMark": "J",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Water Energy.\n\nThe Water Pokémon this card is attached to recovers from all Special Conditions and can't be affected by any Special Conditions.",
+      "textId": "energy-4d94cf29"
+    }
+  },
+  {
+    "apiId": "me4-85",
+    "name": "Magnetic Metal Energy",
+    "set": "CRI",
+    "number": "85",
+    "regulationMark": "J",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Metal Energy.\n\nThe Metal Pokémon this card is attached to has no Retreat Cost.",
+      "textId": "energy-15a48f70"
+    }
+  },
+  {
+    "apiId": "me4-86",
+    "name": "Nitro Fire Energy",
+    "set": "CRI",
+    "number": "86",
+    "regulationMark": "J",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "attacks": [],
+    "abilities": [],
+    "trainerRules": {
+      "text": "As long as this card is attached to a Pokémon, it provides Fire Energy.\n \nIf this card is discarded by an effect of an attack used by the Fire Pokémon this card is attached to, put this card into your hand after attack damage and effects.",
+      "textId": "energy-f61fabf"
+    }
   }
 ]

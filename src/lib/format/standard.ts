@@ -19,6 +19,15 @@ export const STANDARD_FORMAT = {
   /** Lucene query for pokemontcg.io — Trainers (effect text in rules[]). */
   trainerQuery:
     'supertype:Trainer (regulationMark:H OR regulationMark:I OR regulationMark:J)',
+  /**
+   * Lucene query for pokemontcg.io — Energy (effect text in rules[]). Basic
+   * Energy carries no regulation mark, so this matches Special Energy only —
+   * exactly what the corpus needs (basic energies are name-stubbed by
+   * corpusDeckBuilder). Without this query the index lacked every Special
+   * Energy (e.g. CRI 84-86) and regeneration dropped their hand patches.
+   */
+  energyQuery:
+    'supertype:Energy (regulationMark:H OR regulationMark:I OR regulationMark:J)',
 } as const;
 
 export function isStandardRegulationMark(mark: string | undefined): mark is StandardRegulationMark {

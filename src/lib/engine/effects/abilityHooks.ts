@@ -1,4 +1,4 @@
-import { isBasicEnergy, isBasicPokemon, isNsPokemon } from "../../models/definition";
+import { isBasicEnergy, isBasicPokemon, isMagneticMetalEnergy, isNsPokemon } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import type { PlayerId } from "../../models/enums";
 import { PlayerId as PlayerIdEnum } from "../../models/enums";
@@ -372,6 +372,15 @@ export function hasFreeRetreat(state: EngineState, pokemon: CardInstance): boole
     }
   }
   if (getStadiumKind(state) === "ns_castle" && isNsPokemon(def)) {
+    return true;
+  }
+  // Magnetic Metal Energy: the Metal Pokémon it is attached to has no Retreat Cost.
+  if (
+    (def.types?.includes("Metal") ?? false) &&
+    pokemon.attachedEnergy.some((energy) =>
+      isMagneticMetalEnergy(getDefinitionSafe(state, energy.definitionId)),
+    )
+  ) {
     return true;
   }
   return false;

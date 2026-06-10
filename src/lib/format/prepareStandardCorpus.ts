@@ -32,6 +32,8 @@ export interface StandardCorpusManifest {
   format: typeof STANDARD_FORMAT;
   totalPokemonCards: number;
   totalTrainerCards: number;
+  /** Special Energy cards (absent from manifests generated before the energy query). */
+  totalEnergyCards?: number;
   cardsWithAttacks: number;
   cardsWithAbilities: number;
   cardsWithTrainerRules: number;
@@ -88,7 +90,7 @@ function normalizeTextKey(text: string): string {
   return text.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-function textId(kind: "attack" | "ability" | "trainer", text: string): string {
+function textId(kind: "attack" | "ability" | "trainer" | "energy", text: string): string {
   const key = normalizeTextKey(text);
   let hash = 0;
   for (let i = 0; i < key.length; i += 1) {
@@ -147,7 +149,16 @@ async function fetchAllStandardTrainers(): Promise<CardDefinition[]> {
   return fetchAllStandardCards(STANDARD_FORMAT.trainerQuery);
 }
 
-function buildCorpus(pokemonCards: CardDefinition[], trainerCards: CardDefinition[]): StandardCorpus {
+async function fetchAllStandardEnergies(): Promise<CardDefinition[]> {
+  return fetchAllStandardCards(STANDARD_FORMAT.energyQuery);
+}
+
+/** Exported for tests — pure assembly of the fetched card lists into the corpus. */
+export function buildCorpus(
+  pokemonCards: CardDefinition[],
+  trainerCards: CardDefinition[],
+  energyCards: CardDefinition[] = [],
+): StandardCorpus {
   const attackMap = new Map<string, EffectTextRecord>();
   const abilityMap = new Map<string, EffectTextRecord>();
   const trainerMap = new Map<string, EffectTextRecord>();
@@ -284,6 +295,30 @@ function buildCorpus(pokemonCards: CardDefinition[], trainerCards: CardDefinitio
     }
   }
 
+  for (const card of energyCards) {
+    // Special Energy (basic energies carry no regulation mark, so the energy
+    // query never returns them). Rules text is stored on the entry the same
+    // way trainer rules are, but is NOT funneled through parseTrainerText —
+    // Special Energy effects are implemented by card name in
+    // engine/effects/specialEnergyEffects.ts, so parsing the text would only
+    // pollute unknown-patterns.json.
+    const effectText = (card.rules ?? []).join("\n").trim();
+    cardIndex.push({
+      apiId: card.apiId,
+      name: card.name,
+      set: card.set.ptcgoCode ?? card.set.id,
+      number: card.number,
+      regulationMark: card.regulationMark,
+      supertype: card.supertype,
+      subtypes: card.subtypes,
+      attacks: [],
+      abilities: [],
+      trainerRules: effectText
+        ? { text: effectText, textId: textId("energy", effectText) }
+        : undefined,
+    });
+  }
+
   const attackTexts = [...attackMap.values()].sort((a, b) => b.cardCount - a.cardCount);
   const abilityTexts = [...abilityMap.values()].sort((a, b) => b.cardCount - a.cardCount);
   const trainerTexts = [...trainerMap.values()].sort((a, b) => b.cardCount - a.cardCount);
@@ -293,6 +328,7 @@ function buildCorpus(pokemonCards: CardDefinition[], trainerCards: CardDefinitio
     format: STANDARD_FORMAT,
     totalPokemonCards: pokemonCards.length,
     totalTrainerCards: trainerCards.length,
+    totalEnergyCards: energyCards.length,
     totalCards: pokemonCards.length,
     cardsWithAttacks: pokemonCards.filter((c) => (c.attacks?.length ?? 0) > 0).length,
     cardsWithAbilities: pokemonCards.filter((c) => (c.abilities?.length ?? 0) > 0).length,
@@ -313,11 +349,12 @@ function buildCorpus(pokemonCards: CardDefinition[], trainerCards: CardDefinitio
 }
 
 export async function prepareStandardCorpus(outputDir = "data/standard"): Promise<StandardCorpus> {
-  const [pokemonCards, trainerCards] = await Promise.all([
+  const [pokemonCards, trainerCards, energyCards] = await Promise.all([
     fetchAllStandardPokemon(),
     fetchAllStandardTrainers(),
+    fetchAllStandardEnergies(),
   ]);
-  const corpus = buildCorpus(pokemonCards, trainerCards);
+  const corpus = buildCorpus(pokemonCards, trainerCards, energyCards);
 
   const resolvedDir = path.resolve(process.cwd(), outputDir);
   await mkdir(resolvedDir, { recursive: true });

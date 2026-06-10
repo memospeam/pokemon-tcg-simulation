@@ -1,7 +1,10 @@
 import type { CardDefinition } from "../../models/definition";
 import {
   isBasicPokemon,
+  isBubblyWaterEnergy,
   isEvolutionPokemon,
+  isMagneticMetalEnergy,
+  isNitroFireEnergy,
   isTeamRocketPokemon,
 } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
@@ -96,6 +99,41 @@ export function onSpecialEnergyAttachedFromHand(
 
   if (isJetEnergy(energyDef) && target.zone === Zone.Bench) {
     applyJetEnergySwitch(state, playerId, target.instanceId);
+  }
+
+  if (
+    isBubblyWaterEnergy(energyDef) &&
+    (targetDef.types?.includes("Water") ?? false) &&
+    (target.statusConditions.length > 0 || target.poisonCounters !== undefined)
+  ) {
+    target.statusConditions = [];
+    target.poisonCounters = undefined;
+    logMessage(state, `${targetDef.name} recovered from all Special Conditions (Bubbly Water Energy).`);
+  }
+}
+
+/**
+ * Nitro Fire Energy: if discarded by an effect of an attack used by the Fire
+ * Pokémon it was attached to, it returns to the owner's hand after attack
+ * damage and effects. Call right after an attack effect discards the
+ * attacker's own energy, passing the discarded instances.
+ */
+export function returnNitroFireAfterSelfAttackDiscard(
+  state: EngineState,
+  attacker: CardInstance,
+  discarded: CardInstance[],
+): void {
+  const attackerDef = getDefinitionSafe(state, attacker.definitionId);
+  if (!(attackerDef.types?.includes("Fire") ?? false)) return;
+  const player = getPlayer(state, attacker.ownerId);
+  for (const energy of discarded) {
+    if (!isNitroFireEnergy(getDefinition(state, energy.definitionId))) continue;
+    const index = player.discard.findIndex((card) => card.instanceId === energy.instanceId);
+    if (index === -1) continue;
+    const card = player.discard.splice(index, 1)[0]!;
+    card.zone = Zone.Hand;
+    player.hand.push(card);
+    logMessage(state, "Nitro Fire Energy returned to hand after the attack.");
   }
 }
 
@@ -298,6 +336,17 @@ export function getSpecialEnergyContribution(
   }
   if (isLegacyEnergy(def)) {
     return { colors: {}, rainbow: 1, flexPsychicDark: 0 };
+  }
+  // CRI Special Energies — each provides 1 Energy of its color to any Pokémon;
+  // only their bonus effects are restricted to the matching Pokémon type.
+  if (isBubblyWaterEnergy(def)) {
+    return { colors: { Water: 1 }, rainbow: 0, flexPsychicDark: 0 };
+  }
+  if (isMagneticMetalEnergy(def)) {
+    return { colors: { Metal: 1 }, rainbow: 0, flexPsychicDark: 0 };
+  }
+  if (isNitroFireEnergy(def)) {
+    return { colors: { Fire: 1 }, rainbow: 0, flexPsychicDark: 0 };
   }
 
   return empty;

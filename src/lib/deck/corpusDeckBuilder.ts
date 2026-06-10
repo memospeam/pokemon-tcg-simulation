@@ -383,16 +383,29 @@ function stubTrainerDefinition(line: ParsedDeckLine, corpusSubtypes?: string[]):
   };
 }
 
-function stubEnergyDefinition(line: ParsedDeckLine): CardDefinition {
+function stubEnergyDefinition(line: ParsedDeckLine, corpus?: StandardCardIndex): CardDefinition {
   const setCode = normalizeSetCode(line.setCode ?? "MEE") ?? "MEE";
   const types = inferEnergyTypes(line.name);
   const apiId = `${setCode}-${line.number ?? line.name}`.toLowerCase().replace(/\s+/g, "-");
+
+  // Authoritative subtype from the corpus when the printing is indexed (e.g.
+  // the CRI Special Energies). The name heuristic below tags every card whose
+  // name contains "Energy" as Basic — wrong for Special Energies, which must
+  // be capped at 4 copies by the validator and stay visible to
+  // discard-special-energy effects.
+  const subtypes =
+    corpus && corpus.subtypes.length > 0
+      ? [...corpus.subtypes]
+      : line.name.toLowerCase().includes("energy")
+        ? ["Basic"]
+        : ["Special"];
 
   return {
     apiId,
     name: line.name,
     supertype: "Energy",
-    subtypes: line.name.toLowerCase().includes("energy") ? ["Basic"] : ["Special"],
+    subtypes,
+    rules: corpus?.trainerRules ? [corpus.trainerRules.text] : undefined,
     types,
     set: { id: setCode.toLowerCase(), name: setCode, ptcgoCode: setCode },
     number: line.number ?? "1",
@@ -406,7 +419,14 @@ function lineToDefinition(
   deckEnergyTypes: Set<string>,
 ): { definition?: CardDefinition; error?: string } {
   if (line.section === "Energy") {
-    return { definition: stubEnergyDefinition(line) };
+    // Special Energies (e.g. CRI 84-86) are indexed in the corpus; basic
+    // energies are not (the corpus only fetches Pokémon/Trainer supertypes)
+    // and fall through to the name-based stub.
+    const corpus =
+      (line.setCode && line.number
+        ? findCorpusCard(line.setCode, line.number, line.name)
+        : undefined) ?? findCorpusCardByName(line.name);
+    return { definition: stubEnergyDefinition(line, corpus) };
   }
   if (line.section === "Trainer") {
     // Consult the corpus so Tools are classified correctly instead of
