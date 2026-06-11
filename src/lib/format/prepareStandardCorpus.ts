@@ -69,6 +69,11 @@ export interface StandardCardIndex {
   regulationMark?: string;
   supertype: CardDefinition["supertype"];
   subtypes: string[];
+  /** Pokémon typing + battle modifiers (absent from indexes generated before 2026-06). */
+  types?: string[];
+  weaknesses?: { type: string; value: string }[];
+  resistances?: { type: string; value: string }[];
+  retreatCost?: string[];
   attacks: {
     name: string;
     damage: string;
@@ -174,6 +179,10 @@ export function buildCorpus(
       regulationMark: card.regulationMark,
       supertype: card.supertype,
       subtypes: card.subtypes,
+      types: card.types,
+      weaknesses: card.weaknesses,
+      resistances: card.resistances,
+      retreatCost: card.retreatCost,
       attacks: [],
       abilities: [],
     };

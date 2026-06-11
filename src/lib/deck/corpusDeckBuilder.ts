@@ -325,7 +325,14 @@ function corpusCardToDefinition(
 ): CardDefinition {
   const subtypes = resolveSubtypes(card, line, pokemonNames);
   const parentName = resolveEvolvesFrom(line.name, pokemonNames);
-  const types = inferPokemonTypes(line.name, deckEnergyTypes);
+  // Authoritative typing from the corpus (patched from pokemontcg.io). The
+  // name-based inference is a fallback for older indexes only — it guessed
+  // wrong for many cards (Dragapult ex is Dragon, not Psychic; Mega Lopunny ex
+  // is Fighting, not Colorless), which broke Weakness matching.
+  const types =
+    card.types && card.types.length > 0
+      ? [...card.types]
+      : inferPokemonTypes(line.name, deckEnergyTypes);
   const setCode = normalizeSetCode(line.setCode ?? card.set) ?? card.set;
 
   return {
@@ -335,6 +342,13 @@ function corpusCardToDefinition(
     subtypes,
     hp: card.hp ?? inferHp(line.name, subtypes),
     types,
+    weaknesses: card.weaknesses ? card.weaknesses.map((entry) => ({ ...entry })) : undefined,
+    resistances: card.resistances ? card.resistances.map((entry) => ({ ...entry })) : undefined,
+    // Real retreat costs from the corpus. Older indexes lacked this field, and
+    // a missing retreatCost reads as [] in the engine — every Pokémon
+    // retreated free, which erased a whole dimension of the game (Air
+    // Balloon, Switch, and pivot abilities were all dead weight).
+    retreatCost: card.retreatCost ? [...card.retreatCost] : undefined,
     attacks: buildAttacks(card, types),
     abilities: buildAbilities(card),
     evolvesFrom: parentName,
