@@ -12,6 +12,7 @@ import { beginGame, gameReducer, getLegalActions, startActiveGame } from "../eng
 import { getDefinitionSafe } from "../engine/rules";
 import { getStadiumKind } from "../engine/effects/stadiumEffects";
 import { isBasicPokemon, isStage2, isSupporter } from "../models/definition";
+import type { CardInstance } from "../models/instance";
 import { GamePhase, PlayerId } from "../models/enums";
 import { getDefinition, getOpponentId, getPlayer, remainingHp, type EngineState, type GameAction } from "../engine/types";
 import {
@@ -722,6 +723,13 @@ export function pickAutoEvolveAction(state: EngineState, ctx?: StrategyContext):
   return scored[0]?.action ?? null;
 }
 
+/** Whether the Pokémon holds a Binding Mochi (+40 while Poisoned). */
+function holdsBindingMochi(state: EngineState, mon: CardInstance): boolean {
+  return (mon.attachedTools ?? []).some((tool) =>
+    getDefinition(state, tool.definitionId)?.name?.toLowerCase().includes("binding mochi"),
+  );
+}
+
 /**
  * Decide which Pokémon Tool to attach this turn (the ATTACH_TOOL action).
  *
@@ -767,6 +775,19 @@ export function pickAutoToolAction(
       } else if (toolName.includes("rescue board")) {
         // −1 retreat: also helps the Lopunny loop / the active attacker.
         score = isLopunny ? 60 : isActive ? 26 : 10;
+      } else if (toolName.includes("binding mochi")) {
+        // +40 only while the holder is Poisoned. In the Zoroark deck the
+        // holder poisons ITSELF by pivoting in via Pecharunt ex's Subjugating
+        // Chains, so the prime target is a BENCHED N's Zoroark ex (the future
+        // pivot target) — Night Joker 250 becomes 290 after the pivot.
+        const poisoned = target?.statusConditions.includes("Poisoned") ?? false;
+        if (ctx?.archetype === "zoroark" && targetName.includes("n's zoroark ex")) {
+          score = isActive ? 60 : 93;
+        } else if (poisoned) {
+          score = 80;
+        } else {
+          score = 8;
+        }
       } else {
         // Generic damage/HP tools (Defiance Band, Bravery Charm, Maximum Belt,
         // Hero's Cape, …) — put them on the current attacker.
@@ -1241,6 +1262,54 @@ export function pickAutoAbilityAction(
             return bName.includes("n's zoroark ex") && b.attachedEnergy.length > 0;
           });
           if (!activeCanAttack && freshBenchZoroark) score = Math.max(score, 85);
+
+          // ── Mochi-pivot ──
+          // Pivoting in a Benched N's Zoroark ex that HOLDS Binding Mochi
+          // poisons it, switching on the +40 (Night Joker 250 → 290; +40 more
+          // from Black Belt's Training vs an ex → 330). Worth the self-poison
+          // exactly when those bonuses flip a KO the current active can't make.
+          if (opponent.active) {
+            const oppHp = remainingHp(state, opponent.active);
+            const oppIsEx = (
+              getDefinition(state, opponent.active.definitionId)?.subtypes ?? []
+            ).includes("ex");
+            // Best raw Night Joker template damage (unpenalised — we are
+            // checking reach-with-bonuses, not expected value).
+            const njRaw = player.bench.reduce((best, b) => {
+              const bDef = getDefinition(state, b.definitionId);
+              if (!bDef?.name?.toLowerCase().startsWith("n's")) return best;
+              const raw = Math.max(0, ...(bDef.attacks ?? []).map((a) => parseInt(a.damage, 10) || 0));
+              return Math.max(best, raw);
+            }, 0);
+            const blackBeltReady =
+              oppIsEx &&
+              !state.turnFlags.supporterPlayed &&
+              player.hand.some((c) =>
+                getDefinition(state, c.definitionId)?.name?.toLowerCase().includes("black belt's training"),
+              );
+            const bonus = 40 + (blackBeltReady ? 40 : 0);
+            const mochiPivotReady = eligibleBenchDark.some((b) => {
+              const bName = getDefinition(state, b.definitionId)?.name?.toLowerCase() ?? "";
+              return (
+                bName.includes("n's zoroark ex") &&
+                b.attachedEnergy.length > 0 &&
+                holdsBindingMochi(state, b)
+              );
+            });
+            const activeAlreadyBoosted =
+              !!player.active &&
+              holdsBindingMochi(state, player.active) &&
+              player.active.statusConditions.includes("Poisoned");
+            if (
+              mochiPivotReady &&
+              !activeAlreadyBoosted &&
+              njRaw > 0 &&
+              njRaw < oppHp &&
+              njRaw + bonus >= oppHp
+            ) {
+              score = Math.max(score, 90);
+            }
+          }
         }
       }
 
@@ -1899,6 +1968,43 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
         }
       } else if (name.includes("rosa")) {
         score = 28;
+      } else if (name.includes("black belt's training")) {
+        // +40 this turn vs the opponent's Active ex. A generic-supporter score
+        // would burn it as filler — hold it for the turn it FLIPS a KO
+        // (Night Joker 250 + Binding Mochi 40 + this 40 = 330, exactly a
+        // Mega/Tera ex). The ability step runs the Mochi pivot before this is
+        // re-scored, so a poisoned Mochi holder in the Active is visible here.
+        const oppActive = opponent.active;
+        const oppIsEx = oppActive
+          ? (getDefinition(state, oppActive.definitionId)?.subtypes ?? []).includes("ex")
+          : false;
+        if (!oppActive || !oppIsEx) {
+          score = -1;
+        } else {
+          const oppHp = remainingHp(state, oppActive);
+          const activeDef = player.active ? getDefinition(state, player.active.definitionId) : undefined;
+          const mochiBonus =
+            player.active &&
+            player.active.statusConditions.includes("Poisoned") &&
+            holdsBindingMochi(state, player.active)
+              ? 40
+              : 0;
+          const est = (activeDef?.attacks ?? []).reduce(
+            (best, atk) => Math.max(best, estimateAttackDamage(state, playerId, atk.name, atk.damage)),
+            0,
+          );
+          // Unpenalised Night Joker template reach (the estimate discounts
+          // Rampaging Thunder when it does not KO — but with the +40s it may).
+          const njRaw = (activeDef?.name ?? "").toLowerCase().includes("n's zoroark ex")
+            ? player.bench.reduce((best, b) => {
+                const bDef = getDefinition(state, b.definitionId);
+                if (!bDef?.name?.toLowerCase().startsWith("n's")) return best;
+                return Math.max(best, ...(bDef.attacks ?? []).map((a) => parseInt(a.damage, 10) || 0));
+              }, 0)
+            : 0;
+          const potential = Math.max(est, njRaw) + mochiBonus;
+          score = potential < oppHp && potential + 40 >= oppHp ? 96 : 6;
+        }
       // === TEAM ROCKET SUPPORTERS (specific scoring for Honchkrow archetype) ===
       } else if (name.includes("team rocket's transceiver")) {
         // Grab a TR Supporter from deck — critical for Rocket Feathers setup
@@ -2579,7 +2685,25 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     }
     case "SWITCH_TYPED_BENCH": {
       if (pending.options.length === 0) return null;
-      return gameReducer(state, { type: "SWITCH_WITH_BENCH", playerId, benchInstanceId: pending.options[0]! });
+      // Pick the best pivot target, not just options[0]: prefer the
+      // archetype's primary attacker, with energy, and (Mochi-pivot combo) a
+      // Binding Mochi holder — the incoming Pokémon gets Poisoned, which is
+      // exactly what switches the Mochi's +40 on.
+      const swPlayer = getPlayer(state, playerId);
+      const bestSwitch = pending.options
+        .map((id) => {
+          const mon = swPlayer.bench.find((p) => p.instanceId === id);
+          const name = mon
+            ? getDefinition(state, mon.definitionId)?.name?.toLowerCase() ?? ""
+            : "";
+          let score = 0;
+          if (ctx) score += getArchetypeEnergyPriority(ctx.archetype, name);
+          if (mon && mon.attachedEnergy.length > 0) score += 30;
+          if (mon && holdsBindingMochi(state, mon)) score += 40;
+          return { id, score };
+        })
+        .sort((a, b) => b.score - a.score)[0]!;
+      return gameReducer(state, { type: "SWITCH_WITH_BENCH", playerId, benchInstanceId: bestSwitch.id });
     }
     case "ENERGY_SWITCH": {
       if (pending.options.length === 0) return null;
