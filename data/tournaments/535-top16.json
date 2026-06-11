@@ -147,6 +147,14 @@
       "text": "Pokémon : 20\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Duskull PRE 35\n1 Dusclops PRE 36\n1 Dusknoir PRE 37\n1 Budew ASC 16\n2 Munkidori TWM 95\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n\nTrainer : 31\n4 Lillie's Determination MEG 119\n3 Boss's Orders MEG 114\n2 Crispin SCR 133\n1 Judge POR 76\n1 Rosa's Encouragement POR 84\n4 Buddy-Buddy Poffin TEF 144\n4 Ultra Ball MEG 131\n4 Poké Pad POR 81\n2 Night Stretcher ASC 196\n3 Rare Candy MEG 125\n1 Unfair Stamp TWM 165\n2 Team Rocket's Watchtower DRI 180\n\nEnergy : 9\n4 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n2 Darkness Energy MEE 7",
       "id": "utrecht-masterclass-refined-dragapult-dusknoir",
       "label": "★ Masterclass: Refined Dragapult Dusknoir"
+    },
+    {
+      "placement": 0,
+      "player": "Masterclass",
+      "deckName": "Cynthia's Garchomp (Refined)",
+      "text": "Pokémon : 19\n4 Cynthia's Roselia DRI 7\n3 Cynthia's Roserade DRI 8\n4 Cynthia's Gible DRI 102\n4 Cynthia's Gabite DRI 103\n3 Cynthia's Garchomp ex DRI 104\n1 Cynthia's Spiritomb DRI 129\n\nTrainer : 33\n4 Lillie's Determination MEG 119\n4 Boss's Orders MEG 114\n2 Team Rocket's Petrel DRI 176\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n2 Fighting Gong MEG 116\n3 Premium Power Pro MEG 124\n3 Rare Candy MEG 125\n1 Unfair Stamp TWM 165\n1 Night Stretcher ASC 196\n1 Switch MEG 130\n4 Cynthia's Power Weight DRI 162\n\nEnergy : 8\n4 Rocky Fighting Energy POR 87\n4 Fighting Energy MEE 6",
+      "id": "utrecht-masterclass-refined-cynthias-garchomp",
+      "label": "★ Masterclass: Refined Cynthia's Garchomp"
     }
   ]
 }
