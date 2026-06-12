@@ -4,10 +4,11 @@ import { buildPlaytestDeckFromCorpusText } from "./corpusDeckBuilder";
 import {
   applyDeckOutAbilityPenalty,
   applyDeckOutTrainerPenalty,
+  isDeckDrainingTrainerName,
 } from "./deckOutAwareness";
 import type { TournamentDeckPreset } from "./tournamentPresets";
 import { canAffordAttack, canAffordRetreat } from "../engine/energy";
-import { canRareCandyEvolveInto, checkMulliganNeeded } from "../engine/rules";
+import { applyWeaknessAndResistance, canRareCandyEvolveInto, checkMulliganNeeded, parseDamage } from "../engine/rules";
 import { beginGame, gameReducer, getLegalActions, startActiveGame } from "../engine/reducer";
 import { getDefinitionSafe } from "../engine/rules";
 import { getStadiumKind } from "../engine/effects/stadiumEffects";
@@ -1027,9 +1028,8 @@ function shouldSkipAttack(state: EngineState, playerId: PlayerId, ctx: StrategyC
         const d = getDefinition(state, card.definitionId);
         return d && isSupporter(d) && d.name.toLowerCase().includes("team rocket's");
       }).length;
-      const opponentHp = getPlayer(state, getOpponentId(playerId)).active
-        ? remainingHp(state, getPlayer(state, getOpponentId(playerId)).active!)
-        : 9999;
+      const opponentActive = getPlayer(state, getOpponentId(playerId)).active;
+      const opponentHp = opponentActive ? remainingHp(state, opponentActive) : 9999;
       const expectedDamage = trCount * 60;
       // Honchkrow is a one-shot KO deck — Rocket Feathers should fire ONLY when
       // it KOs the opponent's Active (each swing discards the loaded TR
@@ -1037,8 +1037,23 @@ function shouldSkipAttack(state: EngineState, playerId: PlayerId, ctx: StrategyC
       // Otherwise keep loading Supporters. A deck-out / very-late-game valve
       // prevents stalling into a draw.
       const canKO = expectedDamage >= opponentHp;
-      const desperate = player.deck.length <= 6 || state.turnNumber >= 16;
-      if (!canKO && !desperate) return true; // not lethal yet → keep loading hand
+      // Never pass up a KO that costs nothing: another affordable attack
+      // (e.g. Hammer In 100 into a 60-HP Duskull) that already KOs keeps the
+      // loaded hand intact. Self-play showed Honchkrow ending turns into free
+      // KOs while "loading" — 0% winrate, 5/6 stall draws.
+      const freeKO =
+        !!opponentActive &&
+        getLegalActions(state).some((action) => {
+          if (action.type !== "ATTACK") return false;
+          const atk = (def?.attacks ?? []).find((entry) => entry.name === action.attackName);
+          if (!atk || atk.name.toLowerCase().includes("rocket feathers")) return false;
+          const oppDef = getDefinitionSafe(state, opponentActive.definitionId);
+          return (
+            applyWeaknessAndResistance(parseDamage(atk.damage), def?.types, oppDef) >= opponentHp
+          );
+        });
+      const desperate = player.deck.length <= 6 || state.turnNumber >= 12;
+      if (!canKO && !freeKO && !desperate) return true; // not lethal yet → keep loading hand
     }
   }
 
@@ -1350,6 +1365,14 @@ export function pickAutoAbilityAction(
         score = 65; // Low hand — worth refuelling
       } else {
         score = 40; // Decent hand but still net positive
+      }
+      // Alakazam hoards its hand for Powerful Hand (20 × cards in hand) —
+      // once the hand already KOs the opponent's Active, further drawing only
+      // burns the deck (self-play: 5 of Alakazam's 6 losses were deck-outs).
+      if (ctx?.archetype === "alakazam" && score > 0 && opponent.active) {
+        const handLethal = player.hand.length * 20 >= remainingHp(state, opponent.active);
+        if (handLethal && player.hand.length >= 7) score = 0;
+        else if (player.deck.length <= 18 && player.hand.length >= 7) score = Math.min(score, 15);
       }
 
     } else if (abilityLower.includes("psychic draw")) {
@@ -2131,6 +2154,19 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
 
       // Deck-out awareness — see deckOutAwareness.ts.
       score = applyDeckOutTrainerPenalty(score, name, player.deck.length);
+
+      // Alakazam: once the hand is Powerful-Hand-lethal (20 × cards in hand ≥
+      // opponent Active HP), deck-draining trainers add nothing — conserve the
+      // deck instead (deck-out was Alakazam's #1 self-play loss cause).
+      if (
+        ctx?.archetype === "alakazam" &&
+        opponent.active &&
+        player.hand.length >= 7 &&
+        player.hand.length * 20 >= remainingHp(state, opponent.active) &&
+        isDeckDrainingTrainerName(name)
+      ) {
+        score = Math.min(score, 5);
+      }
 
       return { action, score };
     })

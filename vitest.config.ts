@@ -16,6 +16,7 @@ export default defineConfig({
       "scripts/fetchAttackCosts.test.ts",
       "scripts/report-invariants.test.ts",
       "scripts/report-llm-invariants.test.ts",
+      "scripts/report-selfplay.test.ts",
     ],
     testTimeout: 30000,
   },
