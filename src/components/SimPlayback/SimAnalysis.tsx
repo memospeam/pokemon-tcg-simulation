@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useRef } from "react";
-import { getDefinition, getOpponentId, getPlayer, remainingHp } from "@/lib/engine";
+import { getDefinition, getPlayer, remainingHp } from "@/lib/engine";
 import { PlayerId } from "@/lib/models/enums";
 import type { EngineState, PlayerState } from "@/lib/engine";
 import type { ActionCategory, SimFrame } from "@/lib/deck/simulationCapture";
+import { deriveInsight } from "./deriveInsight";
 
 // ─── Category metadata ────────────────────────────────────────────────────────
 
@@ -40,36 +41,56 @@ function PlayerSummary({
   const activeDef = active ? getDefinition(state, active.definitionId) : null;
   const hp = active ? remainingHp(state, active) : 0;
   const maxHp = parseInt(activeDef?.hp ?? "0", 10) || 0;
-  const hpPct = maxHp > 0 ? hp / maxHp : 1;
-  const hpColor = hpPct > 0.5 ? "#6ee7b7" : hpPct > 0.25 ? "#fbbf24" : "#f87171";
+  const hpPct = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 1;
+  const hpColor = hpPct > 0.5 ? "#34d399" : hpPct > 0.25 ? "#fbbf24" : "#f87171";
 
   return (
     <div className={`sim-analysis__player${isCurrentTurn ? " is-active-turn" : ""}`}>
       <div className="sim-analysis__player-row">
         {isCurrentTurn && <span className="sim-analysis__turn-dot">▶</span>}
         <span className="sim-analysis__player-name">{player.name}</span>
-        <span className="sim-analysis__prizes">🏆 {player.prizes.length}</span>
+        <span className="sim-analysis__prizes" title="Prize cards remaining">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <span
+              key={i}
+              className={`sim-analysis__prize-pip${i < player.prizes.length ? " is-filled" : ""}`}
+            />
+          ))}
+        </span>
       </div>
 
       {active ? (
         <div className="sim-analysis__active">
-          <span className="sim-analysis__active-name">{activeDef?.name ?? "?"}</span>
-          <span className="sim-analysis__active-hp" style={{ color: hpColor }}>
-            {hp}/{maxHp}HP
-          </span>
-          {active.attachedEnergy.length > 0 && (
-            <span className="sim-analysis__active-energy">⚡{active.attachedEnergy.length}</span>
-          )}
-          {active.damageCounters > 0 && (
-            <span className="sim-analysis__active-dmg">💢{active.damageCounters * 10}</span>
-          )}
+          <div className="sim-analysis__active-top">
+            <span className="sim-analysis__active-name">{activeDef?.name ?? "?"}</span>
+            <span className="sim-analysis__active-hp" style={{ color: hpColor }}>
+              {hp}/{maxHp}
+            </span>
+          </div>
+          <div className="sim-analysis__hpbar">
+            <div
+              className="sim-analysis__hpbar-fill"
+              style={{ width: `${hpPct * 100}%`, background: hpColor }}
+            />
+          </div>
+          <div className="sim-analysis__active-tags">
+            {active.attachedEnergy.length > 0 && (
+              <span className="sim-analysis__tag sim-analysis__tag--energy">⚡ {active.attachedEnergy.length}</span>
+            )}
+            {active.damageCounters > 0 && (
+              <span className="sim-analysis__tag sim-analysis__tag--dmg">💢 {active.damageCounters * 10}</span>
+            )}
+            {(active.statusConditions ?? []).map((s) => (
+              <span key={s} className="sim-analysis__tag sim-analysis__tag--status">{s}</span>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="sim-analysis__active sim-analysis__active--empty">No active Pokémon</div>
       )}
 
       <div className="sim-analysis__bench-row">
-        Bench: {player.bench.length}
+        <span className="sim-analysis__bench-label">Bench {player.bench.length}</span>
         {player.bench.map((p) => {
           const def = getDefinition(state, p.definitionId);
           return (
@@ -78,7 +99,7 @@ function PlayerSummary({
             </span>
           );
         })}
-        <span className="sim-analysis__hand-count">Hand: {player.hand.length}</span>
+        <span className="sim-analysis__hand-count">🖐 {player.hand.length}</span>
       </div>
     </div>
   );
@@ -113,6 +134,8 @@ export function SimAnalysis({ frames, currentIndex, onStepTo, game }: SimAnalysi
       : frame.state.log.slice(0, 4);
 
   const cat = CAT[frame.category];
+  const insight = deriveInsight(prevFrame?.state, frame.state, frame.category, frame.label, logDelta);
+  const actorName = getPlayer(frame.state, prevFrame?.state.currentPlayerId ?? frame.state.currentPlayerId).name;
   const p1 = getPlayer(game, PlayerId.P1);
   const p2 = getPlayer(game, PlayerId.P2);
 
@@ -125,15 +148,37 @@ export function SimAnalysis({ frames, currentIndex, onStepTo, game }: SimAnalysi
       </div>
 
       {/* ── Current action ─────────────────────────────────────── */}
-      <div className="sim-analysis__action" style={{ borderLeftColor: cat.color }}>
-        <span className="sim-analysis__action-icon">{cat.icon}</span>
+      <div
+        className="sim-analysis__action"
+        style={{ borderLeftColor: cat.color, ["--cat-color" as string]: cat.color }}
+      >
+        <span className="sim-analysis__action-icon" style={{ background: `${cat.color}22` }}>
+          {cat.icon}
+        </span>
         <div className="sim-analysis__action-body">
           <span className="sim-analysis__action-type" style={{ color: cat.color }}>
             {cat.label}
+            <span className="sim-analysis__action-actor">{actorName}</span>
           </span>
           <p className="sim-analysis__action-label">{frame.label}</p>
         </div>
       </div>
+
+      {/* ── AI reasoning ("thinking") ──────────────────────────── */}
+      <div className="sim-analysis__think" style={{ ["--cat-color" as string]: cat.color }}>
+        <span className="sim-analysis__think-icon">💭</span>
+        <span className="sim-analysis__think-text">{insight.reasoning}</span>
+      </div>
+      {insight.badges.length > 0 && (
+        <div className="sim-analysis__badges">
+          {insight.badges.map((b, i) => (
+            <span key={i} className={`sim-analysis__badge sim-analysis__badge--${b.tone}`}>
+              <span className="sim-analysis__badge-icon">{b.icon}</span>
+              {b.text}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* ── Log delta ──────────────────────────────────────────── */}
       {logDelta.length > 0 && (
