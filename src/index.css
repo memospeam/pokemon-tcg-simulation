@@ -890,6 +890,26 @@ button {
   object-fit: cover;
 }
 
+/* Typed placeholder shown while a card image URL resolves (or never does),
+   instead of <img src=""> which triggers a React warning + page re-request. */
+.card-img-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(226, 232, 240, 0.85);
+  background: rgba(51, 65, 85, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+  font-size: 0.7rem;
+}
+
+.card-img-placeholder--pokémon { background: rgba(52, 211, 153, 0.18); }
+.card-img-placeholder--trainer { background: rgba(96, 165, 250, 0.18); }
+.card-img-placeholder--energy { background: rgba(251, 191, 36, 0.18); }
+
 .board-card--hand .board-card__image {
   border-radius: 0.4rem;
 }
@@ -1551,6 +1571,65 @@ button {
   color: #93c5fd;
   border-color: rgba(96, 165, 250, 0.3);
 }
+
+/* Why-this-move: real heuristic scores */
+.sim-analysis__scores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.sim-analysis__score-row {
+  display: grid;
+  grid-template-columns: 1fr 56px 2.2rem;
+  align-items: center;
+  gap: 0.45rem;
+  opacity: 0.6;
+}
+
+.sim-analysis__score-row.is-chosen { opacity: 1; }
+
+.sim-analysis__score-label {
+  font-size: 0.74rem;
+  color: #cbd5e1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sim-analysis__score-row.is-chosen .sim-analysis__score-label {
+  color: #6ee7b7;
+  font-weight: 600;
+}
+
+.sim-analysis__score-check { margin-right: 0.2rem; }
+
+.sim-analysis__score-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.15);
+  overflow: hidden;
+}
+
+.sim-analysis__score-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: #475569;
+  transition: width 0.3s ease;
+}
+
+.sim-analysis__score-row.is-chosen .sim-analysis__score-fill { background: #34d399; }
+
+.sim-analysis__score-num {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #94a3b8;
+  text-align: right;
+}
+
+.sim-analysis__score-row.is-chosen .sim-analysis__score-num { color: #6ee7b7; }
 
 /* Sections */
 .sim-analysis__section {

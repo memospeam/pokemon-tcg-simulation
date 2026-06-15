@@ -15,6 +15,7 @@ import {
   pickBestEnergyForTarget,
   pickBestEnergyTarget,
   pickRetreatAction,
+  type DecisionCandidate,
 } from "./metaGameRunner";
 import { buildStrategyContext, type StrategyContext } from "./deckStrategy";
 import { gameReducer, getLegalActions } from "../engine/reducer";
@@ -44,6 +45,8 @@ export interface SimFrame {
   category: ActionCategory;
   /** New log entries added by this action (empty for the first frame) */
   logDelta: string[];
+  /** Heuristic candidates weighed for this decision, best-first (when traced). */
+  decision?: DecisionCandidate[];
 }
 
 function applyAction(
@@ -53,11 +56,18 @@ function applyAction(
   fallback: string,
   category: ActionCategory,
   onFrame?: OnFrame,
+  decision?: DecisionCandidate[],
 ): EngineState {
   const logBefore = state.log.length;
   const next = gameReducer(state, action);
   const logDelta = next.log.slice(logBefore);
-  const frame: SimFrame = { state: next, label: logDelta.at(-1) ?? fallback, category, logDelta };
+  const frame: SimFrame = {
+    state: next,
+    label: logDelta.at(-1) ?? fallback,
+    category,
+    logDelta,
+    ...(decision && decision.length > 0 ? { decision } : {}),
+  };
   frames.push(frame);
   onFrame?.(frame, frames);
   return next;
@@ -154,9 +164,10 @@ export function captureSimulationFrames(
 
     // 1. Trainers (supporters first, then items) — strategy-aware
     if (!state.turnFlags.attacked && trainersThisTurn < MAX_TRAINERS_PER_TURN) {
-      const trainerAction = pickAutoTrainerAction(state, ctx);
+      const trainerTrace: DecisionCandidate[] = [];
+      const trainerAction = pickAutoTrainerAction(state, ctx, trainerTrace);
       if (trainerAction) {
-        state = applyAction(state, trainerAction, frames, "Play trainer", "trainer");
+        state = applyAction(state, trainerAction, frames, "Play trainer", "trainer", undefined, trainerTrace);
         actionCount += 1;
         trainersThisTurn += 1;
         const drained = drainAndCapture(state, frames, ctx);
@@ -229,9 +240,10 @@ export function captureSimulationFrames(
     // or attack. Loops back to top so multiple abilities can fire in one turn
     // (e.g. two Drakloak's Recon Directives stacked).
     if (!state.pendingAction && !state.turnFlags.attacked) {
-      const abilityAction = pickAutoAbilityAction(state, ctx);
+      const abilityTrace: DecisionCandidate[] = [];
+      const abilityAction = pickAutoAbilityAction(state, ctx, abilityTrace);
       if (abilityAction) {
-        state = applyAction(state, abilityAction, frames, "Use ability", "ability");
+        state = applyAction(state, abilityAction, frames, "Use ability", "ability", undefined, abilityTrace);
         actionCount += 1;
         const drained = drainAndCapture(state, frames, ctx);
         state = drained.state;
@@ -257,7 +269,8 @@ export function captureSimulationFrames(
       !state.turnFlags.attacked &&
       getLegalActions(state).some((a) => a.type === "ATTACK");
     if (canAttackThisTurn) {
-      const bestAttack = pickBestAttack(state, playerId, ctx);
+      const attackTrace: DecisionCandidate[] = [];
+      const bestAttack = pickBestAttack(state, playerId, ctx, attackTrace);
       if (bestAttack) {
         const beforeTurn = state.turnNumber;
         const beforePlayer = state.currentPlayerId;
@@ -267,6 +280,8 @@ export function captureSimulationFrames(
           frames,
           `Attack: ${bestAttack}`,
           "attack",
+          undefined,
+          attackTrace,
         );
         actionCount += 1;
         attacked = true;
