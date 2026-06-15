@@ -12,7 +12,7 @@ import { applyWeaknessAndResistance, canRareCandyEvolveInto, checkMulliganNeeded
 import { beginGame, gameReducer, getLegalActions, startActiveGame } from "../engine/reducer";
 import { getDefinitionSafe } from "../engine/rules";
 import { getStadiumKind } from "../engine/effects/stadiumEffects";
-import { isBasicPokemon, isStage2, isSupporter } from "../models/definition";
+import { isBasicEnergy, isBasicPokemon, isStage2, isSupporter } from "../models/definition";
 import type { CardInstance } from "../models/instance";
 import { GamePhase, PlayerId } from "../models/enums";
 import { getDefinition, getOpponentId, getPlayer, remainingHp, type EngineState, type GameAction } from "../engine/types";
@@ -729,6 +729,58 @@ function holdsBindingMochi(state: EngineState, mon: CardInstance): boolean {
   return (mon.attachedTools ?? []).some((tool) =>
     getDefinition(state, tool.definitionId)?.name?.toLowerCase().includes("binding mochi"),
   );
+}
+
+/**
+ * How disruptive it is to discard a specific attached Energy from an opponent's
+ * Pokémon (Crushing Hammer). Higher = hurts more. The dominant term is
+ * "load-bearing": if the Pokémon is at or below its cheapest attack cost,
+ * removing one Energy denies the attack outright.
+ */
+function crushingHammerTargetScore(
+  state: EngineState,
+  oppActiveId: string | undefined,
+  mon: CardInstance,
+  energy: CardInstance,
+): number {
+  const energyDef = getDefinition(state, energy.definitionId);
+  const monDef = getDefinition(state, mon.definitionId);
+  let score = 10;
+  // Special Energy is harder to replace and often provides 2+ units / effects.
+  if (energyDef && !isBasicEnergy(energyDef)) score += 25;
+  // The active attacker threatens next turn — denying it matters most.
+  if (mon.instanceId === oppActiveId) score += 22;
+  const costs = (monDef?.attacks ?? [])
+    .map((a) => a.convertedEnergyCost ?? a.cost?.length ?? 99)
+    .filter((c) => c < 99);
+  const minCost = costs.length ? Math.min(...costs) : 99;
+  const count = mon.attachedEnergy.length;
+  if (minCost < 99) {
+    if (count <= minCost) score += 45;          // can't attack at all after this
+    else if (count === minCost + 1) score += 18; // knocks the bigger attack offline
+  }
+  if ((monDef?.subtypes ?? []).includes("ex")) score += 8; // bias toward real threats
+  return score;
+}
+
+/** The highest-impact Crushing Hammer target on the opponent's board, or null
+ *  when the opponent has no attached Energy. */
+function bestCrushingHammerTarget(
+  state: EngineState,
+  playerId: PlayerId,
+): { pokemonId: string; energyId: string; score: number } | null {
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  const oppActiveId = opponent.active?.instanceId;
+  let best: { pokemonId: string; energyId: string; score: number } | null = null;
+  for (const mon of [...(opponent.active ? [opponent.active] : []), ...opponent.bench]) {
+    for (const energy of mon.attachedEnergy) {
+      const s = crushingHammerTargetScore(state, oppActiveId, mon, energy);
+      if (!best || s > best.score) {
+        best = { pokemonId: mon.instanceId, energyId: energy.instanceId, score: s };
+      }
+    }
+  }
+  return best;
 }
 
 /**
@@ -2098,7 +2150,16 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
         });
         score = hasEvolutionTarget ? 68 : 35;
       } else if (name.includes("crushing hammer")) {
-        score = opponent.active && opponent.active.attachedEnergy.length > 0 ? 30 : 15;
+        // Energy denial is Dragapult's real-world tempo engine, not filler.
+        // Score by the best available target: deny an attack / strip Special
+        // Energy → high; just chip the active → medium; nothing worth hitting
+        // (only spare bench basics) → skip and keep the card for a live target.
+        const best = bestCrushingHammerTarget(state, playerId);
+        if (!best) score = -1;
+        else if (best.score >= 65) score = 60;   // load-bearing AND active/special
+        else if (best.score >= 45) score = 50;   // load-bearing, or active special
+        else if (best.score >= 30) score = 40;   // hits the active attacker
+        else score = -1;                          // only spare bench energy → hold
       } else if (name.includes("unfair stamp")) {
         score = opponent.prizes.length <= 3 ? 45 : 10;
       } else if (name.includes("air balloon")) {
@@ -3021,7 +3082,19 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     }
     case "CRUSHING_HAMMER": {
       if (pending.options.length === 0) return null;
-      const cOpt = pending.options[0]!;
+      // Discard the Energy whose removal hurts most (deny an attack / strip a
+      // Special Energy off the active attacker), not just options[0].
+      const opponent = getPlayer(state, getOpponentId(playerId));
+      const oppActiveId = opponent.active?.instanceId;
+      const oppMons = [...(opponent.active ? [opponent.active] : []), ...opponent.bench];
+      const cOpt = pending.options
+        .map((opt) => {
+          const mon = oppMons.find((p) => p.instanceId === opt.pokemonId);
+          const energy = mon?.attachedEnergy.find((e) => e.instanceId === opt.energyId);
+          const score = mon && energy ? crushingHammerTargetScore(state, oppActiveId, mon, energy) : 0;
+          return { opt, score };
+        })
+        .sort((a, b) => b.score - a.score)[0]!.opt;
       return gameReducer(state, { type: "DISCARD_OPPONENT_ENERGY", playerId, pokemonId: cOpt.pokemonId, energyId: cOpt.energyId });
     }
     case "DISTRIBUTE_BENCH_DAMAGE": {
