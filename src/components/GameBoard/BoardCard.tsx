@@ -17,6 +17,20 @@ function CardImage({
   title?: string;
 }) {
   const src = useCardImage(def);
+  // Until the image URL resolves (or if it never does), render a typed
+  // placeholder instead of <img src="">, which triggers a React warning and a
+  // wasteful re-request of the whole page.
+  if (!src) {
+    return (
+      <span
+        className={`${className} card-img-placeholder card-img-placeholder--${def.supertype.toLowerCase()}`}
+        title={title ?? def.name}
+        aria-label={def.name}
+      >
+        {def.name.slice(0, 2)}
+      </span>
+    );
+  }
   return <img src={src} alt={def.name} className={className} title={title} loading="lazy" />;
 }
 
@@ -86,7 +100,13 @@ export function CardDefinitionBadge({ definition }: { definition: CardDefinition
   const src = useCardImage(definition);
   return (
     <div className="board-card board-card--mini board-card--badge">
-      <img src={src} alt={definition.name} className="board-card__image" />
+      {src ? (
+        <img src={src} alt={definition.name} className="board-card__image" />
+      ) : (
+        <span className={`board-card__image card-img-placeholder card-img-placeholder--${definition.supertype.toLowerCase()}`} aria-label={definition.name}>
+          {definition.name.slice(0, 2)}
+        </span>
+      )}
       <span>{definition.name}</span>
     </div>
   );

@@ -180,6 +180,36 @@ export function SimAnalysis({ frames, currentIndex, onStepTo, game }: SimAnalysi
         </div>
       )}
 
+      {/* ── Why this move? real heuristic scores ───────────────── */}
+      {frame.decision && frame.decision.length > 0 && (
+        <div className="sim-analysis__section">
+          <div className="sim-analysis__section-title">ทำไมเลือกหมากนี้ (คะแนน AI)</div>
+          <div className="sim-analysis__scores">
+            {(() => {
+              const max = Math.max(...frame.decision!.map((c) => c.score), 1);
+              return frame.decision!.map((c, i) => (
+                <div
+                  key={i}
+                  className={`sim-analysis__score-row${i === 0 ? " is-chosen" : ""}`}
+                >
+                  <span className="sim-analysis__score-label" title={c.label}>
+                    {i === 0 && <span className="sim-analysis__score-check">✓</span>}
+                    {c.label}
+                  </span>
+                  <span className="sim-analysis__score-track">
+                    <span
+                      className="sim-analysis__score-fill"
+                      style={{ width: `${(c.score / max) * 100}%` }}
+                    />
+                  </span>
+                  <span className="sim-analysis__score-num">{Math.round(c.score)}</span>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* ── Log delta ──────────────────────────────────────────── */}
       {logDelta.length > 0 && (
         <div className="sim-analysis__section">

@@ -724,6 +724,25 @@ export function pickAutoEvolveAction(state: EngineState, ctx?: StrategyContext):
   return scored[0]?.action ?? null;
 }
 
+/**
+ * One scored option the heuristic weighed for a decision. Exposed (via an
+ * optional `trace` out-param on the rich pickers) so playback can show the
+ * real numbers behind a move — "picked X (72) over Y (48)" — without changing
+ * any decision logic.
+ */
+export interface DecisionCandidate {
+  label: string;
+  score: number;
+}
+
+function recordTrace(
+  trace: DecisionCandidate[] | undefined,
+  entries: DecisionCandidate[],
+): void {
+  if (!trace) return;
+  for (const e of entries.filter((x) => x.score > 0).slice(0, 4)) trace.push(e);
+}
+
 /** Whether the Pokémon holds a Binding Mochi (+40 while Poisoned). */
 function holdsBindingMochi(state: EngineState, mon: CardInstance): boolean {
   return (mon.attachedTools ?? []).some((tool) =>
@@ -1126,6 +1145,7 @@ function shouldSkipAttack(state: EngineState, playerId: PlayerId, ctx: StrategyC
 export function pickAutoAbilityAction(
   state: EngineState,
   ctx?: StrategyContext,
+  trace?: DecisionCandidate[],
 ): Extract<GameAction, { type: "USE_ABILITY" }> | null {
   const playerId = state.currentPlayerId;
   const player = getPlayer(state, playerId);
@@ -1460,6 +1480,8 @@ export function pickAutoAbilityAction(
     .filter((e) => e.score > 0)
     .sort((a, b) => b.score - a.score);
 
+  recordTrace(trace, scored.map((s) => ({ label: s.action.abilityName, score: s.score })));
+
   return scored[0]?.action ?? null;
 }
 
@@ -1470,7 +1492,12 @@ export function pickAutoAbilityAction(
  * - Gates strategy-specific attacks (Rocket Feathers, Gale Thrust) on preconditions
  * - Boosts the archetype's signature attack
  */
-export function pickBestAttack(state: EngineState, playerId: PlayerId, ctx?: StrategyContext): string | null {
+export function pickBestAttack(
+  state: EngineState,
+  playerId: PlayerId,
+  ctx?: StrategyContext,
+  trace?: DecisionCandidate[],
+): string | null {
   const player = getPlayer(state, playerId);
   const opponent = getPlayer(state, getOpponentId(playerId));
   if (!player.active) return null;
@@ -1545,6 +1572,8 @@ export function pickBestAttack(state: EngineState, playerId: PlayerId, ctx?: Str
 
     return { name: attack.name, score };
   }).sort((a, b) => b.score - a.score);
+
+  recordTrace(trace, scored.map((s) => ({ label: s.name, score: s.score })));
 
   // Only attack if expected damage > 0 (don't waste Rocket Feathers with empty hand)
   if ((scored[0]?.score ?? 0) <= 0) return null;
@@ -1912,7 +1941,7 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
   return best.id;
 }
 
-export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext): Extract<GameAction, { type: "PLAY_TRAINER" }> | null {
+export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext, trace?: DecisionCandidate[]): Extract<GameAction, { type: "PLAY_TRAINER" }> | null {
   const playerId = state.currentPlayerId;
   const player = getPlayer(state, playerId);
   const opponent = getPlayer(state, getOpponentId(playerId));
@@ -2233,6 +2262,14 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext)
     })
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score);
+
+  recordTrace(
+    trace,
+    scored.map((s) => ({
+      label: getDefinition(state, player.hand.find((c) => c.instanceId === s.action.instanceId)?.definitionId ?? "")?.name ?? "?",
+      score: s.score,
+    })),
+  );
 
   return scored[0]?.action ?? null;
 }

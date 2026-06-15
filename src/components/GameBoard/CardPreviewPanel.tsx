@@ -55,7 +55,13 @@ export function CardPreviewPanel({
       </button>
 
       <div className="card-preview__layout">
-        <img src={imageSrc} alt={definition.name} className="card-preview__image" />
+        {imageSrc ? (
+          <img src={imageSrc} alt={definition.name} className="card-preview__image" />
+        ) : (
+          <span className={`card-preview__image card-img-placeholder card-img-placeholder--${definition.supertype.toLowerCase()}`} aria-label={definition.name}>
+            {definition.name.slice(0, 2)}
+          </span>
+        )}
 
         <div className="card-preview__details">
           <span className="card-preview__type">
