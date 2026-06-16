@@ -1281,9 +1281,15 @@ export function pickAutoAbilityAction(
       // else score = 0 — opponent has zero damage; nothing to redistribute
 
     } else if (abilityLower.includes("run errand")) {
-      // Mega Kangaskhan ex: active-only, draw 2 cards. Pure card advantage with
-      // no downside — always fire when legal (engine guards the active-only rule).
-      score = 95;
+      // Mega Kangaskhan ex: active-only, draw 2 cards. It shuffles NOTHING back,
+      // so firing it every turn mills the deck — generic-AI Crustle/Lillie's
+      // self-decked-out around turn 27 with prizes still up. Draw only when the
+      // hand is genuinely low, and stand down hard as the deck thins.
+      const hand = player.hand.length;
+      if (hand >= 7) score = 12;        // hand already full — drawing just mills
+      else if (hand >= 5) score = 45;
+      else score = 88;                  // genuinely need cards
+      if (player.deck.length <= 12 && hand >= 4) score = Math.min(score, 8);
 
     } else if (abilityLower.includes("subjugating chains")) {
       // Pecharunt ex: swap a Benched Darkness Pokémon (NOT another Pecharunt ex)
