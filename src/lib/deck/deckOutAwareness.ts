@@ -103,6 +103,8 @@ export function applyDeckOutTrainerPenalty(
  * Tiers (by remaining deck size):
  *   • ≤ 3 cards — drain ability → -1 (never burn our own deck flat).
  *   • ≤ 7 cards — flat -35 penalty (yield to other plays).
+ *   • ≤ 13 cards — flat -18 penalty (yield earlier so a pure-draw ability
+ *     doesn't mill into the danger zone before the hard penalty applies).
  *   • Otherwise — no change.
  */
 export function applyDeckOutAbilityPenalty(
@@ -113,5 +115,6 @@ export function applyDeckOutAbilityPenalty(
   if (!isDeckDrainingAbilityName(abilityNameLower)) return baseScore;
   if (deckSize <= 3) return -1;
   if (deckSize <= 7) return Math.max(0, baseScore - 35);
+  if (deckSize <= 13) return Math.max(0, baseScore - 18);
   return baseScore;
 }
