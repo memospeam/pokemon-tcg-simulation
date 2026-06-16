@@ -560,6 +560,28 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
 /**
  * Detect the archetype from a deck list text or from card names in play.
  * Uses substring matching on card names (case-insensitive).
+ *
+ * ── Before adding a NEW archetype here, read this ──────────────────────────
+ * Many "different" decks share ONE engine/attacker, so an existing profile
+ * often already pilots them well — a bespoke profile keyed on the deck's
+ * namesake usually makes play WORSE. Measured example (NAIC 2026, reverted):
+ *   • "Slowking" and "Crustle" are really Mega Kangaskhan ex decks — the
+ *     namesake is a support/draw engine, NOT the attacker. The existing
+ *     `ogerpon-box` profile (Mega Kangaskhan ex primary @95) already nailed
+ *     them; a `slowking` profile that put Metagross primary scored 45%→36%.
+ *     (Metagross CRI 61 is a Stage 2 with NO Beldum/Metang in the list — it
+ *     can never even hit the field, so prioritising it wasted energy.)
+ *   • "Rocket's Mewtwo" leans on the Team Rocket supporter engine, so the
+ *     `honchkrow` routing (48%) beat a bespoke `rocket-mewtwo` profile (43%).
+ * Checklist before adding/keying an archetype:
+ *   1. Identify the REAL attacker (who actually swings), not the deck's name.
+ *      It's frequently a shared core (Mega Kangaskhan ex, a Dragapult line…).
+ *   2. Verify every attacker's evolution line is COMPLETE in the list — a
+ *      Stage 2 with no pre-evolutions is dead weight; never make it primary.
+ *   3. Check whether an existing profile already covers that real attacker.
+ *   4. A/B benchmark new-vs-old over enough seeds and KEEP the winner — a
+ *      "wrong" label that routes to a better-fitting profile beats a bespoke
+ *      one that mis-prioritises. Don't ship a profile that regresses.
  */
 export function detectArchetype(deckText: string): Archetype {
   const lower = deckText.toLowerCase();
