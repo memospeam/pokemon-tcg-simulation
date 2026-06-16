@@ -1,0 +1,72 @@
+{
+  "tournamentId": 518,
+  "name": "NAIC 2026 New Orleans",
+  "date": "2026-06-14",
+  "sourceUrl": "https://limitlesstcg.com/tournaments/518",
+  "decks": [
+    {
+      "placement": 1,
+      "player": "James Kowalski",
+      "deckName": "Lillie's Clefairy",
+      "text": "Pokémon : 22\n4 Mega Kangaskhan ex MEG 104\n4 Meowth ex POR 62\n4 Lillie's Clefairy ex JTG 56\n3 Latias ex SSP 76\n2 Wellspring Mask Ogerpon ex TWM 64\n2 Fezandipiti ex ASC 142\n1 Moltres PFL 14\n1 Chien-Pao SSP 56\n1 Koraidon ex ASC 121\n\nTrainer : 28\n4 Crispin SCR 133\n3 Boss's Orders MEG 114\n2 Ciphermaniac's Codebreaking TEF 145\n1 Cyrano SSP 170\n4 Ultra Ball MEG 131\n4 Dusk Ball SSP 175\n3 Wondrous Patch PFL 94\n1 Prime Catcher TEF 157\n2 Lillie's Pearl JTG 151\n4 Area Zero Underdepths SCR 131\n\nEnergy : 10\n4 Psychic Energy MEE 5\n2 Water Energy MEE 3\n2 Fighting Energy MEE 6\n1 Telepathic Psychic Energy POR 88\n1 Fire Energy MEE 2",
+      "id": "limitless-518-1-james-kowalski",
+      "label": "#1 James Kowalski — Lillie's Clefairy"
+    },
+    {
+      "placement": 2,
+      "player": "Neddy Kosek",
+      "deckName": "Dragapult Dusknoir",
+      "text": "Pokémon : 19\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n2 Dragapult ex TWM 130\n2 Duskull PRE 35\n2 Dusclops PRE 36\n1 Dusknoir PRE 37\n1 Budew ASC 16\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n1 Munkidori TWM 95\n\nTrainer : 33\n4 Lillie's Determination MEG 119\n3 Crispin SCR 133\n2 Boss's Orders MEG 114\n1 Dawn PFL 87\n4 Ultra Ball MEG 131\n4 Poké Pad POR 81\n4 Buddy-Buddy Poffin TEF 144\n4 Crushing Hammer POR 71\n2 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n1 Special Red Card CRI 82\n1 Handheld Fan TWM 150\n1 Team Rocket's Watchtower DRI 180\n1 Jamming Tower TWM 153\n\nEnergy : 8\n3 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n2 Darkness Energy MEE 7",
+      "id": "limitless-518-2-neddy-kosek",
+      "label": "#2 Neddy Kosek — Dragapult Dusknoir"
+    },
+    {
+      "placement": 3,
+      "player": "Justin Newdorf",
+      "deckName": "Dragapult",
+      "text": "Pokémon : 18\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Munkidori TWM 95\n1 Dunsparce JTG 120\n1 Dudunsparce TEF 129\n1 Budew ASC 16\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n\nTrainer : 33\n4 Lillie's Determination MEG 119\n3 Boss's Orders MEG 114\n2 Crispin SCR 133\n1 Rosa's Encouragement POR 84\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n4 Ultra Ball MEG 131\n4 Crushing Hammer POR 71\n3 Night Stretcher ASC 196\n1 Special Red Card CRI 82\n1 Unfair Stamp TWM 165\n2 Risky Ruins MEG 127\n\nEnergy : 9\n4 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n2 Darkness Energy MEE 7",
+      "id": "limitless-518-3-justin-newdorf",
+      "label": "#3 Justin Newdorf — Dragapult"
+    },
+    {
+      "placement": 4,
+      "player": "Ross Cawthon",
+      "deckName": "Slowking",
+      "text": "Pokémon : 20\n4 Slowpoke SCR 57\n3 Slowking SCR 58\n3 Mega Kangaskhan ex MEG 104\n2 Latias ex SSP 76\n2 Kyurem SFA 47\n2 Metagross CRI 61\n1 Meowth ex POR 62\n1 Zeraora DRI 78\n1 Lillie's Clefairy ex JTG 56\n1 Fezandipiti ex ASC 142\n\nTrainer : 29\n4 Lillie's Determination MEG 119\n4 Ciphermaniac's Codebreaking TEF 145\n4 Poké Pad POR 81\n4 Ultra Ball MEG 131\n3 Wondrous Patch PFL 94\n2 Night Stretcher ASC 196\n1 Secret Box TWM 163\n1 Switch MEG 130\n1 Brave Bangle WHT 80\n1 Lucky Helmet TWM 158\n4 Academy at Night SFA 54\n\nEnergy : 11\n4 Telepathic Psychic Energy POR 88\n4 Psychic Energy MEE 5\n3 Boomerang Energy TWM 166",
+      "id": "limitless-518-4-ross-cawthon",
+      "label": "#4 Ross Cawthon — Slowking"
+    },
+    {
+      "placement": 5,
+      "player": "Rahul Reddy",
+      "deckName": "Crustle",
+      "text": "Pokémon : 10\n4 Mega Kangaskhan ex MEG 104\n3 Dwebble DRI 11\n3 Crustle DRI 12\n\nTrainer : 37\n4 Lillie's Determination MEG 119\n4 Boss's Orders MEG 114\n4 Team Rocket's Petrel DRI 176\n2 Hilda WHT 84\n2 Eri TEF 146\n1 Xerosic's Machinations SFA 64\n1 Pokémon Center Lady MEG 123\n1 Bianca's Devotion TEF 142\n1 Lisia's Appeal SSP 179\n4 Jumbo Ice Cream PFL 91\n3 Pokégear 3.0 SVI 186\n2 Buddy-Buddy Poffin TEF 144\n1 Ultra Ball MEG 131\n1 Switch MEG 130\n1 Hand Trimmer TEF 150\n1 Hero's Cape TEF 152\n1 Handheld Fan TWM 150\n1 Team Rocket's Factory DRI 173\n1 Community Center TWM 146\n1 Festival Grounds TWM 149\n\nEnergy : 13\n4 Spiky Energy JTG 159\n4 Growing Grass Energy POR 86\n4 Mist Energy TEF 161\n1 Grass Energy MEE 1",
+      "id": "limitless-518-5-rahul-reddy",
+      "label": "#5 Rahul Reddy — Crustle"
+    },
+    {
+      "placement": 6,
+      "player": "Jon Webb",
+      "deckName": "Dragapult Blaziken",
+      "text": "Pokémon : 23\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n2 Dragapult ex TWM 130\n2 Torchic DRI 40\n1 Combusken DRI 41\n2 Blaziken ex JTG 24\n2 Munkidori TWM 95\n1 Lillie's Clefairy ex JTG 56\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n1 Budew ASC 16\n1 Chi-Yu TWM 39\n1 Shaymin DRI 10\n\nTrainer : 29\n4 Lillie's Determination MEG 119\n3 Boss's Orders MEG 114\n2 Crispin SCR 133\n1 Dawn PFL 87\n4 Buddy-Buddy Poffin TEF 144\n4 Ultra Ball MEG 131\n3 Poké Pad POR 81\n2 Night Stretcher ASC 196\n2 Rare Candy MEG 125\n1 Special Red Card CRI 82\n1 Unfair Stamp TWM 165\n1 Area Zero Underdepths SCR 131\n1 Team Rocket's Watchtower DRI 180\n\nEnergy : 8\n3 Fire Energy MEE 2\n3 Psychic Energy MEE 5\n2 Darkness Energy MEE 7",
+      "id": "limitless-518-6-jon-webb",
+      "label": "#6 Jon Webb — Dragapult Blaziken"
+    },
+    {
+      "placement": 7,
+      "player": "Juho Kallama",
+      "deckName": "Rocket's Mewtwo",
+      "text": "Pokémon : 15\n4 Team Rocket's Tarountula DRI 19\n4 Team Rocket's Spidops DRI 20\n2 Team Rocket's Mewtwo ex DRI 81\n2 Team Rocket's Mimikyu DRI 87\n2 Team Rocket's Articuno DRI 51\n1 Lillie's Clefairy ex JTG 56\n\nTrainer : 34\n4 Lillie's Determination MEG 119\n4 Team Rocket's Ariana DRI 171\n3 Team Rocket's Giovanni DRI 174\n2 Team Rocket's Proton DRI 177\n1 Team Rocket's Petrel DRI 176\n4 Team Rocket's Transceiver DRI 178\n4 Ultra Ball MEG 131\n3 Night Stretcher ASC 196\n2 Bug Catching Set TWM 143\n1 Energy Switch MEG 115\n2 Lucky Helmet TWM 158\n1 Maximum Belt TEF 154\n2 Prism Tower CRI 80\n1 Team Rocket's Factory DRI 173\n\nEnergy : 11\n6 Grass Energy MEE 1\n4 Team Rocket's Energy DRI 182\n1 Psychic Energy MEE 5",
+      "id": "limitless-518-7-juho-kallama",
+      "label": "#7 Juho Kallama — Rocket's Mewtwo"
+    },
+    {
+      "placement": 8,
+      "player": "Miguel Angel Marin Herrera",
+      "deckName": "Dragapult",
+      "text": "Pokémon : 18\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Munkidori TWM 95\n1 Budew ASC 16\n1 Moltres PFL 14\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n1 Yveltal MEG 88\n\nTrainer : 34\n4 Lillie's Determination MEG 119\n3 Boss's Orders MEG 114\n3 Crispin SCR 133\n1 Judge POR 76\n4 Ultra Ball MEG 131\n4 Buddy-Buddy Poffin TEF 144\n4 Crushing Hammer POR 71\n4 Poké Pad POR 81\n2 Night Stretcher ASC 196\n1 Special Red Card CRI 82\n1 Unfair Stamp TWM 165\n1 Risky Ruins MEG 127\n1 Jamming Tower TWM 153\n1 Team Rocket's Watchtower DRI 180\n\nEnergy : 8\n3 Fire Energy MEE 2\n3 Psychic Energy MEE 5\n2 Darkness Energy MEE 7",
+      "id": "limitless-518-8-miguel-angel-marin-herrera",
+      "label": "#8 Miguel Angel Marin Herrera — Dragapult"
+    }
+  ]
+}
