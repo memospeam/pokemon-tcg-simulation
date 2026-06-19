@@ -29,7 +29,6 @@ export function Lobby({ onPlay }: LobbyProps) {
   const [error, setError] = useState<string | null>(null);
   const [showBuilder, setShowBuilder] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [vsAI, setVsAI] = useState(false);
   const [useLlm, setUseLlm] = useState(false);
 
   async function loadDecks(
@@ -207,30 +206,19 @@ export function Lobby({ onPlay }: LobbyProps) {
           <label className="lobby-mode-toggle">
             <input
               type="checkbox"
-              checked={vsAI}
-              onChange={(e) => setVsAI(e.target.checked)}
+              checked={useLlm}
+              onChange={(e) => setUseLlm(e.target.checked)}
             />
-            {" "}Play vs AI (Player 1 = you, Player 2 = AI)
+            {" "}Opponent = LLM agent (reads card text; needs Ollama/Groq — see README)
           </label>
-
-          {vsAI && (
-            <label className="lobby-mode-toggle">
-              <input
-                type="checkbox"
-                checked={useLlm}
-                onChange={(e) => setUseLlm(e.target.checked)}
-              />
-              {" "}Opponent = LLM agent (reads card text; needs Ollama/Groq — see README)
-            </label>
-          )}
 
           <button
             type="button"
             disabled={!canPlay || loadingSlot !== null}
-            onClick={() => onPlay(player1Name, player2Name, vsAI, vsAI && useLlm ? "llm" : "heuristic")}
+            onClick={() => onPlay(player1Name, player2Name, true, useLlm ? "llm" : "heuristic")}
             className="action-dock__primary"
           >
-            {vsAI ? (useLlm ? "🤖 Play vs LLM" : "⚔️ Play vs AI") : "Play (both sides)"}
+            {useLlm ? "🤖 Play vs LLM" : "⚔️ Play vs AI"}
           </button>
         </div>
       </section>
