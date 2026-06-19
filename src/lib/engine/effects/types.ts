@@ -488,6 +488,8 @@ export type ParsedEffect =
   | { kind: "trainer_tool_scrapper"; count: number }
   | { kind: "trainer_premium_power_pro"; amount: number }
   | { kind: "trainer_black_belt_training"; amount: number }
+  | { kind: "trainer_ruffian" }
+  | { kind: "trainer_transformation_tome" }
   | { kind: "trainer_lanas_aid"; count: number }
   | { kind: "trainer_brocks_scouting" }
   | { kind: "trainer_rosas_encouragement"; count: number }
