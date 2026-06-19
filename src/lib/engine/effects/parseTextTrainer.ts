@@ -226,6 +226,14 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_black_belt_training", amount: 40 }),
   },
   {
+    test: /discard a pok[ée]mon tool and a special energy from 1 of your opponent's pok[ée]mon/,
+    build: () => ({ kind: "trainer_ruffian" }),
+  },
+  {
+    test: /choose a basic pok[ée]mon in your discard pile and switch it with 1 of your basic pok[ée]mon in play/,
+    build: () => ({ kind: "trainer_transformation_tome" }),
+  },
+  {
     test: /put up to 3 in any combination of pok[ée]mon that don't have a rule box and basic energy cards from your discard pile into your hand/,
     build: () => ({ kind: "trainer_lanas_aid", count: 3 }),
   },

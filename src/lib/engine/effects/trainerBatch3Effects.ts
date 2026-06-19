@@ -17,10 +17,12 @@ import {
   getDefinition,
   getOpponentId,
   getPlayer,
+  moveToDiscard,
   type EngineState,
 } from "../types";
 import type { ParsedEffect } from "./types";
-import { attachEnergyToPokemon } from "../trainerEffects";
+import { attachEnergyToPokemon, discardAttachedEnergy } from "../trainerEffects";
+import { placePokemonFromDiscardToBench } from "./pokemonZoneHelpers";
 import { applyRiskyRuinsOnBenchPlay, getMaxBenchSize, getStadiumKind } from "./stadiumEffects";
 import {
   addFromDeckToHand,
@@ -491,6 +493,65 @@ export function canPlayTrainerBatch3Kind(
   }
 }
 
+/** Ruffian: discard a Pokémon Tool and a Special Energy from 1 opponent Pokémon. */
+function applyRuffian(state: EngineState, playerId: PlayerId): void {
+  const oppId = getOpponentId(playerId);
+  const opponent = getPlayer(state, oppId);
+  const hasSpecial = (mon: CardInstance) =>
+    mon.attachedEnergy.some((e) => !isBasicEnergy(getDefinitionSafe(state, e.definitionId)));
+  const targets = allPokemonInPlay(opponent).filter(
+    (m) => (m.attachedTools?.length ?? 0) > 0 || hasSpecial(m),
+  );
+  if (targets.length === 0) {
+    logMessage(state, "Ruffian: opponent has no Tool or Special Energy to discard.");
+    return;
+  }
+  // ponytail: pick the most-loaded target (active counts as one of these); good enough vs optimal targeting.
+  const target = targets.sort(
+    (a, b) =>
+      (b.attachedTools?.length ?? 0) + b.attachedEnergy.length -
+      ((a.attachedTools?.length ?? 0) + a.attachedEnergy.length),
+  )[0]!;
+  const tool = (target.attachedTools ?? [])[0];
+  if (tool) {
+    target.attachedTools = (target.attachedTools ?? []).filter((t) => t !== tool);
+    moveToDiscard(opponent, tool);
+  }
+  const special = target.attachedEnergy.find(
+    (e) => !isBasicEnergy(getDefinitionSafe(state, e.definitionId)),
+  );
+  if (special) discardAttachedEnergy(state, oppId, target.instanceId, special.instanceId, false);
+  logMessage(state, `Ruffian: discarded a Tool and a Special Energy from ${getDefinitionSafe(state, target.definitionId).name}.`);
+}
+
+/**
+ * Transformation Tome.
+ * ponytail: the printed card swaps an in-play Basic with a discard Basic,
+ * keeping all attached state, and must be played 2 at once. Modelled as
+ * "recur one Basic from discard onto the Bench" — the deck's real use is
+ * refuelling N's attackers (Zekrom/Zorua) for Night Joker, which need no
+ * energy on the Bench. Upgrade to the full swap if attachment transfer matters.
+ */
+function applyTransformationTome(state: EngineState, playerId: PlayerId): void {
+  const player = getPlayer(state, playerId);
+  if (player.bench.length >= getMaxBenchSize(state, playerId)) {
+    logMessage(state, "Transformation Tome: Bench is full.");
+    return;
+  }
+  const basics = player.discard.filter((c) => isBasicPokemon(getDefinitionSafe(state, c.definitionId)));
+  if (basics.length === 0) {
+    logMessage(state, "Transformation Tome: no Basic Pokémon in discard.");
+    return;
+  }
+  const pick =
+    basics.find((c) => getDefinitionSafe(state, c.definitionId).name.toLowerCase().startsWith("n's")) ??
+    basics[0]!;
+  const placed = placePokemonFromDiscardToBench(state, playerId, pick.instanceId);
+  if (placed) {
+    logMessage(state, `Transformation Tome: returned ${getDefinitionSafe(state, placed.definitionId).name} from discard to the Bench.`);
+  }
+}
+
 export function applyTrainerBatch3Kind(state: EngineState, playerId: PlayerId, effect: ParsedEffect): void {
   switch (effect.kind) {
     case "trainer_premium_power_pro":
@@ -498,6 +559,12 @@ export function applyTrainerBatch3Kind(state: EngineState, playerId: PlayerId, e
       return;
     case "trainer_black_belt_training":
       applyBlackBeltTraining(state, effect.amount);
+      return;
+    case "trainer_ruffian":
+      applyRuffian(state, playerId);
+      return;
+    case "trainer_transformation_tome":
+      applyTransformationTome(state, playerId);
       return;
     case "trainer_lanas_aid":
       applyLanasAid(state, playerId, effect.count);
