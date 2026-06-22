@@ -24,6 +24,7 @@ import {
   getArchetypeTrainerBonus,
   type StrategyContext,
 } from "./deckStrategy";
+import { getComboLines } from "./comboLines";
 
 export interface GameRunResult {
   state: EngineState;
@@ -1705,6 +1706,16 @@ export function pickHeuristicMainAction(
 ): GameAction | null {
   const player = getPlayer(state, playerId);
   if (state.pendingAction) return null; // caller drains pending separately
+
+  // 0. Deck-expert combo lines — force the deck's signature next step (e.g.
+  //    take lethal now) before the generic scoring chain.
+  if (ctx && !state.turnFlags.attacked) {
+    const legal = getLegalActions(state);
+    for (const line of getComboLines(ctx.archetype)) {
+      const action = line.nextStep({ state, playerId, legal });
+      if (action) return action;
+    }
+  }
 
   // 1-3. Trainer / tool / basic / evolve (only before attacking)
   if (!state.turnFlags.attacked) {
