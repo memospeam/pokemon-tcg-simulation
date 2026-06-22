@@ -59,16 +59,74 @@ const lethalFinisher: ComboLine = {
 };
 
 /**
- * Per-archetype combo lines. Empty today — author here one deck at a time,
- * each validated by benchmark before it stays. The lethal finisher above is
+ * Per-archetype combo lines. Author here one deck at a time, each validated by
+ * benchmark before it stays (keep-the-winner). The lethal finisher above is
  * shared by every archetype via getComboLines.
  *
- * ponytail: wired into pickHeuristicMainAction (the policy/agent decision
- * path). The sync benchmark driver (runEngineAutoPlay) and Simulation capture
- * keep their own inline chains; route them through getComboLines when a
- * per-archetype line needs to show up there too.
+ * ponytail: consumed via pickComboAction, wired into both pickHeuristicMainAction
+ * (policy/agent path) and runEngineAutoPlay (sync benchmark + Play-vs-AI). The
+ * Simulation capture loop still has its own inline chain — route it through
+ * pickComboAction when a line needs to show up in the Simulation tab.
  */
-const PER_ARCHETYPE: Partial<Record<Archetype, ComboLine[]>> = {};
+/**
+ * N's Zoroark — close the Mochi combo kill the generic lethal finisher can't
+ * see. When the Active N's Zoroark ex is the Poisoned Binding Mochi holder
+ * (so its +40 is live) and can Night Joker, but the copied attack's raw damage
+ * ISN'T lethal while raw + Mochi(40) + Black Belt's Training(40 vs an ex) IS,
+ * force the kill: play Black Belt's first if it adds the needed 40, otherwise
+ * swing Night Joker now (the engine applies the Mochi/Black Belt buffs at
+ * damage time). The setup (attaching Mochi, the Subjugating Chains pivot) is
+ * already handled by the heuristic's scoring — this only stops it whiffing the
+ * final lethal.
+ */
+const zoroarkMochiLethal: ComboLine = {
+  name: "zoroark-mochi-lethal",
+  nextStep: ({ state, playerId, legal }) => {
+    const me = getPlayer(state, playerId);
+    const opp = getPlayer(state, getOpponentId(playerId));
+    const active = me.active;
+    if (!active || !opp.active) return null;
+    const aDef = getDefinition(state, active.definitionId);
+    if (!aDef?.name.toLowerCase().includes("n's zoroark ex")) return null;
+    const poisoned = active.statusConditions?.includes("Poisoned") ?? false;
+    const holdsMochi = (active.attachedTools ?? []).some((t) =>
+      getDefinition(state, t.definitionId)?.name.toLowerCase().includes("binding mochi"),
+    );
+    const njAttack = legal.find(
+      (a) => a.type === "ATTACK" && a.attackName.toLowerCase().includes("night joker"),
+    );
+    if (!poisoned || !holdsMochi || !njAttack) return null;
+
+    // Best Night Joker template damage from a benched N's Pokémon.
+    const njRaw = me.bench.reduce((best, b) => {
+      const bd = getDefinition(state, b.definitionId);
+      if (!bd?.name.toLowerCase().startsWith("n's")) return best;
+      return Math.max(best, ...(bd.attacks ?? []).map((a) => parseDamage(a.damage)));
+    }, 0);
+    if (njRaw <= 0) return null;
+
+    const oppDef = getDefinition(state, opp.active.definitionId);
+    const oppHp = remainingHp(state, opp.active);
+    const oppIsEx = (oppDef?.subtypes ?? []).includes("ex");
+    const bbCard = me.hand.find((c) =>
+      getDefinition(state, c.definitionId)?.name.toLowerCase().includes("black belt's training"),
+    );
+    const bbLegal =
+      bbCard && oppIsEx && !state.turnFlags.supporterPlayed
+        ? legal.find((a) => a.type === "PLAY_TRAINER" && a.instanceId === bbCard.instanceId)
+        : undefined;
+
+    const rawWR = applyWeaknessAndResistance(njRaw, aDef.types, oppDef!);
+    const comboWR = applyWeaknessAndResistance(njRaw + 40 + (bbLegal ? 40 : 0), aDef.types, oppDef!);
+    if (rawWR >= oppHp) return null; // generic lethal finisher already covers this
+    if (comboWR < oppHp) return null; // even the combo can't kill — don't force it
+    return bbLegal ?? njAttack; // play Black Belt's for the extra 40, else swing
+  },
+};
+
+const PER_ARCHETYPE: Partial<Record<Archetype, ComboLine[]>> = {
+  zoroark: [zoroarkMochiLethal],
+};
 
 export function getComboLines(archetype: Archetype): ComboLine[] {
   return [lethalFinisher, ...(PER_ARCHETYPE[archetype] ?? [])];
