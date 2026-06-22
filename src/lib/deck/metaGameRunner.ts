@@ -241,6 +241,26 @@ export function runEngineAutoPlay(
     const ctx = getStrategyCtx(playerId);
     let attacked = false;
 
+    // 0. Deck-expert combo lines (may return an ATTACK → track turn transition).
+    {
+      const comboAction = pickComboAction(state, playerId, ctx);
+      if (comboAction) {
+        const beforeTurn = state.turnNumber;
+        const beforePlayer = state.currentPlayerId;
+        state = gameReducer(state, comboAction);
+        actionCount += 1;
+        const drained = drainAutoPending(state, 12, ctx);
+        state = drained.state;
+        actionCount += drained.steps;
+        if (isPlayStalled(state)) {
+          return { state, turnCount, actionCount, stalled: true, winnerId: state.winnerId };
+        }
+        if (state.phase !== GamePhase.Active || state.winnerId) break;
+        if (state.currentPlayerId !== beforePlayer || state.turnNumber > beforeTurn) turnCount += 1;
+        continue;
+      }
+    }
+
     if (!state.pendingAction && !state.turnFlags.attacked) {
       const trainerAction = pickAutoTrainerAction(state, ctx);
       if (trainerAction) {
@@ -1699,6 +1719,21 @@ export function pickBestEnergyForTarget(
  * Order mirrors runAutoMatch exactly: trainer → basic → evolve → energy →
  * ability → retreat → attack. Returns null when nothing is worth doing.
  */
+/** Consult the archetype's combo lines; return the first action one forces, or null. */
+function pickComboAction(
+  state: EngineState,
+  playerId: PlayerId,
+  ctx: StrategyContext | undefined,
+): GameAction | null {
+  if (!ctx || state.turnFlags.attacked || state.pendingAction) return null;
+  const legal = getLegalActions(state);
+  for (const line of getComboLines(ctx.archetype)) {
+    const action = line.nextStep({ state, playerId, legal });
+    if (action) return action;
+  }
+  return null;
+}
+
 export function pickHeuristicMainAction(
   state: EngineState,
   playerId: PlayerId,
@@ -1707,15 +1742,10 @@ export function pickHeuristicMainAction(
   const player = getPlayer(state, playerId);
   if (state.pendingAction) return null; // caller drains pending separately
 
-  // 0. Deck-expert combo lines — force the deck's signature next step (e.g.
-  //    take lethal now) before the generic scoring chain.
-  if (ctx && !state.turnFlags.attacked) {
-    const legal = getLegalActions(state);
-    for (const line of getComboLines(ctx.archetype)) {
-      const action = line.nextStep({ state, playerId, legal });
-      if (action) return action;
-    }
-  }
+  // 0. Deck-expert combo lines — force the deck's signature next step before
+  //    the generic scoring chain.
+  const comboAction = pickComboAction(state, playerId, ctx);
+  if (comboAction) return comboAction;
 
   // 1-3. Trainer / tool / basic / evolve (only before attacking)
   if (!state.turnFlags.attacked) {
