@@ -185,6 +185,33 @@ export function runTournamentPresetMatch(
 }
 
 /**
+ * Apply an action in the auto-play loop, drain any resulting pending, and
+ * report the loop-control signal. Extracts the apply→drain→stall/winner→turn
+ * bookkeeping that the combo / trainer / ability / attack steps all share.
+ */
+function applyAndDrain(
+  state: EngineState,
+  action: GameAction,
+  ctx: StrategyContext | undefined,
+): { state: EngineState; steps: number; terminal: "stall" | "end" | null; turnAdvanced: boolean } {
+  const beforeTurn = state.turnNumber;
+  const beforePlayer = state.currentPlayerId;
+  const drained = drainAutoPending(gameReducer(state, action), 12, ctx);
+  const next = drained.state;
+  const terminal: "stall" | "end" | null = isPlayStalled(next)
+    ? "stall"
+    : next.phase !== GamePhase.Active || next.winnerId
+      ? "end"
+      : null;
+  return {
+    state: next,
+    steps: 1 + drained.steps,
+    terminal,
+    turnAdvanced: next.currentPlayerId !== beforePlayer || next.turnNumber > beforeTurn,
+  };
+}
+
+/**
  * Minimal auto-play loop: use the first affordable attack each turn, otherwise END_TURN.
  * Stops when the game finishes, hits limits, or needs player input (pendingAction).
  */
@@ -245,18 +272,12 @@ export function runEngineAutoPlay(
     {
       const comboAction = pickComboAction(state, playerId, ctx);
       if (comboAction) {
-        const beforeTurn = state.turnNumber;
-        const beforePlayer = state.currentPlayerId;
-        state = gameReducer(state, comboAction);
-        actionCount += 1;
-        const drained = drainAutoPending(state, 12, ctx);
-        state = drained.state;
-        actionCount += drained.steps;
-        if (isPlayStalled(state)) {
-          return { state, turnCount, actionCount, stalled: true, winnerId: state.winnerId };
-        }
-        if (state.phase !== GamePhase.Active || state.winnerId) break;
-        if (state.currentPlayerId !== beforePlayer || state.turnNumber > beforeTurn) turnCount += 1;
+        const r = applyAndDrain(state, comboAction, ctx);
+        state = r.state;
+        actionCount += r.steps;
+        if (r.terminal === "stall") return { state, turnCount, actionCount, stalled: true, winnerId: state.winnerId };
+        if (r.terminal === "end") break;
+        if (r.turnAdvanced) turnCount += 1;
         continue;
       }
     }
@@ -264,23 +285,11 @@ export function runEngineAutoPlay(
     if (!state.pendingAction && !state.turnFlags.attacked) {
       const trainerAction = pickAutoTrainerAction(state, ctx);
       if (trainerAction) {
-        state = gameReducer(state, trainerAction);
-        actionCount += 1;
-        const drained = drainAutoPending(state, 12, ctx);
-        state = drained.state;
-        actionCount += drained.steps;
-        if (isPlayStalled(state)) {
-          return {
-            state,
-            turnCount,
-            actionCount,
-            stalled: true,
-            winnerId: state.winnerId,
-          };
-        }
-        if (state.phase !== GamePhase.Active || state.winnerId) {
-          break;
-        }
+        const r = applyAndDrain(state, trainerAction, ctx);
+        state = r.state;
+        actionCount += r.steps;
+        if (r.terminal === "stall") return { state, turnCount, actionCount, stalled: true, winnerId: state.winnerId };
+        if (r.terminal === "end") break;
         continue;
       }
     }
@@ -349,15 +358,11 @@ export function runEngineAutoPlay(
     if (!state.pendingAction) {
       const abilityAction = pickAutoAbilityAction(state, ctx);
       if (abilityAction) {
-        state = gameReducer(state, abilityAction);
-        actionCount += 1;
-        const drained = drainAutoPending(state, 12, ctx);
-        state = drained.state;
-        actionCount += drained.steps;
-        if (isPlayStalled(state)) {
-          return { state, turnCount, actionCount, stalled: true, winnerId: state.winnerId };
-        }
-        if (state.phase !== GamePhase.Active || state.winnerId) break;
+        const r = applyAndDrain(state, abilityAction, ctx);
+        state = r.state;
+        actionCount += r.steps;
+        if (r.terminal === "stall") return { state, turnCount, actionCount, stalled: true, winnerId: state.winnerId };
+        if (r.terminal === "end") break;
         continue;
       }
     }
@@ -387,29 +392,13 @@ export function runEngineAutoPlay(
     if (canAttackThisTurn) {
       const bestAttack = pickBestAttack(state, playerId, ctx);
       if (bestAttack) {
-        const beforeTurn = state.turnNumber;
-        const beforePlayer = state.currentPlayerId;
-        state = gameReducer(state, { type: "ATTACK", playerId, attackName: bestAttack });
-        actionCount += 1;
+        const r = applyAndDrain(state, { type: "ATTACK", playerId, attackName: bestAttack }, ctx);
+        state = r.state;
+        actionCount += r.steps;
         attacked = true;
-        const drained = drainAutoPending(state, 12, ctx);
-        state = drained.state;
-        actionCount += drained.steps;
-        if (isPlayStalled(state)) {
-          return {
-            state,
-            turnCount,
-            actionCount,
-            stalled: true,
-            winnerId: state.winnerId,
-          };
-        }
-        if (state.phase !== GamePhase.Active || state.winnerId) {
-          break;
-        }
-        if (state.currentPlayerId !== beforePlayer || state.turnNumber > beforeTurn) {
-          turnCount += 1;
-        }
+        if (r.terminal === "stall") return { state, turnCount, actionCount, stalled: true, winnerId: state.winnerId };
+        if (r.terminal === "end") break;
+        if (r.turnAdvanced) turnCount += 1;
       }
     }
 
