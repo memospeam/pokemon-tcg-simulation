@@ -1720,7 +1720,7 @@ export function pickBestEnergyForTarget(
  * ability → retreat → attack. Returns null when nothing is worth doing.
  */
 /** Consult the archetype's combo lines; return the first action one forces, or null. */
-function pickComboAction(
+export function pickComboAction(
   state: EngineState,
   playerId: PlayerId,
   ctx: StrategyContext | undefined,

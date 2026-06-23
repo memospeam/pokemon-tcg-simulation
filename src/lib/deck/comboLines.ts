@@ -63,10 +63,10 @@ const lethalFinisher: ComboLine = {
  * benchmark before it stays (keep-the-winner). The lethal finisher above is
  * shared by every archetype via getComboLines.
  *
- * ponytail: consumed via pickComboAction, wired into both pickHeuristicMainAction
- * (policy/agent path) and runEngineAutoPlay (sync benchmark + Play-vs-AI). The
- * Simulation capture loop still has its own inline chain — route it through
- * pickComboAction when a line needs to show up in the Simulation tab.
+ * ponytail: consumed via pickComboAction, wired into all three heuristic
+ * drivers — pickHeuristicMainAction (policy/agent), runEngineAutoPlay (sync
+ * benchmark + Play-vs-AI), and captureSimulationFrames (Simulation tab +
+ * report:selfplay).
  */
 /**
  * N's Zoroark — close the Mochi combo kill the generic lethal finisher can't

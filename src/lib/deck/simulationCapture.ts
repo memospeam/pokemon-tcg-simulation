@@ -7,6 +7,7 @@ import {
   drainAutoPending,
   isPlayStalled,
   pickAutoTrainerAction,
+  pickComboAction,
   pickAutoToolAction,
   pickAutoAbilityAction,
   pickAutoPlayBasicAction,
@@ -161,6 +162,21 @@ export function captureSimulationFrames(
     const player = getPlayer(state, playerId);
     const ctx = getCtx(playerId);
     let attacked = false;
+
+    // 0. Deck-expert combo lines (may return an ATTACK → track turn transition).
+    const comboAction = pickComboAction(state, playerId, ctx);
+    if (comboAction) {
+      const beforeTurn = state.turnNumber;
+      const beforePlayer = state.currentPlayerId;
+      state = applyAction(state, comboAction, frames, "Combo", categoryOf(comboAction));
+      actionCount += 1;
+      const drained = drainAndCapture(state, frames, ctx);
+      state = drained.state;
+      actionCount += drained.steps;
+      if (drained.stalled || state.phase !== GamePhase.Active || state.winnerId) break;
+      if (state.currentPlayerId !== beforePlayer || state.turnNumber > beforeTurn) turnCount += 1;
+      continue;
+    }
 
     // 1. Trainers (supporters first, then items) — strategy-aware
     if (!state.turnFlags.attacked && trainersThisTurn < MAX_TRAINERS_PER_TURN) {
