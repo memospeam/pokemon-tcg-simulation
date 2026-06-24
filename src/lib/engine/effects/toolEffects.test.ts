@@ -7,6 +7,8 @@ import { parseToolKind, parseToolKindFromText } from "./parseTextTool";
 import {
   attachToolToPokemon,
   countToolsOnPlayerPokemon,
+  getToolAttackBonus,
+  getToolDamageReduction,
   getToolHpBonus,
   getToolRetreatReduction,
   listAllAttachedTools,
@@ -168,6 +170,39 @@ describe("toolEffects", () => {
     expect(getToolHpBonus(state, cynthia)).toBe(70);
     expect(countToolsOnPlayerPokemon(state, PlayerId.P1)).toBe(1);
     expect(listAllAttachedTools(state)).toHaveLength(1);
+  });
+
+  it("Batch 2: conditional attack bonus + berry/scale damage reduction", () => {
+    // attacker (P1) carries Maximum Belt + Brave Bangle; defender (P2) carries Occa Berry.
+    const beltDef = mockTool("Maximum Belt", ["+50 damage to your opponent's Active Pokémon ex."]);
+    const bangleDef = mockTool("Brave Bangle", ["+30 damage if no Rule Box."]);
+    const occaDef = mockTool("Occa Berry", ["reduce Fire damage by 60."]);
+
+    const attackerDef = mockPokemon("Charmander", "70"); // no Rule Box, Fire type
+    attackerDef.types = ["Fire"];
+    const exDef = mockPokemon("Pikachu ex", "200");
+    exDef.subtypes = ["Basic", "ex"];
+
+    const attacker = createCardInstance("charmander", PlayerId.P1, Zone.Active);
+    attacker.attachedTools = [
+      createCardInstance("belt", PlayerId.P1, Zone.Active),
+      createCardInstance("bangle", PlayerId.P1, Zone.Active),
+    ];
+    const target = createCardInstance("pika-ex", PlayerId.P2, Zone.Active);
+    target.attachedTools = [createCardInstance("occa", PlayerId.P2, Zone.Active)];
+
+    const state = minimalState({
+      belt: beltDef,
+      bangle: bangleDef,
+      occa: occaDef,
+      charmander: attackerDef,
+      "pika-ex": exDef,
+    });
+
+    // vs an ex defender, non-rule-box attacker: +50 (belt) +30 (bangle) = 80
+    expect(getToolAttackBonus(state, attacker, target)).toBe(80);
+    // Occa Berry on the ex reduces incoming Fire damage by 60
+    expect(getToolDamageReduction(state, target, attacker)).toBe(60);
   });
 
   it("rejects Power Weight on non-Cynthia Pokémon", () => {

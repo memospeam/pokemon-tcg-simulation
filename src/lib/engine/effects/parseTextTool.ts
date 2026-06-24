@@ -9,6 +9,21 @@ export type ToolKind =
   | "binding_mochi"
   | "lillies_pearl"
   | "heroes_cape"
+  | "ancient_booster"
+  | "maximum_belt"
+  | "light_ball"
+  | "brave_bangle"
+  | "hops_choice_band"
+  | "future_booster"
+  | "rescue_board"
+  | "occa_berry"
+  | "payapa_berry"
+  | "babiri_berry"
+  | "colbur_berry"
+  | "passho_berry"
+  | "haban_berry"
+  | "sacred_charm"
+  | "thick_scale"
   | "unknown";
 
 function normalize(text: string): string {
@@ -64,6 +79,22 @@ export function parseToolKind(def: CardDefinition): ToolKind {
   if (def.name.toLowerCase().includes("binding mochi")) return "binding_mochi";
   if (def.name.toLowerCase().includes("lillie's pearl")) return "lillies_pearl";
   if (def.name.toLowerCase().includes("hero's cape")) return "heroes_cape";
+  const n = def.name.toLowerCase();
+  if (n.includes("ancient booster")) return "ancient_booster";
+  if (n.includes("maximum belt")) return "maximum_belt";
+  if (n.includes("light ball")) return "light_ball";
+  if (n.includes("brave bangle")) return "brave_bangle";
+  if (n.includes("hop's choice band")) return "hops_choice_band";
+  if (n.includes("future booster")) return "future_booster";
+  if (n.includes("rescue board")) return "rescue_board";
+  if (n.includes("occa berry")) return "occa_berry";
+  if (n.includes("payapa berry")) return "payapa_berry";
+  if (n.includes("babiri berry")) return "babiri_berry";
+  if (n.includes("colbur berry")) return "colbur_berry";
+  if (n.includes("passho berry")) return "passho_berry";
+  if (n.includes("haban berry")) return "haban_berry";
+  if (n.includes("sacred charm")) return "sacred_charm";
+  if (n.includes("thick scale")) return "thick_scale";
   return "unknown";
 }
 

@@ -1,5 +1,5 @@
 import type { CardDefinition } from "../../models/definition";
-import { isCynthiasPokemon, isLilliesPokemon, isTool } from "../../models/definition";
+import { hasRuleBox, isCynthiasPokemon, isLilliesPokemon, isTool } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import { PlayerId, Zone } from "../../models/enums";
 import { drawCards, getDefinitionSafe } from "../rules";
@@ -145,7 +145,10 @@ export function discardAttachedTool(
 export function getToolRetreatReduction(state: EngineState, pokemon: CardInstance): number {
   let reduction = 0;
   for (const tool of pokemon.attachedTools ?? []) {
-    if (getToolKind(state, tool) === "air_balloon") reduction += 2;
+    const kind = getToolKind(state, tool);
+    if (kind === "air_balloon") reduction += 2;
+    if (kind === "rescue_board") reduction += 1;
+    if (kind === "future_booster") reduction += 5; // Future Pokémon: no Retreat Cost
   }
   return reduction;
 }
@@ -156,6 +159,7 @@ export function getToolHpBonus(state: EngineState, pokemon: CardInstance): numbe
     const kind = getToolKind(state, tool);
     if (kind === "cynthias_power_weight") bonus += 70;
     if (kind === "heroes_cape") bonus += 100;
+    if (kind === "ancient_booster") bonus += 60; // Ancient Pokémon
   }
   return bonus;
 }
@@ -163,14 +167,76 @@ export function getToolHpBonus(state: EngineState, pokemon: CardInstance): numbe
 export function getToolAttackBonus(
   state: EngineState,
   attacker: CardInstance,
-  _opponentActive: CardInstance,
+  opponentActive: CardInstance,
 ): number {
-  if (!attacker.statusConditions.includes("Poisoned")) return 0;
+  const attackerDef = getDefinitionSafe(state, attacker.definitionId);
+  const oppDef = opponentActive ? getDefinitionSafe(state, opponentActive.definitionId) : undefined;
+  const oppIsEx = (oppDef?.subtypes ?? []).includes("ex");
+  const noRuleBox = !hasRuleBox(attackerDef);
+  const name = attackerDef.name.toLowerCase();
   let bonus = 0;
   for (const tool of attacker.attachedTools ?? []) {
-    if (getToolKind(state, tool) === "binding_mochi") bonus += 40;
+    switch (getToolKind(state, tool)) {
+      case "binding_mochi":
+        if (attacker.statusConditions.includes("Poisoned")) bonus += 40;
+        break;
+      case "maximum_belt":
+        if (oppIsEx) bonus += 50;
+        break;
+      case "light_ball":
+        if (oppIsEx && name.includes("pikachu ex")) bonus += 50;
+        break;
+      case "brave_bangle":
+        if (noRuleBox) bonus += 30;
+        break;
+      case "hops_choice_band":
+        if (name.includes("hop's")) bonus += 30;
+        break;
+      case "future_booster":
+        if ((attackerDef.subtypes ?? []).includes("Future")) bonus += 20;
+        break;
+    }
   }
   return bonus;
+}
+
+/** Berries / Sacred Charm / Thick Scale: reduce damage taken by attacker type
+ *  (applied AFTER Weakness/Resistance, via applyDamageReduction). */
+const BERRY_REDUCED_TYPE: Partial<Record<ToolKind, string>> = {
+  occa_berry: "fire",
+  payapa_berry: "psychic",
+  babiri_berry: "metal",
+  colbur_berry: "darkness",
+  passho_berry: "water",
+  haban_berry: "dragon",
+};
+
+export function getToolDamageReduction(
+  state: EngineState,
+  defender: CardInstance,
+  attacker: CardInstance | null | undefined,
+): number {
+  if (!attacker) return 0;
+  const attackerDef = getDefinitionSafe(state, attacker.definitionId);
+  const defenderDef = getDefinitionSafe(state, defender.definitionId);
+  const atkTypes = (attackerDef.types ?? []).map((t) => t.toLowerCase());
+  const atkHasAbility = (attackerDef.abilities ?? []).length > 0;
+  const defenderIsDragon = (defenderDef.types ?? []).some((t) => t.toLowerCase() === "dragon");
+  let reduction = 0;
+  for (const tool of defender.attachedTools ?? []) {
+    const kind = getToolKind(state, tool);
+    const berryType = BERRY_REDUCED_TYPE[kind];
+    if (berryType && atkTypes.includes(berryType)) reduction += 60;
+    if (kind === "sacred_charm" && atkHasAbility) reduction += 30;
+    if (
+      kind === "thick_scale" &&
+      defenderIsDragon &&
+      atkTypes.some((t) => ["grass", "fire", "water", "lightning"].includes(t))
+    ) {
+      reduction += 50;
+    }
+  }
+  return reduction;
 }
 
 export function getToolPrizeReduction(state: EngineState, knockedOut: CardInstance): number {
