@@ -45,6 +45,7 @@ import {
 } from "./passiveRules";
 import { getTrainerTurnAttackBonus } from "./trainerTurnBonuses";
 import { discardToolsFromOpponentActive, getToolAttackBonus } from "./toolEffects";
+import { getStadiumAttackBonus } from "./stadiumEffects";
 
 export function isFestivalGroundsInPlay(state: EngineState): boolean {
   if (!state.stadium) return false;
@@ -214,6 +215,7 @@ function applyAttackDamagePhaseWithDefinition(
   bonusDamage += getTeamPassiveAttackBonus(state, player.active, playerId);
   bonusDamage += getTrainerTurnAttackBonus(state, player.active, opponent.active!);
   bonusDamage += getToolAttackBonus(state, player.active, opponent.active!);
+  bonusDamage += getStadiumAttackBonus(state, player.active);
   for (const effect of preDamageEffects) {
     if (effect.kind === "coin_attack_fails_on_tails" && !flipCoin(state)) {
       logMessage(state, `${attack.name} failed — tails on the coin flip.`);
