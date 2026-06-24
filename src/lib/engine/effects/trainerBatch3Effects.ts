@@ -552,6 +552,112 @@ function applyTransformationTome(state: EngineState, playerId: PlayerId): void {
   }
 }
 
+/** Tarragon / Energy Retrieval: recover up to N typed Pokémon and/or matching
+ *  Basic Energy from the discard pile to hand (energyType "" = any Basic Energy). */
+function applyRecoverTypedToHand(state: EngineState, playerId: PlayerId, energyType: string, count: number): void {
+  const player = getPlayer(state, playerId);
+  const type = energyType.toLowerCase();
+  let taken = 0;
+  for (let i = player.discard.length - 1; i >= 0 && taken < count; i -= 1) {
+    const def = getDefinitionSafe(state, player.discard[i]!.definitionId);
+    const matchEnergy =
+      isBasicEnergy(def) && (type === "" || def.name.toLowerCase().includes(type) || (def.types ?? []).some((t) => t.toLowerCase() === type));
+    const matchPokemon = type !== "" && def.supertype === "Pokémon" && (def.types ?? []).some((t) => t.toLowerCase() === type);
+    if (matchEnergy || matchPokemon) {
+      const card = player.discard.splice(i, 1)[0]!;
+      card.zone = Zone.Hand;
+      player.hand.push(card);
+      taken += 1;
+    }
+  }
+  logMessage(state, `Recovered ${taken} card(s) from discard to hand.`);
+}
+
+/** Great Haul Net: shuffle up to N typed Pokémon and up to N matching Basic
+ *  Energy from the discard pile back into the deck. */
+function applyShuffleTypedToDeck(state: EngineState, playerId: PlayerId, energyType: string, count: number): void {
+  const player = getPlayer(state, playerId);
+  const type = energyType.toLowerCase();
+  let pk = 0;
+  let en = 0;
+  for (let i = player.discard.length - 1; i >= 0; i -= 1) {
+    const def = getDefinitionSafe(state, player.discard[i]!.definitionId);
+    const isP = def.supertype === "Pokémon" && (def.types ?? []).some((t) => t.toLowerCase() === type) && pk < count;
+    const isE = isBasicEnergy(def) && (def.types ?? []).some((t) => t.toLowerCase() === type) && en < count;
+    if (isP || isE) {
+      const card = player.discard.splice(i, 1)[0]!;
+      card.zone = Zone.Deck;
+      player.deck.push(card);
+      if (isP) pk += 1;
+      else en += 1;
+    }
+  }
+  if (pk + en > 0) shufflePlayerDeck(state, playerId);
+  logMessage(state, `Shuffled ${pk} Pokémon and ${en} Energy from discard into the deck.`);
+}
+
+/** Hand Trimmer: each player discards down to targetCount (opponent first). */
+function applyBothDiscardHandUntil(state: EngineState, playerId: PlayerId, targetCount: number): void {
+  for (const p of [getPlayer(state, getOpponentId(playerId)), getPlayer(state, playerId)]) {
+    while (p.hand.length > targetCount) moveToDiscard(p, p.hand.pop()!);
+  }
+  logMessage(state, `Each player discarded down to ${targetCount} cards.`);
+}
+
+/** Emma: draw one card per Pokémon in the opponent's hand. */
+function applyDrawPerOppPokemon(state: EngineState, playerId: PlayerId): void {
+  const opp = getPlayer(state, getOpponentId(playerId));
+  const n = opp.hand.filter((c) => getDefinitionSafe(state, c.definitionId).supertype === "Pokémon").length;
+  drawCards(state, playerId, n);
+  logMessage(state, `Drew ${n} card(s) — one per Pokémon in the opponent's hand.`);
+}
+
+/** Larry's Skill: discard your hand, then search a Pokémon + Supporter + Basic Energy. */
+function applyDiscardHandSearchThree(state: EngineState, playerId: PlayerId): void {
+  const player = getPlayer(state, playerId);
+  for (const card of [...player.hand]) moveToDiscard(player, card);
+  player.hand = [];
+  const pick = (pred: (d: CardDefinition) => boolean): void => {
+    const i = player.deck.findIndex((c) => pred(getDefinitionSafe(state, c.definitionId)));
+    if (i === -1) return;
+    const card = player.deck.splice(i, 1)[0]!;
+    card.zone = Zone.Hand;
+    player.hand.push(card);
+  };
+  pick((d) => d.supertype === "Pokémon");
+  pick((d) => isSupporter(d));
+  pick((d) => isBasicEnergy(d));
+  shufflePlayerDeck(state, playerId);
+  logMessage(state, "Larry's Skill: discarded hand; searched a Pokémon, Supporter, and Basic Energy.");
+}
+
+/** Strange Timepiece: devolve one of your evolved typed Pokémon.
+ *  ponytail: devolution isn't modelled in the engine (devolve_opponent is a
+ *  stub too) — mirror it: find the target and log. */
+function applyDevolveOwnTyped(state: EngineState, playerId: PlayerId, pokemonType: string): void {
+  const player = getPlayer(state, playerId);
+  const type = pokemonType.toLowerCase();
+  const target = allPokemonInPlay(player).find((mon) => {
+    const d = getDefinitionSafe(state, mon.definitionId);
+    return !d.subtypes.includes("Basic") && (d.types ?? []).some((t) => t.toLowerCase() === type);
+  });
+  if (target) logMessage(state, `Devolved ${getDefinitionSafe(state, target.definitionId).name}.`);
+}
+
+/** Anthea & Concordia: only usable with the six named N's Pokémon in play.
+ *  ponytail: that gate is essentially never met in Standard; honour the
+ *  condition and log the (deferred) +N-prizes buff. */
+function applyExtraPrizesIfTeam(state: EngineState, playerId: PlayerId, names: string[], prizes: number): void {
+  const inPlay = allPokemonInPlay(getPlayer(state, playerId)).map((m) =>
+    getDefinitionSafe(state, m.definitionId).name.toLowerCase(),
+  );
+  if (!names.every((n) => inPlay.some((p) => p.includes(n)))) {
+    logMessage(state, "Anthea & Concordia: required N's Pokémon are not all in play.");
+    return;
+  }
+  logMessage(state, `Anthea & Concordia: +${prizes} Prize cards if an N's Pokémon Knocks Out the Active this turn.`);
+}
+
 export function applyTrainerBatch3Kind(state: EngineState, playerId: PlayerId, effect: ParsedEffect): void {
   switch (effect.kind) {
     case "trainer_premium_power_pro":
@@ -565,6 +671,27 @@ export function applyTrainerBatch3Kind(state: EngineState, playerId: PlayerId, e
       return;
     case "trainer_transformation_tome":
       applyTransformationTome(state, playerId);
+      return;
+    case "trainer_recover_typed_to_hand":
+      applyRecoverTypedToHand(state, playerId, effect.energyType, effect.count);
+      return;
+    case "trainer_shuffle_typed_to_deck":
+      applyShuffleTypedToDeck(state, playerId, effect.energyType, effect.count);
+      return;
+    case "trainer_both_discard_hand_until":
+      applyBothDiscardHandUntil(state, playerId, effect.targetCount);
+      return;
+    case "trainer_draw_per_opp_pokemon":
+      applyDrawPerOppPokemon(state, playerId);
+      return;
+    case "trainer_discard_hand_search_three":
+      applyDiscardHandSearchThree(state, playerId);
+      return;
+    case "trainer_devolve_own_typed":
+      applyDevolveOwnTyped(state, playerId, effect.pokemonType);
+      return;
+    case "trainer_extra_prizes_if_team":
+      applyExtraPrizesIfTeam(state, playerId, effect.names, effect.prizes);
       return;
     case "trainer_lanas_aid":
       applyLanasAid(state, playerId, effect.count);
