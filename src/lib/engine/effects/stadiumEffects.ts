@@ -22,7 +22,59 @@ export type StadiumKind =
   | "ns_castle"
   | "festival_grounds"
   | "neutralization_zone"
+  // Batch 3 passives (wired into combat/HP/retreat/checkup hooks):
+  | "lively_stadium"
+  | "ange_floette"
+  | "full_metal_lab"
+  | "granite_cave"
+  | "postwick"
+  | "paradise_resort"
+  | "jamming_tower"
+  | "nighttime_mine"
+  | "perilous_jungle"
+  // Batch 3 recognized-only (once-per-turn optional abilities; activation
+  // ponytail: deferred — each needs Lumiose/Grand-Tree-scale pending-action
+  // plumbing and is niche/optional, so the AI sim never drives them. They play
+  // and sit in the Active Spot like a dead Stadium. Add the flow if a deck needs it.):
+  | "community_center"
+  | "academy_at_night"
+  | "levincia"
+  | "spikemuth_gym"
+  | "mystery_garden"
+  | "surfing_beach"
+  | "prism_tower"
+  | "dizzying_valley"
   | "unknown";
+
+/** Name-based classification for Batch 3 stadiums not covered by the regex
+ *  patterns in parseStadiumFullText. ponytail: name match over 17 more regexes. */
+const STADIUM_KIND_BY_NAME: { match: string; kind: StadiumKind }[] = [
+  { match: "lively stadium", kind: "lively_stadium" },
+  { match: "ange floette", kind: "ange_floette" },
+  { match: "full metal lab", kind: "full_metal_lab" },
+  { match: "granite cave", kind: "granite_cave" },
+  { match: "postwick", kind: "postwick" },
+  { match: "paradise resort", kind: "paradise_resort" },
+  { match: "jamming tower", kind: "jamming_tower" },
+  { match: "nighttime mine", kind: "nighttime_mine" },
+  { match: "perilous jungle", kind: "perilous_jungle" },
+  { match: "community center", kind: "community_center" },
+  { match: "academy at night", kind: "academy_at_night" },
+  { match: "levincia", kind: "levincia" },
+  { match: "spikemuth gym", kind: "spikemuth_gym" },
+  { match: "mystery garden", kind: "mystery_garden" },
+  { match: "surfing beach", kind: "surfing_beach" },
+  { match: "prism tower", kind: "prism_tower" },
+  { match: "dizzying valley", kind: "dizzying_valley" },
+];
+
+function stadiumKindByName(name: string): StadiumKind | null {
+  const n = name.toLowerCase();
+  for (const entry of STADIUM_KIND_BY_NAME) {
+    if (n.includes(entry.match)) return entry.kind;
+  }
+  return null;
+}
 
 function toStadiumKind(kind: ParsedEffect["kind"]): StadiumKind | null {
   switch (kind) {
@@ -60,8 +112,9 @@ export function getStadiumKind(state: EngineState): StadiumKind | null {
   const def = getDefinition(state, state.stadium.definitionId);
   if (!def) return null;
   const parsed = parseStadiumFullText(def.rules?.join(" ") ?? def.name);
-  if (!parsed) return "unknown";
-  return toStadiumKind(parsed.kind) ?? "unknown";
+  const fromParse = parsed ? toStadiumKind(parsed.kind) : null;
+  if (fromParse) return fromParse;
+  return stadiumKindByName(def.name) ?? "unknown";
 }
 
 export function logStadiumOnPlay(state: EngineState, def: CardDefinition): void {
@@ -157,9 +210,44 @@ export function getMaxBenchSize(state: EngineState, playerId: PlayerId): number 
 }
 
 export function getStadiumHpModifier(state: EngineState, pokemon: CardInstance): number {
-  if (getStadiumKind(state) !== "gravity_mountain") return 0;
+  const kind = getStadiumKind(state);
   const def = getDefinitionSafe(state, pokemon.definitionId);
-  return isStage2(def) ? -30 : 0;
+  if (kind === "gravity_mountain") return isStage2(def) ? -30 : 0;
+  if (kind === "lively_stadium") return isBasicPokemon(def) ? 30 : 0;
+  if (kind === "ange_floette") return def.name.toLowerCase().includes("mega floette ex") ? 150 : 0;
+  return 0;
+}
+
+/** Full Metal Lab / Granite Cave: -30 damage to certain Pokémon, after W/R.
+ *  Wired into applyDamageReduction (modifiers.ts). */
+export function getStadiumDamageReduction(state: EngineState, target: CardInstance): number {
+  const kind = getStadiumKind(state);
+  const def = getDefinitionSafe(state, target.definitionId);
+  if (kind === "full_metal_lab" && (def.types?.includes("Metal") ?? false)) return 30;
+  if (kind === "granite_cave" && def.name.toLowerCase().includes("steven's")) return 30;
+  return 0;
+}
+
+/** Postwick: Hop's Pokémon do +30 damage, before W/R.
+ *  Wired into attackFlow bonusDamage. */
+export function getStadiumAttackBonus(state: EngineState, attacker: CardInstance): number {
+  if (getStadiumKind(state) !== "postwick") return 0;
+  const def = getDefinitionSafe(state, attacker.definitionId);
+  return def.name.toLowerCase().includes("hop's") ? 30 : 0;
+}
+
+/** Paradise Resort: each Psyduck's Retreat Cost is Colorless less.
+ *  Wired into the retreat-cost reduction in energy.ts. */
+export function getStadiumRetreatReduction(state: EngineState, pokemon: CardInstance): number {
+  if (getStadiumKind(state) !== "paradise_resort") return 0;
+  const def = getDefinitionSafe(state, pokemon.definitionId);
+  return def.name.toLowerCase().includes("psyduck") ? 1 : 0;
+}
+
+/** Jamming Tower: Pokémon Tools have no effect. ponytail: gate effect lookup, not
+ *  attachment — tools stay attached (attach legality uses parseToolKind directly). */
+export function areToolEffectsDisabled(state: EngineState): boolean {
+  return getStadiumKind(state) === "jamming_tower";
 }
 
 export function canUseLumioseCity(state: EngineState, playerId: PlayerId): boolean {

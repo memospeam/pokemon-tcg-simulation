@@ -7,6 +7,7 @@ import { getOpponentId, getPlayer, type EngineState } from "../types";
 import { getDefinitionSafe } from "../rules";
 import { parseAbilityText } from "./parseText";
 import { getToolDamageReduction } from "./toolEffects";
+import { getStadiumDamageReduction } from "./stadiumEffects";
 
 export type ModifierPhase = "pending" | "active";
 
@@ -173,7 +174,8 @@ export function applyDamageReduction(
   const reduction =
     (target.damageReductionNextOpponentTurn ?? 0) +
     getPassiveDamageReduction(state, target, attacker) +
-    getToolDamageReduction(state, target, attacker);
+    getToolDamageReduction(state, target, attacker) +
+    getStadiumDamageReduction(state, target);
   return Math.max(0, damage - reduction);
 }
 

@@ -99,6 +99,10 @@ export function runPokemonCheckup(state: EngineState): void {
         }
       }
       const def = getDefinitionSafe(state, pokemon.definitionId);
+      // Perilous Jungle: +2 damage counters on each Poisoned non-Darkness Pokémon.
+      if (getStadiumKind(state) === "perilous_jungle" && !(def.types?.includes("Darkness") ?? false)) {
+        counters += 2;
+      }
       pokemon.damageCounters += countersToDamage(counters);
       logMessage(state, `Checkup: ${counters} damage counter(s) on Poisoned ${def.name}.`);
     }

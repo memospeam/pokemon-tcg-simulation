@@ -15,8 +15,12 @@ import {
 } from "../types";
 import { attachEnergyToPokemon } from "../trainerEffects";
 import { parseToolKind, type ToolKind } from "./parseTextTool";
+import { areToolEffectsDisabled } from "./stadiumEffects";
 
 export function getToolKind(state: EngineState, tool: CardInstance): ToolKind {
+  // Jamming Tower: Pokémon Tools have no effect. Gate effect lookups here so every
+  // getTool* consumer sees "unknown"; attachment legality (parseToolKind) is unaffected.
+  if (areToolEffectsDisabled(state)) return "unknown";
   const def = getDefinitionSafe(state, tool.definitionId);
   return parseToolKind(def);
 }

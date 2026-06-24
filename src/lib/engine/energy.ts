@@ -7,6 +7,7 @@ import type { PlayerId } from "../models/enums";
 import { getEffectiveAttackCost } from "./effects/passiveRules";
 import { getExtraRetreatCost, hasFreeRetreat } from "./effects/abilityHooks";
 import { getToolRetreatReduction } from "./effects/toolEffects";
+import { getStadiumRetreatReduction } from "./effects/stadiumEffects";
 import {
   getSpecialEnergyContribution,
   isEnrichingEnergy,
@@ -170,7 +171,7 @@ export function canAffordRetreat(state: EngineState, pokemon: CardInstance): boo
   const cost = [...(def.retreatCost ?? [])];
   const extra = getExtraRetreatCost(state, pokemon);
   for (let i = 0; i < extra; i += 1) cost.push("Colorless");
-  const reduction = getToolRetreatReduction(state, pokemon);
+  const reduction = getToolRetreatReduction(state, pokemon) + getStadiumRetreatReduction(state, pokemon);
   for (let i = 0; i < reduction && cost.length > 0; i += 1) {
     const colorlessIndex = cost.lastIndexOf("Colorless");
     if (colorlessIndex >= 0) cost.splice(colorlessIndex, 1);
@@ -191,7 +192,7 @@ export function payRetreatCost(
   let cost = [...(def.retreatCost ?? [])];
   const extra = getExtraRetreatCost(state, pokemon);
   for (let i = 0; i < extra; i += 1) cost.push("Colorless");
-  const reduction = getToolRetreatReduction(state, pokemon);
+  const reduction = getToolRetreatReduction(state, pokemon) + getStadiumRetreatReduction(state, pokemon);
   for (let i = 0; i < reduction && cost.length > 0; i += 1) {
     const colorlessIndex = cost.lastIndexOf("Colorless");
     if (colorlessIndex >= 0) cost.splice(colorlessIndex, 1);

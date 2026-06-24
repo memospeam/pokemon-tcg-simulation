@@ -5,7 +5,7 @@ import { getDefinitionSafe } from "../rules";
 import { allPokemonInPlay, getOpponentId, getPlayer, type EngineState } from "../types";
 import { parseAbilityText } from "./parseText";
 import { allOwnedPokemon } from "./modifiers";
-import { getStadiumHpModifier } from "./stadiumEffects";
+import { getStadiumHpModifier, getStadiumKind } from "./stadiumEffects";
 import { getToolHpBonus } from "./toolEffects";
 
 export function countPrizesTakenByPlayer(state: EngineState, playerId: PlayerId): number {
@@ -33,6 +33,11 @@ export function getEffectiveAttackCost(
 ): string[] {
   const cost = [...attack.cost];
   const def = getDefinitionSafe(state, pokemon.definitionId);
+  // Nighttime Mine: each Tera Pokémon's attacks cost Colorless more (applies even
+  // to Tera Pokémon with no Ability, so do it before the no-ability early return).
+  if (getStadiumKind(state) === "nighttime_mine" && def.subtypes.includes("Tera")) {
+    cost.push("Colorless");
+  }
   if (!def.abilities?.length) return cost;
 
   const player = getPlayer(state, pokemon.ownerId);
