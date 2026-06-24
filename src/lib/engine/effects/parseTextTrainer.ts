@@ -234,6 +234,60 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_transformation_tome" }),
   },
   {
+    // Energy Retrieval: up to 2 Basic Energy from discard to hand.
+    test: /put up to 2 basic energy cards from your discard pile into your hand/,
+    build: () => ({ kind: "trainer_recover_typed_to_hand", energyType: "", count: 2 }),
+  },
+  {
+    // Tarragon: up to 4 Fighting Pokémon / Basic Fighting Energy from discard to hand.
+    test: /put up to 4 in any combination of fighting pok[ée]mon and basic fighting energy cards from your discard pile into your hand/,
+    build: () => ({ kind: "trainer_recover_typed_to_hand", energyType: "Fighting", count: 4 }),
+  },
+  {
+    // Great Haul Net: shuffle up to 3 Water Pokémon and/or Basic Water Energy from discard to deck.
+    test: /shuffle up to 3 water pok[ée]mon from your discard pile into your deck.*shuffle up to 3 basic water energy/s,
+    build: () => ({ kind: "trainer_shuffle_typed_to_deck", energyType: "Water", count: 3 }),
+  },
+  {
+    // Xerosic's Machinations: opponent discards down to 3.
+    test: /your opponent discards cards from their hand until they have 3 cards in their hand/,
+    build: () => ({ kind: "discard_hand_until_count", targetCount: 3 }),
+  },
+  {
+    // Hand Trimmer: each player discards down to 5 (opponent first).
+    test: /each player discards cards from their hand until they have 5 cards in their hand/,
+    build: () => ({ kind: "trainer_both_discard_hand_until", targetCount: 5 }),
+  },
+  {
+    // Emma: opponent reveals hand, draw a card per Pokémon found.
+    test: /your opponent reveals their hand, and you draw a card for each pok[ée]mon you find there/,
+    build: () => ({ kind: "trainer_draw_per_opp_pokemon" }),
+  },
+  {
+    // Larry's Skill: discard hand, search a Pokémon + Supporter + Basic Energy.
+    test: /discard your hand and search your deck for a pok[ée]mon, a supporter card, and a basic energy card/,
+    build: () => ({ kind: "trainer_discard_hand_search_three" }),
+  },
+  {
+    // Strange Timepiece: devolve one of your evolved Psychic Pokémon.
+    test: /devolve 1 of your evolved psychic pok[ée]mon by putting any number of evolution cards on it into your hand/,
+    build: () => ({ kind: "trainer_devolve_own_typed", pokemonType: "Psychic" }),
+  },
+  {
+    // Anthea & Concordia: +3 prizes on KO by your N's Pokémon (gated on six specific N's in play).
+    test: /you can use this card only if you have n's darmanitan, n's zoroark ex, n's vanilluxe, n's klinklang, n's reshiram, and n's zekrom in play/,
+    build: () => ({
+      kind: "trainer_extra_prizes_if_team",
+      names: ["n's darmanitan", "n's zoroark ex", "n's vanilluxe", "n's klinklang", "n's reshiram", "n's zekrom"],
+      prizes: 3,
+    }),
+  },
+  {
+    // Tool Scrapper reprint variant (other printing already matched elsewhere).
+    test: /choose up to 2 pok[ée]mon tools attached to pok[ée]mon \(yours or your opponent's\) and discard them/,
+    build: () => ({ kind: "trainer_tool_scrapper", count: 2 }),
+  },
+  {
     test: /put up to 3 in any combination of pok[ée]mon that don't have a rule box and basic energy cards from your discard pile into your hand/,
     build: () => ({ kind: "trainer_lanas_aid", count: 3 }),
   },

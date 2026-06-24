@@ -490,6 +490,13 @@ export type ParsedEffect =
   | { kind: "trainer_black_belt_training"; amount: number }
   | { kind: "trainer_ruffian" }
   | { kind: "trainer_transformation_tome" }
+  | { kind: "trainer_recover_typed_to_hand"; energyType: string; count: number }
+  | { kind: "trainer_shuffle_typed_to_deck"; energyType: string; count: number }
+  | { kind: "trainer_both_discard_hand_until"; targetCount: number }
+  | { kind: "trainer_draw_per_opp_pokemon" }
+  | { kind: "trainer_discard_hand_search_three" }
+  | { kind: "trainer_devolve_own_typed"; pokemonType: string }
+  | { kind: "trainer_extra_prizes_if_team"; names: string[]; prizes: number }
   | { kind: "trainer_lanas_aid"; count: number }
   | { kind: "trainer_brocks_scouting" }
   | { kind: "trainer_rosas_encouragement"; count: number }
