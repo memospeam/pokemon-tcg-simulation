@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "prepare:standard": "vitest run scripts/prepare-standard-effects.test.ts --config vitest.corpus.config.ts",
+    "prepare:standard": "vitest run scripts/prepare-standard-effects.test.ts --config vitest.corpus.config.ts --testTimeout=7200000",
     "report:coverage": "vitest run scripts/report-coverage.test.ts",
     "report:cri-meta": "vitest run scripts/cri-meta-readiness.test.ts",
     "report:invariants": "vitest run scripts/report-invariants.test.ts --config vitest.corpus.config.ts",

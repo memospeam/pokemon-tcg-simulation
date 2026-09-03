@@ -164,6 +164,31 @@
     ]
   },
   {
+    "pokemonName": "chi-yu",
+    "apiId": "sv6-39",
+    "set": "TWM",
+    "number": "39",
+    "attacks": [
+      {
+        "name": "Allure",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      },
+      {
+        "name": "Ground Melter",
+        "cost": [
+          "Fire",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "60+"
+      }
+    ]
+  },
+  {
     "pokemonName": "chien-pao",
     "apiId": "sv8-56",
     "set": "SSP",
@@ -566,6 +591,22 @@
     ]
   },
   {
+    "pokemonName": "dwebble",
+    "apiId": "sv10-11",
+    "set": "DRI",
+    "number": "11",
+    "attacks": [
+      {
+        "name": "Ascension",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      }
+    ]
+  },
+  {
     "pokemonName": "fan rotom",
     "apiId": "sv7-118",
     "set": "SCR",
@@ -740,6 +781,24 @@
         ],
         "convertedEnergyCost": 2,
         "damage": "30+"
+      }
+    ]
+  },
+  {
+    "pokemonName": "iron crown ex",
+    "apiId": "sv5-81",
+    "set": "TEF",
+    "number": "81",
+    "attacks": [
+      {
+        "name": "Twin Shotels",
+        "cost": [
+          "Psychic",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": ""
       }
     ]
   },
@@ -1183,6 +1242,31 @@
     ]
   },
   {
+    "pokemonName": "raging bolt ex",
+    "apiId": "sv5-123",
+    "set": "TEF",
+    "number": "123",
+    "attacks": [
+      {
+        "name": "Burst Roar",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      },
+      {
+        "name": "Bellowing Thunder",
+        "cost": [
+          "Lightning",
+          "Fighting"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "70×"
+      }
+    ]
+  },
+  {
     "pokemonName": "shaymin",
     "apiId": "sv10-10",
     "set": "DRI",
@@ -1192,6 +1276,58 @@
         "name": "Smash Kick",
         "cost": [
           "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "30"
+      }
+    ]
+  },
+  {
+    "pokemonName": "slowking",
+    "apiId": "sv7-58",
+    "set": "SCR",
+    "number": "58",
+    "attacks": [
+      {
+        "name": "Seek Inspiration",
+        "cost": [
+          "Psychic",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": ""
+      },
+      {
+        "name": "Super Psy Bolt",
+        "cost": [
+          "Psychic",
+          "Psychic",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "120"
+      }
+    ]
+  },
+  {
+    "pokemonName": "slowpoke",
+    "apiId": "sv7-57",
+    "set": "SCR",
+    "number": "57",
+    "attacks": [
+      {
+        "name": "Dangle Tail",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      },
+      {
+        "name": "Tackle",
+        "cost": [
+          "Psychic",
           "Colorless"
         ],
         "convertedEnergyCost": 2,
@@ -1294,6 +1430,24 @@
         ],
         "convertedEnergyCost": 3,
         "damage": "100"
+      }
+    ]
+  },
+  {
+    "pokemonName": "team rocket's mewtwo ex",
+    "apiId": "sv10-81",
+    "set": "DRI",
+    "number": "81",
+    "attacks": [
+      {
+        "name": "Erasure Ball",
+        "cost": [
+          "Psychic",
+          "Psychic",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "160+"
       }
     ]
   },
@@ -1479,6 +1633,32 @@
         ],
         "convertedEnergyCost": 3,
         "damage": "110"
+      }
+    ]
+  },
+  {
+    "pokemonName": "zeraora",
+    "apiId": "sv10-78",
+    "set": "DRI",
+    "number": "78",
+    "attacks": [
+      {
+        "name": "Scratch",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "20"
+      },
+      {
+        "name": "Thunder Raid",
+        "cost": [
+          "Lightning",
+          "Lightning",
+          "Lightning"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": ""
       }
     ]
   }

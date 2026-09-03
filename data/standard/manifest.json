@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-24T09:33:49.872Z",
+  "generatedAt": "2026-09-03T10:10:18.549Z",
   "format": {
     "name": "Standard",
     "season": "2025-26 / 2026 rotation",
@@ -17,33 +17,35 @@
       "J"
     ],
     "pokemonQuery": "supertype:Pokémon (regulationMark:H OR regulationMark:I OR regulationMark:J)",
-    "trainerQuery": "supertype:Trainer (regulationMark:H OR regulationMark:I OR regulationMark:J)"
+    "trainerQuery": "supertype:Trainer (regulationMark:H OR regulationMark:I OR regulationMark:J)",
+    "energyQuery": "supertype:Energy (regulationMark:H OR regulationMark:I OR regulationMark:J)"
   },
-  "totalPokemonCards": 2386,
-  "totalTrainerCards": 421,
-  "totalCards": 2386,
-  "cardsWithAttacks": 2386,
-  "cardsWithAbilities": 536,
-  "cardsWithTrainerRules": 421,
-  "uniqueAttackTexts": 830,
-  "uniqueAbilityTexts": 239,
-  "uniqueTrainerTexts": 228,
+  "totalPokemonCards": 2304,
+  "totalTrainerCards": 379,
+  "totalEnergyCards": 23,
+  "totalCards": 2304,
+  "cardsWithAttacks": 2304,
+  "cardsWithAbilities": 506,
+  "cardsWithTrainerRules": 371,
+  "uniqueAttackTexts": 821,
+  "uniqueAbilityTexts": 238,
+  "uniqueTrainerTexts": 188,
   "attackCoverage": {
-    "full": 821,
+    "full": 813,
     "partial": 0,
     "none": 0,
-    "empty": 9
+    "empty": 8
   },
   "abilityCoverage": {
-    "full": 238,
+    "full": 237,
     "partial": 0,
     "none": 0,
     "empty": 1
   },
   "trainerCoverage": {
-    "full": 70,
-    "partial": 111,
-    "none": 47,
+    "full": 102,
+    "partial": 60,
+    "none": 26,
     "empty": 0
   }
 }

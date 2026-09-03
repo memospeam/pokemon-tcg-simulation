@@ -16,6 +16,6 @@ describe("prepare Standard effect corpus", () => {
       console.log(`  Ability coverage:`, corpus.manifest.abilityCoverage);
       console.log(`  Unknown/partial patterns: ${corpus.effectTexts.filter((e) => e.coverage !== "full" && e.coverage !== "empty").length}`);
     },
-    600_000,
+    7_200_000,
   );
 });

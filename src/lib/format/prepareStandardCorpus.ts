@@ -1,4 +1,4 @@
-import { writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { mapApiCard } from "../catalog/mapApiCard";
 import type { PokemonTcgApiResponse } from "../catalog/types";
@@ -7,10 +7,13 @@ import { parseAbilityText, parseAttackText } from "../engine/effects/parseText";
 import { parseTrainerText } from "../engine/effects/trainerText";
 import type { ParsedAbility, ParsedEffect } from "../engine/effects/types";
 import { analyzeParsedEffects } from "./effectCoverage";
-import { STANDARD_FORMAT } from "./standard";
+import { isStandardRegulationMark, STANDARD_FORMAT } from "./standard";
+import { STANDARD_EXPANSIONS, getStandardExpansionByPtcgoCode } from "./standardExpansions";
 
 const API_BASE = "https://api.pokemontcg.io/v2";
-const PAGE_SIZE = 250;
+/** Small pages — pokemontcg.io returns 500 on larger pageSize for bulk queries. */
+const PAGE_SIZE = 25;
+const PAGE_DELAY_MS = 300;
 
 export interface EffectTextRecord {
   id: string;
@@ -117,7 +120,6 @@ async function fetchStandardPage(query: string, page: number): Promise<PokemonTc
     q: query,
     pageSize: String(PAGE_SIZE),
     page: String(page),
-    orderBy: "set.releaseDate",
   });
 
   const headers: Record<string, string> = { Accept: "application/json" };
@@ -125,45 +127,232 @@ async function fetchStandardPage(query: string, page: number): Promise<PokemonTc
   if (apiKey) headers["X-Api-Key"] = apiKey;
 
   const url = `${API_BASE}/cards?${params.toString()}`;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  let lastStatus = "unknown";
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     const response = await fetch(url, { headers });
     if (response.ok) {
       return (await response.json()) as PokemonTcgApiResponse;
     }
-    if ([429, 500, 502, 503, 504].includes(response.status) && attempt < 3) {
-      await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
+    lastStatus = `${response.status} ${response.statusText}`;
+    if ([429, 500, 502, 503, 504].includes(response.status) && attempt < 4) {
+      await new Promise((resolve) => setTimeout(resolve, Math.min(1500 * 2 ** attempt, 8000)));
       continue;
     }
-    throw new Error(`Pokemon TCG API error: ${response.status} ${response.statusText}`);
+    throw new Error(`Pokemon TCG API error: ${lastStatus}`);
   }
-  throw new Error("Pokemon TCG API error: exhausted retries");
+  throw new Error(`Pokemon TCG API error: ${lastStatus}`);
 }
 
-async function fetchAllStandardCards(query: string): Promise<CardDefinition[]> {
+async function fetchQueryPages(query: string): Promise<CardDefinition[]> {
   const first = await fetchStandardPage(query, 1);
   const totalCount = first.totalCount ?? first.data.length;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const cards = first.data.map(mapApiCard);
 
   for (let page = 2; page <= totalPages; page += 1) {
+    await new Promise((resolve) => setTimeout(resolve, PAGE_DELAY_MS));
     const payload = await fetchStandardPage(query, page);
     cards.push(...payload.data.map(mapApiCard));
-    await new Promise((resolve) => setTimeout(resolve, 150));
   }
 
   return cards;
 }
 
+async function fetchExpansionCards(
+  supertype: CardDefinition["supertype"],
+  expansions: typeof STANDARD_EXPANSIONS,
+): Promise<CardDefinition[]> {
+  const byId = new Map<string, CardDefinition>();
+  for (const expansion of expansions) {
+    const query = `supertype:${supertype} set.id:${expansion.id}`;
+    for (const card of await fetchQueryPages(query)) {
+      if (supertype === "Energy" || isStandardRegulationMark(card.regulationMark)) {
+        byId.set(card.apiId, card);
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, PAGE_DELAY_MS));
+  }
+  return [...byId.values()];
+}
+
+function indexEntryToDefinition(entry: StandardCardIndex): CardDefinition {
+  const expansion = getStandardExpansionByPtcgoCode(entry.set);
+  const setId = expansion?.id ?? entry.set.toLowerCase();
+  return {
+    apiId: entry.apiId,
+    name: entry.name,
+    supertype: entry.supertype,
+    subtypes: entry.subtypes,
+    hp: entry.hp,
+    types: entry.types,
+    regulationMark: entry.regulationMark,
+    number: entry.number,
+    weaknesses: entry.weaknesses,
+    resistances: entry.resistances,
+    retreatCost: entry.retreatCost,
+    set: { id: setId, name: expansion?.name ?? entry.set, ptcgoCode: entry.set },
+    images: { small: "", large: "" },
+    attacks: entry.attacks.map((attack) => ({
+      name: attack.name,
+      damage: attack.damage,
+      text: attack.text,
+      cost: attack.cost ?? [],
+      convertedEnergyCost: attack.convertedEnergyCost ?? attack.cost?.length ?? 0,
+    })),
+    abilities: entry.abilities.map((ability) => ({
+      name: ability.name,
+      text: ability.text,
+      type: "Ability",
+    })),
+    rules: entry.trainerRules?.text ? [entry.trainerRules.text] : undefined,
+  };
+}
+
+async function writeCorpusFiles(corpus: StandardCorpus, outputDir: string): Promise<void> {
+  const resolvedDir = path.resolve(process.cwd(), outputDir);
+  await mkdir(resolvedDir, { recursive: true });
+
+  await writeFile(path.join(resolvedDir, "manifest.json"), `${JSON.stringify(corpus.manifest, null, 2)}\n`);
+  await writeFile(path.join(resolvedDir, "effect-texts.json"), `${JSON.stringify(corpus.effectTexts, null, 2)}\n`);
+  await writeFile(path.join(resolvedDir, "cards-index.json"), `${JSON.stringify(corpus.cards, null, 2)}\n`);
+
+  const unknownPatterns = corpus.effectTexts
+    .filter((entry) => entry.coverage === "none" || entry.coverage === "partial")
+    .map((entry) => ({
+      id: entry.id,
+      kind: entry.kind,
+      text: entry.text,
+      coverage: entry.coverage,
+      unknownClauses: entry.unknownClauses,
+      cardCount: entry.cardCount,
+      exampleCards: entry.exampleCards,
+    }));
+
+  await writeFile(
+    path.join(resolvedDir, "unknown-patterns.json"),
+    `${JSON.stringify(unknownPatterns, null, 2)}\n`,
+  );
+
+  const stubPatterns = corpus.effectTexts
+    .filter((entry) => (entry.stubClauses?.length ?? 0) > 0)
+    .map((entry) => ({
+      id: entry.id,
+      kind: entry.kind,
+      text: entry.text,
+      parseCoverage: entry.coverage,
+      implementationCoverage: entry.implementationCoverage ?? "stub",
+      stubClauses: entry.stubClauses ?? [],
+      cardCount: entry.cardCount,
+      exampleCards: entry.exampleCards,
+    }));
+
+  await writeFile(
+    path.join(resolvedDir, "stub-patterns.json"),
+    `${JSON.stringify(stubPatterns, null, 2)}\n`,
+  );
+}
+
+/** Re-fetch selected expansions and merge into the on-disk corpus (fast patch for API blips). */
+export async function patchStandardExpansions(
+  ptcgoCodes: string[],
+  outputDir = "data/standard",
+): Promise<StandardCorpus> {
+  const codes = new Set(ptcgoCodes.map((code) => code.toUpperCase()));
+  const targets = STANDARD_EXPANSIONS.filter((expansion) => codes.has(expansion.ptcgoCode));
+  if (targets.length === 0) {
+    throw new Error(`No Standard expansions match: ${ptcgoCodes.join(", ")}`);
+  }
+
+  const resolvedDir = path.resolve(process.cwd(), outputDir);
+  const existingIndex = JSON.parse(
+    await readFile(path.join(resolvedDir, "cards-index.json"), "utf8"),
+  ) as StandardCardIndex[];
+
+  const kept = existingIndex.filter((entry) => !codes.has(entry.set.toUpperCase()));
+  const keptPokemon = kept.filter((entry) => entry.supertype === "Pokémon").map(indexEntryToDefinition);
+  const keptTrainers = kept.filter((entry) => entry.supertype === "Trainer").map(indexEntryToDefinition);
+  const keptEnergy = kept.filter((entry) => entry.supertype === "Energy").map(indexEntryToDefinition);
+
+  // eslint-disable-next-line no-console
+  console.log(`Patching ${targets.map((t) => t.ptcgoCode).join(", ")}…`);
+  const patchPokemon = await fetchExpansionCards("Pokémon", targets);
+  const patchTrainers = await fetchExpansionCards("Trainer", targets);
+  const patchEnergy = await fetchExpansionCards("Energy", targets);
+
+  const corpus = buildCorpus(
+    [...keptPokemon, ...patchPokemon],
+    [...keptTrainers, ...patchTrainers],
+    [...keptEnergy, ...patchEnergy],
+  );
+  await writeCorpusFiles(corpus, outputDir);
+  return corpus;
+}
+
+/** Fetch one supertype set-by-set (reliable on the public API). */
+async function fetchAllStandardCards(supertype: CardDefinition["supertype"]): Promise<CardDefinition[]> {
+  const byId = new Map<string, CardDefinition>();
+  const ingest = (cards: CardDefinition[]) => {
+    for (const card of cards) {
+      if (supertype === "Energy" || isStandardRegulationMark(card.regulationMark)) {
+        byId.set(card.apiId, card);
+      }
+    }
+  };
+
+  const fetchSet = async (expansion: (typeof STANDARD_EXPANSIONS)[number]) => {
+    const query = `supertype:${supertype} set.id:${expansion.id}`;
+    ingest(await fetchQueryPages(query));
+  };
+
+  const failed: (typeof STANDARD_EXPANSIONS)[number][] = [];
+  for (const expansion of STANDARD_EXPANSIONS) {
+    try {
+      // eslint-disable-next-line no-console
+      console.log(`  fetching ${supertype} — ${expansion.ptcgoCode} (${expansion.id})`);
+      await fetchSet(expansion);
+    } catch {
+      failed.push(expansion);
+    }
+    await new Promise((resolve) => setTimeout(resolve, PAGE_DELAY_MS));
+  }
+
+  const stillFailed: (typeof STANDARD_EXPANSIONS)[number][] = [];
+  for (const expansion of failed) {
+    try {
+      // eslint-disable-next-line no-console
+      console.log(`  retry ${supertype} — ${expansion.ptcgoCode}`);
+      await fetchSet(expansion);
+    } catch {
+      stillFailed.push(expansion);
+    }
+    await new Promise((resolve) => setTimeout(resolve, PAGE_DELAY_MS));
+  }
+
+  for (const expansion of stillFailed) {
+    try {
+      // eslint-disable-next-line no-console
+      console.log(`  retry² ${supertype} — ${expansion.ptcgoCode}`);
+      await fetchSet(expansion);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn(`  skipped ${expansion.ptcgoCode} after retry:`, (err as Error).message);
+    }
+    await new Promise((resolve) => setTimeout(resolve, PAGE_DELAY_MS * 2));
+  }
+
+  return [...byId.values()];
+}
+
 async function fetchAllStandardPokemon(): Promise<CardDefinition[]> {
-  return fetchAllStandardCards(STANDARD_FORMAT.pokemonQuery);
+  return fetchAllStandardCards("Pokémon");
 }
 
 async function fetchAllStandardTrainers(): Promise<CardDefinition[]> {
-  return fetchAllStandardCards(STANDARD_FORMAT.trainerQuery);
+  return fetchAllStandardCards("Trainer");
 }
 
 async function fetchAllStandardEnergies(): Promise<CardDefinition[]> {
-  return fetchAllStandardCards(STANDARD_FORMAT.energyQuery);
+  return fetchAllStandardCards("Energy");
 }
 
 /** Exported for tests — pure assembly of the fetched card lists into the corpus. */
@@ -366,54 +555,10 @@ export function buildCorpus(
 }
 
 export async function prepareStandardCorpus(outputDir = "data/standard"): Promise<StandardCorpus> {
-  const [pokemonCards, trainerCards, energyCards] = await Promise.all([
-    fetchAllStandardPokemon(),
-    fetchAllStandardTrainers(),
-    fetchAllStandardEnergies(),
-  ]);
+  const pokemonCards = await fetchAllStandardPokemon();
+  const trainerCards = await fetchAllStandardTrainers();
+  const energyCards = await fetchAllStandardEnergies();
   const corpus = buildCorpus(pokemonCards, trainerCards, energyCards);
-
-  const resolvedDir = path.resolve(process.cwd(), outputDir);
-  await mkdir(resolvedDir, { recursive: true });
-
-  await writeFile(path.join(resolvedDir, "manifest.json"), `${JSON.stringify(corpus.manifest, null, 2)}\n`);
-  await writeFile(path.join(resolvedDir, "effect-texts.json"), `${JSON.stringify(corpus.effectTexts, null, 2)}\n`);
-  await writeFile(path.join(resolvedDir, "cards-index.json"), `${JSON.stringify(corpus.cards, null, 2)}\n`);
-
-  const unknownPatterns = corpus.effectTexts
-    .filter((entry) => entry.coverage === "none" || entry.coverage === "partial")
-    .map((entry) => ({
-      id: entry.id,
-      kind: entry.kind,
-      text: entry.text,
-      coverage: entry.coverage,
-      unknownClauses: entry.unknownClauses,
-      cardCount: entry.cardCount,
-      exampleCards: entry.exampleCards,
-    }));
-
-  await writeFile(
-    path.join(resolvedDir, "unknown-patterns.json"),
-    `${JSON.stringify(unknownPatterns, null, 2)}\n`,
-  );
-
-  const stubPatterns = corpus.effectTexts
-    .filter((entry) => (entry.stubClauses?.length ?? 0) > 0)
-    .map((entry) => ({
-      id: entry.id,
-      kind: entry.kind,
-      text: entry.text,
-      parseCoverage: entry.coverage,
-      implementationCoverage: entry.implementationCoverage ?? "stub",
-      stubClauses: entry.stubClauses ?? [],
-      cardCount: entry.cardCount,
-      exampleCards: entry.exampleCards,
-    }));
-
-  await writeFile(
-    path.join(resolvedDir, "stub-patterns.json"),
-    `${JSON.stringify(stubPatterns, null, 2)}\n`,
-  );
-
+  await writeCorpusFiles(corpus, outputDir);
   return corpus;
 }

@@ -2,7 +2,7 @@
   {
     "id": "trainer-579781ab",
     "kind": "trainer",
-    "text": "Play this card as if it were a 60-HP Basic Colorless Pokémon. This card can't be affected by any Special Conditions and can't retreat.    At any time during your turn, you may discard this card from play. You may play any number of Item cards during your turn.",
+    "text": "Play this card as if it were a 60-HP Basic Colorless Pokémon. This card can't be affected by any Special Conditions and can't retreat.  At any time during your turn, you may discard this card from play. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
       "play this card as if it were a 60-hp basic colorless pokémon.",
@@ -11,118 +11,9 @@
     ],
     "cardCount": 6,
     "exampleCards": [
-      "Antique Cover Fossil",
-      "Antique Root Fossil",
+      "Antique Jaw Fossil",
+      "Antique Sail Fossil",
       "Antique Plume Fossil"
-    ]
-  },
-  {
-    "id": "trainer-7970e039",
-    "kind": "trainer",
-    "text": "Your opponent reveals their hand, and you discard up to 2 Item cards you find there.",
-    "coverage": "none",
-    "unknownClauses": [
-      "your opponent reveals their hand, and you discard up to 2 item cards you find there."
-    ],
-    "cardCount": 4,
-    "exampleCards": [
-      "Eri"
-    ]
-  },
-  {
-    "id": "trainer-6330fee3",
-    "kind": "trainer",
-    "text": "If you go first, you may use this card during your first turn.    Discard your hand and draw 5 cards.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if you go first, you may use this card during your first turn."
-    ],
-    "cardCount": 4,
-    "exampleCards": [
-      "Carmine"
-    ]
-  },
-  {
-    "id": "trainer-c2024670",
-    "kind": "trainer",
-    "text": "Choose up to 2 of your Darkness Pokémon. For each of those Pokémon, search your deck for a Basic Darkness Energy card and attach it to that Pokémon. Then, shuffle your deck. If you attached Energy to your Active Pokémon in this way, it is now Poisoned.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "for each of those pokémon, search your deck for a basic darkness energy card and attach it to that pokémon.",
-      "then, shuffle your deck.",
-      "if you attached energy to your active pokémon in this way, it is now poisoned."
-    ],
-    "cardCount": 4,
-    "exampleCards": [
-      "Janine's Secret Art"
-    ]
-  },
-  {
-    "id": "trainer-222d0191",
-    "kind": "trainer",
-    "text": "Put a Pokémon or a Basic Energy card from your discard pile into your hand. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "put a pokémon or a basic energy card from your discard pile into your hand."
-    ],
-    "cardCount": 4,
-    "exampleCards": [
-      "Night Stretcher"
-    ]
-  },
-  {
-    "id": "trainer-e5dbc4cb",
-    "kind": "trainer",
-    "text": "You can use this card only if your opponent has exactly 2 Prize cards remaining.    During this turn, if your opponent's Active Pokémon is Knocked Out by damage from an attack used by your Tera Pokémon, take 1 more Prize card.",
-    "coverage": "none",
-    "unknownClauses": [
-      "you can use this card only if your opponent has exactly 2 prize cards remaining.",
-      "during this turn, if your opponent's active pokémon is knocked out by damage from an attack used by your tera pokémon, take 1 more prize card."
-    ],
-    "cardCount": 4,
-    "exampleCards": [
-      "Briar"
-    ]
-  },
-  {
-    "id": "trainer-370ecaf7",
-    "kind": "trainer",
-    "text": "Search your deck for up to 2 Basic Energy cards of different types, reveal them, and put 1 of them into your hand. Attach the other to 1 of your Pokémon. Then, shuffle your deck.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "attach the other to 1 of your pokémon.",
-      "then, shuffle your deck."
-    ],
-    "cardCount": 4,
-    "exampleCards": [
-      "Crispin"
-    ]
-  },
-  {
-    "id": "trainer-50e46a39",
-    "kind": "trainer",
-    "text": "You can use this card only if you have any Tera Pokémon in play.    Choose up to 2 of your Benched Colorless Pokémon and attach a Basic Energy card from your discard pile to each of them. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "you can use this card only if you have any tera pokémon in play.",
-      "choose up to 2 of your benched colorless pokémon and attach a basic energy card from your discard pile to each of them."
-    ],
-    "cardCount": 4,
-    "exampleCards": [
-      "Glass Trumpet"
-    ]
-  },
-  {
-    "id": "trainer-c4924fc9",
-    "kind": "trainer",
-    "text": "You can use this card only if you discard another card from your hand.  Draw cards until you have 6 cards in your hand.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "you can use this card only if you discard another card from your hand."
-    ],
-    "cardCount": 4,
-    "exampleCards": [
-      "Iris's Fighting Spirit"
     ]
   },
   {
@@ -140,166 +31,29 @@
     ]
   },
   {
-    "id": "trainer-c02913b6",
+    "id": "trainer-c4924fc9",
     "kind": "trainer",
-    "text": "Heal all damage from 1 of your Pokémon that has 30 HP or less remaining.",
-    "coverage": "none",
-    "unknownClauses": [
-      "heal all damage from 1 of your pokémon that has 30 hp or less remaining."
-    ],
-    "cardCount": 3,
-    "exampleCards": [
-      "Bianca's Devotion"
-    ]
-  },
-  {
-    "id": "trainer-f351fae3",
-    "kind": "trainer",
-    "text": "Look at the top 6 cards of your deck and put 2 of them into your hand. Discard the other cards.",
+    "text": "You can use this card only if you discard another card from your hand.  Draw cards until you have 6 cards in your hand.",
     "coverage": "partial",
     "unknownClauses": [
-      "discard the other cards."
+      "you can use this card only if you discard another card from your hand."
     ],
-    "cardCount": 3,
+    "cardCount": 4,
     "exampleCards": [
-      "Explorer's Guidance"
+      "Iris's Fighting Spirit"
     ]
   },
   {
-    "id": "trainer-bea4f91",
+    "id": "trainer-688b1d38",
     "kind": "trainer",
-    "text": "You can use this card only if you discard another card from your hand.  Draw a card for each of your opponent's Benched Pokémon.",
-    "coverage": "none",
-    "unknownClauses": [
-      "you can use this card only if you discard another card from your hand.",
-      "draw a card for each of your opponent's benched pokémon."
-    ],
-    "cardCount": 3,
-    "exampleCards": [
-      "Morty's Conviction"
-    ]
-  },
-  {
-    "id": "trainer-2e184f4a",
-    "kind": "trainer",
-    "text": "Search your deck for a card that has no Abilities and evolves from 1 of your Pokémon, and put it onto that Pokémon to evolve it. Then, shuffle your deck. You can use this card on a Pokémon you put down when you were setting up to play or on a Pokémon that was put into play this turn.",
+    "text": "During your opponent's next turn, their Poisoned Pokémon can't retreat. (This includes newly Poisoned Pokémon.)",
     "coverage": "partial",
     "unknownClauses": [
-      "then, shuffle your deck.",
-      "you can use this card on a pokémon you put down when you were setting up to play or on a pokémon that was put into play this turn."
+      "(this includes newly poisoned pokémon.)"
     ],
     "cardCount": 3,
     "exampleCards": [
-      "Salvatore"
-    ]
-  },
-  {
-    "id": "trainer-712c7305",
-    "kind": "trainer",
-    "text": "Reveal up to 2 Pokémon in your hand and put them into your deck. If you do, search your deck for up to that many Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
-    "coverage": "none",
-    "unknownClauses": [
-      "reveal up to 2 pokémon in your hand and put them into your deck.",
-      "if you do, search your deck for up to that many pokémon, reveal them, and put them into your hand.",
-      "then, shuffle your deck."
-    ],
-    "cardCount": 3,
-    "exampleCards": [
-      "Perrin"
-    ]
-  },
-  {
-    "id": "trainer-c71777f7",
-    "kind": "trainer",
-    "text": "You can use this card only when it is the last card in your hand.  Search your deck for up to 2 cards and put them into your hand. Then, shuffle your deck.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "you can use this card only when it is the last card in your hand.",
-      "then, shuffle your deck."
-    ],
-    "cardCount": 3,
-    "exampleCards": [
-      "Cassiopeia"
-    ]
-  },
-  {
-    "id": "trainer-d2061b8b",
-    "kind": "trainer",
-    "text": "During your opponent's next turn, all of your Pokémon take 30 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come into play.)",
-    "coverage": "partial",
-    "unknownClauses": [
-      "(this includes new pokémon that come into play.)"
-    ],
-    "cardCount": 3,
-    "exampleCards": [
-      "Jasmine's Gaze"
-    ]
-  },
-  {
-    "id": "trainer-b60fe1e9",
-    "kind": "trainer",
-    "text": "Switch in 1 of your opponent's Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if you do, the new active pokémon is now confused."
-    ],
-    "cardCount": 3,
-    "exampleCards": [
-      "Lisia's Appeal"
-    ]
-  },
-  {
-    "id": "trainer-94c86471",
-    "kind": "trainer",
-    "text": "Draw 4 cards. At the end of this turn, if you have 5 or more cards in your hand, discard your hand.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "at the end of this turn, if you have 5 or more cards in your hand, discard your hand."
-    ],
-    "cardCount": 3,
-    "exampleCards": [
-      "Amarys"
-    ]
-  },
-  {
-    "id": "trainer-59822b45",
-    "kind": "trainer",
-    "text": "Search your deck for up to 3 in any combination of Ethan's Pokémon and Basic Fire Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "then, shuffle your deck."
-    ],
-    "cardCount": 3,
-    "exampleCards": [
-      "Ethan's Adventure"
-    ]
-  },
-  {
-    "id": "trainer-f9340a5",
-    "kind": "trainer",
-    "text": "You can use this card only if any of your Team Rocket's Pokémon were Knocked Out during your opponent's last turn.  Each player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 3 cards.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "you can use this card only if any of your team rocket's pokémon were knocked out during your opponent's last turn.",
-      "each player shuffles their hand into their deck."
-    ],
-    "cardCount": 3,
-    "exampleCards": [
-      "Team Rocket's Archer"
-    ]
-  },
-  {
-    "id": "trainer-5934bb3",
-    "kind": "trainer",
-    "text": "If you go first, you may use this card during your first turn.  Search your deck for up to 3 Basic Team Rocket's Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if you go first, you may use this card during your first turn.",
-      "then, shuffle your deck."
-    ],
-    "cardCount": 3,
-    "exampleCards": [
-      "Team Rocket's Proton"
+      "Roxie's Performance"
     ]
   },
   {
@@ -330,30 +84,43 @@
     ]
   },
   {
-    "id": "trainer-8b8b5f69",
+    "id": "trainer-59822b45",
     "kind": "trainer",
-    "text": "Search your deck for a Mega Evolution Pokémon ex, reveal it, and put it into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
+    "text": "Search your deck for up to 3 in any combination of Ethan's Pokémon and Basic Fire Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
     "coverage": "partial",
     "unknownClauses": [
       "then, shuffle your deck."
     ],
     "cardCount": 3,
     "exampleCards": [
-      "Mega Signal"
+      "Ethan's Adventure"
     ]
   },
   {
-    "id": "trainer-f29bfc8b",
+    "id": "trainer-94c86471",
     "kind": "trainer",
-    "text": "Heal all damage from 1 of your Mega Evolution Pokémon ex. If you healed any damage in this way, put all Energy attached to that Pokémon into your hand.",
-    "coverage": "none",
+    "text": "Draw 4 cards. At the end of this turn, if you have 5 or more cards in your hand, discard your hand.",
+    "coverage": "partial",
     "unknownClauses": [
-      "heal all damage from 1 of your mega evolution pokémon ex.",
-      "if you healed any damage in this way, put all energy attached to that pokémon into your hand."
+      "at the end of this turn, if you have 5 or more cards in your hand, discard your hand."
     ],
     "cardCount": 3,
     "exampleCards": [
-      "Wally's Compassion"
+      "Amarys"
+    ]
+  },
+  {
+    "id": "trainer-c71777f7",
+    "kind": "trainer",
+    "text": "You can use this card only when it is the last card in your hand.  Search your deck for up to 2 cards and put them into your hand. Then, shuffle your deck.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "you can use this card only when it is the last card in your hand.",
+      "then, shuffle your deck."
+    ],
+    "cardCount": 3,
+    "exampleCards": [
+      "Cassiopeia"
     ]
   },
   {
@@ -371,57 +138,233 @@
     ]
   },
   {
-    "id": "trainer-b7af6b39",
+    "id": "trainer-d2061b8b",
     "kind": "trainer",
-    "text": "You can use this card only if you have more Prize cards remaining than your opponent.  Attach up to 2 Basic Energy cards from your discard pile to 1 of your Stage 2 Pokémon.",
+    "text": "During your opponent's next turn, all of your Pokémon take 30 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come into play.)",
+    "coverage": "partial",
+    "unknownClauses": [
+      "(this includes new pokémon that come into play.)"
+    ],
+    "cardCount": 3,
+    "exampleCards": [
+      "Jasmine's Gaze"
+    ]
+  },
+  {
+    "id": "trainer-b60fe1e9",
+    "kind": "trainer",
+    "text": "Switch in 1 of your opponent's Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "if you do, the new active pokémon is now confused."
+    ],
+    "cardCount": 3,
+    "exampleCards": [
+      "Lisia's Appeal"
+    ]
+  },
+  {
+    "id": "trainer-2dbb5f83",
+    "kind": "trainer",
+    "text": "Once during each player's turn, that player may discard 2 cards from their hand in order to draw a card.",
     "coverage": "none",
     "unknownClauses": [
-      "you can use this card only if you have more prize cards remaining than your opponent.",
-      "attach up to 2 basic energy cards from your discard pile to 1 of your stage 2 pokémon."
-    ],
-    "cardCount": 3,
-    "exampleCards": [
-      "Rosa's Encouragement"
-    ]
-  },
-  {
-    "id": "trainer-688b1d38",
-    "kind": "trainer",
-    "text": "During your opponent's next turn, their Poisoned Pokémon can't retreat. (This includes newly Poisoned Pokémon.)",
-    "coverage": "partial",
-    "unknownClauses": [
-      "(this includes newly poisoned pokémon.)"
-    ],
-    "cardCount": 3,
-    "exampleCards": [
-      "Roxie's Performance"
-    ]
-  },
-  {
-    "id": "trainer-3b16b449",
-    "kind": "trainer",
-    "text": "Attacks used by the Pokémon this card is attached to do 50 more damage to your opponent's Active Pokémon ex (before applying Weakness and Resistance). You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "attacks used by the pokémon this card is attached to do 50 more damage to your opponent's active pokémon ex (before applying weakness and resistance)."
+      "Once during each player's turn, that player may discard 2 cards from their hand in order to draw a card."
     ],
     "cardCount": 2,
     "exampleCards": [
-      "Maximum Belt"
+      "Prism Tower"
     ]
   },
   {
-    "id": "trainer-6b032327",
+    "id": "trainer-f546d7e1",
     "kind": "trainer",
-    "text": "The Retreat Cost of the Pokémon this card is attached to is Colorless less. If that Pokémon's remaining HP is 30 or less, it has no Retreat Cost. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
+    "text": "You can use this card only if your opponent has 3 or fewer Prize cards remaining.\n\nYour opponent shuffles their hand and puts it on the bottom of their deck. If they put any cards on the bottom of their deck in this way, they draw 3 cards.",
     "coverage": "partial",
     "unknownClauses": [
-      "the retreat cost of the pokémon this card is attached to is colorless less.",
-      "if that pokémon's remaining hp is 30 or less, it has no retreat cost."
+      "you can use this card only if your opponent has 3 or fewer prize cards remaining."
     ],
     "cardCount": 2,
     "exampleCards": [
-      "Rescue Board"
+      "Special Red Card"
+    ]
+  },
+  {
+    "id": "trainer-14b648fe",
+    "kind": "trainer",
+    "text": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can't draw any cards in this way, you can't use this card.)",
+    "coverage": "partial",
+    "unknownClauses": [
+      "before drawing cards, you may discard any number of cards from your hand.",
+      "(if you can't draw any cards in this way, you can't use this card.)"
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Naveen"
+    ]
+  },
+  {
+    "id": "trainer-bf6884e8",
+    "kind": "trainer",
+    "text": "Each player's Grass Pokémon can evolve into Grass Pokémon during the turn they play those Pokémon, except during their first turn. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played.",
+    "coverage": "none",
+    "unknownClauses": [
+      "Each player's Grass Pokémon can evolve into Grass Pokémon during the turn they play those Pokémon, except during their first turn. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played."
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Forest of Vitality"
+    ]
+  },
+  {
+    "id": "trainer-8c72405f",
+    "kind": "trainer",
+    "text": "You can use this card only if you discard a Basic Fire Energy card from your hand.  Discard a Pokémon Tool or Special Energy card from 1 of your opponent's Pokémon, or discard a Stadium in play. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "you can use this card only if you discard a basic fire energy card from your hand.",
+      "discard a pokémon tool or special energy card from 1 of your opponent's pokémon, or discard a stadium in play."
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Blowtorch"
+    ]
+  },
+  {
+    "id": "trainer-7e3de39a",
+    "kind": "trainer",
+    "text": "Search your deck for up to 7 Basic Fire Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "then, shuffle your deck."
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Firebreather"
+    ]
+  },
+  {
+    "id": "trainer-141576fa",
+    "kind": "trainer",
+    "text": "Look at the top 7 cards of your deck and put a Darkness Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can't use this card during your first turn.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "you can't use this card during your first turn."
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Grimsley's Move"
+    ]
+  },
+  {
+    "id": "trainer-70a562e1",
+    "kind": "trainer",
+    "text": "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have Psychic Pokémon in play. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
+    "coverage": "none",
+    "unknownClauses": [
+      "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have Psychic Pokémon in play. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Mystery Garden"
+    ]
+  },
+  {
+    "id": "trainer-70819fc4",
+    "kind": "trainer",
+    "text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "each player shuffles their hand into their deck.",
+      "then, flip a coin."
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Harlequin"
+    ]
+  },
+  {
+    "id": "trainer-d31d8cb",
+    "kind": "trainer",
+    "text": "Flip a coin. If heads, search your deck for an Evolution Team Rocket's Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Team Rocket's Pokémon, reveal it, and put it into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "if heads, search your deck for an evolution team rocket's pokémon, reveal it, and put it into your hand.",
+      "if tails, search your deck for a basic team rocket's pokémon, reveal it, and put it into your hand.",
+      "then, shuffle your deck."
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Team Rocket's Great Ball"
+    ]
+  },
+  {
+    "id": "trainer-61efbcf4",
+    "kind": "trainer",
+    "text": "Once during each player's turn, that player may put up to 2 Basic Lightning Energy cards from their discard pile into their hand. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
+    "coverage": "none",
+    "unknownClauses": [
+      "Once during each player's turn, that player may put up to 2 Basic Lightning Energy cards from their discard pile into their hand. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Levincia"
+    ]
+  },
+  {
+    "id": "trainer-2ec3c9e",
+    "kind": "trainer",
+    "text": "Choose a Pokémon ex in your discard pile that has \"Ogerpon\" in its name, and switch it with 1 of your Pokémon ex in play that has \"Ogerpon\" in its name. Any attached cards, damage counters, Special Conditions, turns in play, and any other effects remain on the new Pokémon. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "choose a pokémon ex in your discard pile that has \"ogerpon\" in its name, and switch it with 1 of your pokémon ex in play that has \"ogerpon\" in its name.",
+      "any attached cards, damage counters, special conditions, turns in play, and any other effects remain on the new pokémon."
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Ogre's Mask"
+    ]
+  },
+  {
+    "id": "trainer-d4dd86a5",
+    "kind": "trainer",
+    "text": "Put 1 of your Pokémon and all attached cards into your hand. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "put 1 of your pokémon and all attached cards into your hand."
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Scoop Up Cyclone"
+    ]
+  },
+  {
+    "id": "trainer-5f3f2538",
+    "kind": "trainer",
+    "text": "Tell your opponent the name of a Pokémon in your hand and put that Pokémon face down in front of you. Your opponent guesses that Pokémon's HP, and then you reveal it. If your opponent guessed right, they draw 4 cards. If they guessed wrong, you draw 4 cards. Then, return the Pokémon to your hand.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "tell your opponent the name of a pokémon in your hand and put that pokémon face down in front of you.",
+      "your opponent guesses that pokémon's hp, and then you reveal it.",
+      "then, return the pokémon to your hand."
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Tyme"
+    ]
+  },
+  {
+    "id": "trainer-fa3140e5",
+    "kind": "trainer",
+    "text": "Put 2 cards from your hand on the bottom of your deck in any order. If you put 2 cards on the bottom of your deck in this way, draw 4 cards. (If you can't put 2 cards from your hand on the bottom of your deck, you can't use this card.)",
+    "coverage": "partial",
+    "unknownClauses": [
+      "put 2 cards from your hand on the bottom of your deck in any order.",
+      "(if you can't put 2 cards from your hand on the bottom of your deck, you can't use this card.)"
+    ],
+    "cardCount": 2,
+    "exampleCards": [
+      "Kofu"
     ]
   },
   {
@@ -479,114 +422,6 @@
     ]
   },
   {
-    "id": "trainer-2ec3c9e",
-    "kind": "trainer",
-    "text": "Choose a Pokémon ex in your discard pile that has \"Ogerpon\" in its name, and switch it with 1 of your Pokémon ex in play that has \"Ogerpon\" in its name. Any attached cards, damage counters, Special Conditions, turns in play, and any other effects remain on the new Pokémon. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "choose a pokémon ex in your discard pile that has \"ogerpon\" in its name, and switch it with 1 of your pokémon ex in play that has \"ogerpon\" in its name.",
-      "any attached cards, damage counters, special conditions, turns in play, and any other effects remain on the new pokémon."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Ogre's Mask"
-    ]
-  },
-  {
-    "id": "trainer-d4dd86a5",
-    "kind": "trainer",
-    "text": "Put 1 of your Pokémon and all attached cards into your hand. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "put 1 of your pokémon and all attached cards into your hand."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Scoop Up Cyclone"
-    ]
-  },
-  {
-    "id": "trainer-789b5266",
-    "kind": "trainer",
-    "text": "Attacks used by the Poisoned Pokémon this card is attached to do 40 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance). You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "attacks used by the poisoned pokémon this card is attached to do 40 more damage to your opponent's active pokémon (before applying weakness and resistance)."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Binding Mochi"
-    ]
-  },
-  {
-    "id": "trainer-27b5a9a2",
-    "kind": "trainer",
-    "text": "At the end of your turn (after your attack), if the Pokémon this card is attached to is in the Active Spot, you may attach a Basic Energy card from your discard pile to it. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "at the end of your turn (after your attack), if the pokémon this card is attached to is in the active spot, you may attach a basic energy card from your discard pile to it."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Powerglass"
-    ]
-  },
-  {
-    "id": "trainer-b8db5e71",
-    "kind": "trainer",
-    "text": "Your opponent discards cards from their hand until they have 3 cards in their hand.",
-    "coverage": "none",
-    "unknownClauses": [
-      "your opponent discards cards from their hand until they have 3 cards in their hand."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Xerosic's Machinations"
-    ]
-  },
-  {
-    "id": "trainer-fa3140e5",
-    "kind": "trainer",
-    "text": "Put 2 cards from your hand on the bottom of your deck in any order. If you put 2 cards on the bottom of your deck in this way, draw 4 cards. (If you can't put 2 cards from your hand on the bottom of your deck, you can't use this card.)",
-    "coverage": "partial",
-    "unknownClauses": [
-      "put 2 cards from your hand on the bottom of your deck in any order.",
-      "(if you can't put 2 cards from your hand on the bottom of your deck, you can't use this card.)"
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Kofu"
-    ]
-  },
-  {
-    "id": "trainer-db64a2d0",
-    "kind": "trainer",
-    "text": "When the Tera Pokémon this card is attached to uses an attack, that attack costs 1 Energy less. (The Energy can be of any type.) You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "when the tera pokémon this card is attached to uses an attack, that attack costs 1 energy less.",
-      "(the energy can be of any type.) you may attach any number of pokémon tools to your pokémon during your turn."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Sparkling Crystal"
-    ]
-  },
-  {
-    "id": "trainer-fcc6d8ff",
-    "kind": "trainer",
-    "text": "If you have more Prize cards remaining than your opponent, attacks used by the Pokémon this card is attached to cost Colorless less. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached. Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if you have more prize cards remaining than your opponent, attacks used by the pokémon this card is attached to cost colorless less.",
-      "attach a pokémon tool to 1 of your pokémon that doesn't already have a pokémon tool attached."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Counter Gain"
-    ]
-  },
-  {
     "id": "trainer-277c829a",
     "kind": "trainer",
     "text": "Shuffle your hand into your deck. Then, flip a coin. If heads, draw 8 cards. If tails, draw 3 cards.",
@@ -600,1021 +435,146 @@
     ]
   },
   {
-    "id": "trainer-5f3f2538",
+    "id": "trainer-f0995192",
     "kind": "trainer",
-    "text": "Tell your opponent the name of a Pokémon in your hand and put that Pokémon face down in front of you. Your opponent guesses that Pokémon's HP, and then you reveal it. If your opponent guessed right, they draw 4 cards. If they guessed wrong, you draw 4 cards. Then, return the Pokémon to your hand.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "tell your opponent the name of a pokémon in your hand and put that pokémon face down in front of you.",
-      "your opponent guesses that pokémon's hp, and then you reveal it.",
-      "then, return the pokémon to your hand."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Tyme"
-    ]
-  },
-  {
-    "id": "trainer-a7f41f26",
-    "kind": "trainer",
-    "text": "Discard your hand and search your deck for a Pokémon, a Supporter card, and a Basic Energy card, reveal them, and put them into your hand. Then, shuffle your deck.",
+    "text": "You can put this card into play only if you discard a Prism Tower in play, and you can put this card into play during the same turn you play Prism Tower.\nEach Mega Floette ex in play (both yours and your opponent's) gets +150 HP.",
     "coverage": "none",
     "unknownClauses": [
-      "discard your hand and search your deck for a pokémon, a supporter card, and a basic energy card, reveal them, and put them into your hand.",
-      "then, shuffle your deck."
+      "You can put this card into play only if you discard a Prism Tower in play, and you can put this card into play during the same turn you play Prism Tower.\nEach Mega Floette ex in play (both yours and your opponent's) gets +150 HP."
     ],
-    "cardCount": 2,
+    "cardCount": 1,
     "exampleCards": [
-      "Larry's Skill"
+      "Ange Floette"
     ]
   },
   {
-    "id": "trainer-61efbcf4",
+    "id": "trainer-9c59b5a7",
     "kind": "trainer",
-    "text": "Once during each player's turn, that player may put up to 2 Basic Lightning Energy cards from their discard pile into their hand. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
+    "text": "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon.",
     "coverage": "none",
     "unknownClauses": [
-      "Once during each player's turn, that player may put up to 2 Basic Lightning Energy cards from their discard pile into their hand. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+      "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon."
     ],
-    "cardCount": 2,
+    "cardCount": 1,
     "exampleCards": [
-      "Levincia"
+      "Surfing Beach"
     ]
   },
   {
-    "id": "trainer-aa3ef900",
+    "id": "trainer-2d34b9c8",
     "kind": "trainer",
-    "text": "Discard a Pokémon Tool and a Special Energy from 1 of your opponent's Pokémon.",
-    "coverage": "none",
-    "unknownClauses": [
-      "discard a pokémon tool and a special energy from 1 of your opponent's pokémon."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Ruffian"
-    ]
-  },
-  {
-    "id": "trainer-d31d8cb",
-    "kind": "trainer",
-    "text": "Flip a coin. If heads, search your deck for an Evolution Team Rocket's Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Team Rocket's Pokémon, reveal it, and put it into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if heads, search your deck for an evolution team rocket's pokémon, reveal it, and put it into your hand.",
-      "if tails, search your deck for a basic team rocket's pokémon, reveal it, and put it into your hand.",
-      "then, shuffle your deck."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Team Rocket's Great Ball"
-    ]
-  },
-  {
-    "id": "trainer-70819fc4",
-    "kind": "trainer",
-    "text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "each player shuffles their hand into their deck.",
-      "then, flip a coin."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Harlequin"
-    ]
-  },
-  {
-    "id": "trainer-804b1a85",
-    "kind": "trainer",
-    "text": "Choose up to 2 Pokémon Tools attached to Pokémon (yours or your opponent's) and discard them. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "choose up to 2 pokémon tools attached to pokémon (yours or your opponent's) and discard them."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Tool Scrapper"
-    ]
-  },
-  {
-    "id": "trainer-70a562e1",
-    "kind": "trainer",
-    "text": "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have Psychic Pokémon in play. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have Psychic Pokémon in play. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Mystery Garden"
-    ]
-  },
-  {
-    "id": "trainer-79419997",
-    "kind": "trainer",
-    "text": "The Retreat Cost of the Pokémon this card is attached to is ColorlessColorless less. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "the retreat cost of the pokémon this card is attached to is colorlesscolorless less."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Air Balloon"
-    ]
-  },
-  {
-    "id": "trainer-8c72405f",
-    "kind": "trainer",
-    "text": "You can use this card only if you discard a Basic Fire Energy card from your hand.  Discard a Pokémon Tool or Special Energy card from 1 of your opponent's Pokémon, or discard a Stadium in play. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "you can use this card only if you discard a basic fire energy card from your hand.",
-      "discard a pokémon tool or special energy card from 1 of your opponent's pokémon, or discard a stadium in play."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Blowtorch"
-    ]
-  },
-  {
-    "id": "trainer-7e3de39a",
-    "kind": "trainer",
-    "text": "Search your deck for up to 7 Basic Fire Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+    "text": "Search your deck for a Basic Energy card, reveal it, and put it into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
       "then, shuffle your deck."
     ],
-    "cardCount": 2,
+    "cardCount": 1,
     "exampleCards": [
-      "Firebreather"
+      "Energy Search"
     ]
   },
   {
-    "id": "trainer-141576fa",
+    "id": "trainer-9b4900e8",
     "kind": "trainer",
-    "text": "Look at the top 7 cards of your deck and put a Darkness Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can't use this card during your first turn.",
+    "text": "Your opponent reveals their hand, and you choose an Energy card you find there and put it on the bottom of their deck. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
-      "you can't use this card during your first turn."
+      "your opponent reveals their hand, and you choose an energy card you find there and put it on the bottom of their deck."
     ],
-    "cardCount": 2,
+    "cardCount": 1,
     "exampleCards": [
-      "Grimsley's Move"
+      "Energy Swatter"
     ]
   },
   {
-    "id": "trainer-33458af7",
+    "id": "trainer-ef93ad5a",
     "kind": "trainer",
-    "text": "If the Darkness Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), place 4 damage counters on the Attacking Pokémon. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
+    "text": "Heal 20 damage and remove a Special Condition from your Active Pokémon. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
-      "if the darkness pokémon this card is attached to is in the active spot and is damaged by an attack from your opponent's pokémon (even if this pokémon is knocked out), place 4 damage counters on the attacking pokémon."
+      "heal 20 damage and remove a special condition from your active pokémon."
     ],
-    "cardCount": 2,
+    "cardCount": 1,
     "exampleCards": [
-      "Punk Helmet"
+      "Lumiose Galette"
     ]
   },
   {
-    "id": "trainer-4b4ad8db",
+    "id": "trainer-bd61f597",
     "kind": "trainer",
-    "text": "The Pokémon this card is attached to takes 30 less damage from attacks from your opponent's Pokémon that have an Ability (after applying Weakness and Resistance). You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
+    "text": "Flip a coin. If heads, switch in 1 of your opponent's Benched Pokémon to the Active Spot. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
-      "the pokémon this card is attached to takes 30 less damage from attacks from your opponent's pokémon that have an ability (after applying weakness and resistance)."
+      "if heads, switch in 1 of your opponent's benched pokémon to the active spot."
     ],
-    "cardCount": 2,
+    "cardCount": 1,
     "exampleCards": [
-      "Sacred Charm"
+      "Pokémon Catcher"
     ]
   },
   {
-    "id": "trainer-2085df1e",
+    "id": "trainer-ddf287f4",
     "kind": "trainer",
-    "text": "You can use this card only if you have N's Darmanitan, N's Zoroark ex, N's Vanilluxe, N's Klinklang, N's Reshiram, and N's Zekrom in play.  During this turn, if your opponent's Active Pokémon is Knocked Out by damage from an attack used by your N's Pokémon, take 3 more Prize cards.",
+    "text": "Confused Pokémon (both yours and your opponent's) don't recover from that Special Condition when they evolve or devolve. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
     "coverage": "none",
     "unknownClauses": [
-      "you can use this card only if you have n's darmanitan, n's zoroark ex, n's vanilluxe, n's klinklang, n's reshiram, and n's zekrom in play.",
-      "during this turn, if your opponent's active pokémon is knocked out by damage from an attack used by your n's pokémon, take 3 more prize cards."
+      "Confused Pokémon (both yours and your opponent's) don't recover from that Special Condition when they evolve or devolve. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
     ],
-    "cardCount": 2,
+    "cardCount": 1,
     "exampleCards": [
-      "Anthea & Concordia"
+      "Dizzying Valley"
     ]
   },
   {
-    "id": "trainer-6a5d0da8",
+    "id": "trainer-69c2bff6",
     "kind": "trainer",
-    "text": "If you have more Prize cards remaining than your opponent, attacks used by the Pokémon this card is attached to cost Colorless less. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if you have more prize cards remaining than your opponent, attacks used by the pokémon this card is attached to cost colorless less."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Counter Gain"
-    ]
-  },
-  {
-    "id": "trainer-bf6884e8",
-    "kind": "trainer",
-    "text": "Each player's Grass Pokémon can evolve into Grass Pokémon during the turn they play those Pokémon, except during their first turn. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played.",
+    "text": "Each player's Grass Pokémon can evolve into Grass Pokémon during the turn they play those Pokémon, except during their first turn. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
     "coverage": "none",
     "unknownClauses": [
-      "Each player's Grass Pokémon can evolve into Grass Pokémon during the turn they play those Pokémon, except during their first turn. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played."
+      "Each player's Grass Pokémon can evolve into Grass Pokémon during the turn they play those Pokémon, except during their first turn. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
     ],
-    "cardCount": 2,
+    "cardCount": 1,
     "exampleCards": [
       "Forest of Vitality"
     ]
   },
   {
-    "id": "trainer-14b648fe",
+    "id": "trainer-d7cd75f3",
     "kind": "trainer",
-    "text": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can't draw any cards in this way, you can't use this card.)",
+    "text": "During your opponent's next turn, all of your Metal Pokémon take 30 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come into play.) You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
-      "before drawing cards, you may discard any number of cards from your hand.",
-      "(if you can't draw any cards in this way, you can't use this card.)"
+      "(this includes new pokémon that come into play.) you may play any number of item cards during your turn."
     ],
-    "cardCount": 2,
+    "cardCount": 1,
     "exampleCards": [
-      "Naveen"
+      "Iron Defender"
     ]
   },
   {
-    "id": "trainer-d7f13618",
+    "id": "trainer-3099ce3f",
     "kind": "trainer",
-    "text": "Put up to 4 in any combination of Fighting Pokémon and Basic Fighting Energy cards from your discard pile into your hand.",
+    "text": "Switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.) You may play any number of Item cards during your turn.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "(your opponent chooses the new active pokémon.) you may play any number of item cards during your turn."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Repel"
+    ]
+  },
+  {
+    "id": "trainer-227a0a8a",
+    "kind": "trainer",
+    "text": "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
     "coverage": "none",
     "unknownClauses": [
-      "put up to 4 in any combination of fighting pokémon and basic fighting energy cards from your discard pile into your hand."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Tarragon"
-    ]
-  },
-  {
-    "id": "trainer-f546d7e1",
-    "kind": "trainer",
-    "text": "You can use this card only if your opponent has 3 or fewer Prize cards remaining.\n\nYour opponent shuffles their hand and puts it on the bottom of their deck. If they put any cards on the bottom of their deck in this way, they draw 3 cards.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "you can use this card only if your opponent has 3 or fewer prize cards remaining."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Special Red Card"
-    ]
-  },
-  {
-    "id": "trainer-e837e04f",
-    "kind": "trainer",
-    "text": "Your opponent reveals their hand, and you draw a card for each Pokémon you find there.",
-    "coverage": "none",
-    "unknownClauses": [
-      "your opponent reveals their hand, and you draw a card for each pokémon you find there."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Emma"
-    ]
-  },
-  {
-    "id": "trainer-2dbb5f83",
-    "kind": "trainer",
-    "text": "Once during each player's turn, that player may discard 2 cards from their hand in order to draw a card.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, that player may discard 2 cards from their hand in order to draw a card."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Prism Tower"
-    ]
-  },
-  {
-    "id": "trainer-8ef08288",
-    "kind": "trainer",
-    "text": "The Retreat Cost of each Psyduck in play (both yours and your opponent's) is Colorless less. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "The Retreat Cost of each Psyduck in play (both yours and your opponent's) is Colorless less. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+      "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Paradise Resort"
-    ]
-  },
-  {
-    "id": "trainer-7f50b114",
-    "kind": "trainer",
-    "text": "The Ancient Pokémon this card is attached to gets +60 HP, recovers from all Special Conditions, and can't be affected by any Special Conditions. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "the ancient pokémon this card is attached to gets +60 hp, recovers from all special conditions, and can't be affected by any special conditions."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Ancient Booster Energy Capsule"
-    ]
-  },
-  {
-    "id": "trainer-fcce209e",
-    "kind": "trainer",
-    "text": "Draw a card for each of your Ancient Pokémon in play. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "draw a card for each of your ancient pokémon in play."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Awakening Drum"
-    ]
-  },
-  {
-    "id": "trainer-f9d89c05",
-    "kind": "trainer",
-    "text": "Search your deck for up to 2 Item cards, reveal them, and put them into your hand. Then, shuffle your deck. Your turn ends. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "then, shuffle your deck.",
-      "your turn ends."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Boxed Order"
-    ]
-  },
-  {
-    "id": "trainer-b01c7354",
-    "kind": "trainer",
-    "text": "Metal Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Metal Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Full Metal Lab"
-    ]
-  },
-  {
-    "id": "trainer-fb014b20",
-    "kind": "trainer",
-    "text": "The Future Pokémon this card is attached to has no Retreat Cost, and the attacks it uses do 20 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance). You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "the future pokémon this card is attached to has no retreat cost, and the attacks it uses do 20 more damage to your opponent's active pokémon (before applying weakness and resistance)."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Future Booster Energy Capsule"
-    ]
-  },
-  {
-    "id": "trainer-e3909f61",
-    "kind": "trainer",
-    "text": "Each player discards cards from their hand until they have 5 cards in their hand. Your opponent discards first. (If a player has 5 or fewer cards in their hand, they do not discard.) You may play any number of Item cards during your turn.",
-    "coverage": "none",
-    "unknownClauses": [
-      "each player discards cards from their hand until they have 5 cards in their hand.",
-      "your opponent discards first.",
-      "(if a player has 5 or fewer cards in their hand, they do not discard.) you may play any number of item cards during your turn."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Hand Trimmer"
-    ]
-  },
-  {
-    "id": "trainer-ee38b4ae",
-    "kind": "trainer",
-    "text": "If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent's Pokémon, move up to 3 Basic Energy cards from that Pokémon to your Benched Pokémon in any way you like. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the pokémon this card is attached to has a retreat cost of exactly 4, is in the active spot, and is knocked out by damage from an attack from your opponent's pokémon, move up to 3 basic energy cards from that pokémon to your benched pokémon in any way you like."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Heavy Baton"
-    ]
-  },
-  {
-    "id": "trainer-8a4061fd",
-    "kind": "trainer",
-    "text": "The Pokémon this card is attached to gets +100 HP. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "the pokémon this card is attached to gets +100 hp."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Hero's Cape"
-    ]
-  },
-  {
-    "id": "trainer-856a8bd",
-    "kind": "trainer",
-    "text": "During Pokémon Checkup, put 2 more damage counters on each Poisoned non-Darkness Pokémon (both yours and your opponent's). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "During Pokémon Checkup, put 2 more damage counters on each Poisoned non-Darkness Pokémon (both yours and your opponent's). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Perilous Jungle"
-    ]
-  },
-  {
-    "id": "trainer-9414b3fc",
-    "kind": "trainer",
-    "text": "Attach a Basic Energy card from your discard pile to each of your Future Pokémon. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "attach a basic energy card from your discard pile to each of your future pokémon."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Reboot Pod"
-    ]
-  },
-  {
-    "id": "trainer-ae42aa74",
-    "kind": "trainer",
-    "text": "Reveal the top 5 cards of your opponent's deck. You may choose any number of Basic Pokémon you find there and put those Pokémon onto their Bench. Your opponent shuffles the other cards back into their deck. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "your opponent shuffles the other cards back into their deck."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Accompanying Flute"
-    ]
-  },
-  {
-    "id": "trainer-dc9da026",
-    "kind": "trainer",
-    "text": "Once during each player's turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Community Center"
-    ]
-  },
-  {
-    "id": "trainer-791a95b1",
-    "kind": "trainer",
-    "text": "Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Festival Grounds"
-    ]
-  },
-  {
-    "id": "trainer-94e6819c",
-    "kind": "trainer",
-    "text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), move an Energy from the Attacking Pokémon to 1 of your opponent's Benched Pokémon. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached. Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the pokémon this card is attached to is in the active spot and is damaged by an attack from your opponent's pokémon (even if this pokémon is knocked out), move an energy from the attacking pokémon to 1 of your opponent's benched pokémon.",
-      "attach a pokémon tool to 1 of your pokémon that doesn't already have a pokémon tool attached."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Handheld Fan"
-    ]
-  },
-  {
-    "id": "trainer-b1bbdc0",
-    "kind": "trainer",
-    "text": "Search your deck for up to 3 Stage 1 Pokémon, reveal them, and put them into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "then, shuffle your deck."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Hyper Aroma"
-    ]
-  },
-  {
-    "id": "trainer-de14effb",
-    "kind": "trainer",
-    "text": "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Jamming Tower"
-    ]
-  },
-  {
-    "id": "trainer-9a349977",
-    "kind": "trainer",
-    "text": "Search your deck for a Pokémon with the same name as 1 of your opponent's Pokémon in play, reveal it, and put it into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "then, shuffle your deck."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Love Ball"
-    ]
-  },
-  {
-    "id": "trainer-a1c6ce9c",
-    "kind": "trainer",
-    "text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), draw 2 cards. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached. Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "attach a pokémon tool to 1 of your pokémon that doesn't already have a pokémon tool attached."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Lucky Helmet"
-    ]
-  },
-  {
-    "id": "trainer-192c1547",
-    "kind": "trainer",
-    "text": "Look at the top 5 cards of your deck and discard any number of them. Put the other cards back in any order.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "put the other cards back in any order."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Raifort"
-    ]
-  },
-  {
-    "id": "trainer-b8cea18b",
-    "kind": "trainer",
-    "text": "You can use this card only if you discard 3 other cards from your hand.    Search your deck for an Item card, a Pokémon Tool card, a Supporter card, and a Stadium card, reveal them, and put them into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "you can use this card only if you discard 3 other cards from your hand.",
-      "then, shuffle your deck."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Secret Box"
-    ]
-  },
-  {
-    "id": "trainer-57698d59",
-    "kind": "trainer",
-    "text": "If the Pokémon this card is attached to has full HP and would be Knocked Out by damage from an attack from your opponent's Pokémon, it is not Knocked Out, and its remaining HP becomes 10. Then, discard this card. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached. Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the pokémon this card is attached to has full hp and would be knocked out by damage from an attack from your opponent's pokémon, it is not knocked out, and its remaining hp becomes 10.",
-      "then, discard this card.",
-      "attach a pokémon tool to 1 of your pokémon that doesn't already have a pokémon tool attached."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Survival Brace"
-    ]
-  },
-  {
-    "id": "trainer-d83540d8",
-    "kind": "trainer",
-    "text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent's last turn.    Each player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 2 cards. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "you can use this card only if any of your pokémon were knocked out during your opponent's last turn.",
-      "each player shuffles their hand into their deck."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Unfair Stamp"
-    ]
-  },
-  {
-    "id": "trainer-650c0e3e",
-    "kind": "trainer",
-    "text": "The Retreat Cost of the Pokémon this card is attached to is Colorless less. If that Pokémon's remaining HP is 30 or less, it has no Retreat Cost. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached. Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "the retreat cost of the pokémon this card is attached to is colorless less.",
-      "if that pokémon's remaining hp is 30 or less, it has no retreat cost.",
-      "attach a pokémon tool to 1 of your pokémon that doesn't already have a pokémon tool attached."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Rescue Board"
-    ]
-  },
-  {
-    "id": "trainer-5399d736",
-    "kind": "trainer",
-    "text": "Once during each player's turn, that player may put a card from their hand on top of their deck. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, that player may put a card from their hand on top of their deck. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Academy at Night"
-    ]
-  },
-  {
-    "id": "trainer-338b6102",
-    "kind": "trainer",
-    "text": "Heal 150 damage from 1 of your Pokémon.    This card can't be put into your hand or deck from the discard pile. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "this card can't be put into your hand or deck from the discard pile."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Poké Vital A"
-    ]
-  },
-  {
-    "id": "trainer-bfd03b2c",
-    "kind": "trainer",
-    "text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), put 12 damage counters on the Attacking Pokémon. If you placed any damage counters in this way, discard this card. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the pokémon this card is attached to is in the active spot and is damaged by an attack from your opponent's pokémon (even if this pokémon is knocked out), put 12 damage counters on the attacking pokémon.",
-      "if you placed any damage counters in this way, discard this card."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Deluxe Bomb"
-    ]
-  },
-  {
-    "id": "trainer-74cbaf6b",
-    "kind": "trainer",
-    "text": "As long as the Pokémon this card is attached to is in the Active Spot, the Retreat Cost of both Active Pokémon is Colorless more. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "as long as the pokémon this card is attached to is in the active spot, the retreat cost of both active pokémon is colorless more."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Gravity Gemstone"
-    ]
-  },
-  {
-    "id": "trainer-33dec1d5",
-    "kind": "trainer",
-    "text": "If the Pokémon this card is attached to is damaged by an attack from your opponent's Fire Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the pokémon this card is attached to is damaged by an attack from your opponent's fire pokémon, it takes 60 less damage (after applying weakness and resistance), and discard this card."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Occa Berry"
-    ]
-  },
-  {
-    "id": "trainer-1b71d20a",
-    "kind": "trainer",
-    "text": "If the Pokémon this card is attached to is damaged by an attack from your opponent's Psychic Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the pokémon this card is attached to is damaged by an attack from your opponent's psychic pokémon, it takes 60 less damage (after applying weakness and resistance), and discard this card."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Payapa Berry"
-    ]
-  },
-  {
-    "id": "trainer-edbb01aa",
-    "kind": "trainer",
-    "text": "If the Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, search your deck for up to 3 cards and put them into your hand. Then, shuffle your deck. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached. Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the pokémon this card is attached to is knocked out by damage from an attack from your opponent's pokémon, search your deck for up to 3 cards and put them into your hand.",
-      "then, shuffle your deck.",
-      "attach a pokémon tool to 1 of your pokémon that doesn't already have a pokémon tool attached."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Amulet of Hope"
-    ]
-  },
-  {
-    "id": "trainer-d288193",
-    "kind": "trainer",
-    "text": "If the Pokémon this card is attached to is damaged by an attack from your opponent's Metal Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached. Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the pokémon this card is attached to is damaged by an attack from your opponent's metal pokémon, it takes 60 less damage (after applying weakness and resistance), and discard this card.",
-      "attach a pokémon tool to 1 of your pokémon that doesn't already have a pokémon tool attached."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Babiri Berry"
-    ]
-  },
-  {
-    "id": "trainer-608a1139",
-    "kind": "trainer",
-    "text": "Search your deck for up to 5 cards and discard them. Then, shuffle your deck. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "then, shuffle your deck."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Brilliant Blender"
-    ]
-  },
-  {
-    "id": "trainer-996759de",
-    "kind": "trainer",
-    "text": "You can use this card only if you go second, and only during your first turn.  Put an Energy attached to 1 of your opponent's Pokémon into their hand. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "you can use this card only if you go second, and only during your first turn.",
-      "put an energy attached to 1 of your opponent's pokémon into their hand."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Chill Teaser Toy"
-    ]
-  },
-  {
-    "id": "trainer-cd9d2983",
-    "kind": "trainer",
-    "text": "If the Pokémon this card is attached to is damaged by an attack from your opponent's Darkness Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached. Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the pokémon this card is attached to is damaged by an attack from your opponent's darkness pokémon, it takes 60 less damage (after applying weakness and resistance), and discard this card.",
-      "attach a pokémon tool to 1 of your pokémon that doesn't already have a pokémon tool attached."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Colbur Berry"
-    ]
-  },
-  {
-    "id": "trainer-196788a0",
-    "kind": "trainer",
-    "text": "Look at the bottom 7 cards of your deck. You may reveal a Pokémon you find there and put it into your hand. Shuffle the other cards back into your deck. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "look at the bottom 7 cards of your deck."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Dusk Ball"
-    ]
-  },
-  {
-    "id": "trainer-916426b5",
-    "kind": "trainer",
-    "text": "Search your deck for any number of Basic Energy cards of different types, reveal them, and put them into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "then, shuffle your deck."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Energy Search Pro"
-    ]
-  },
-  {
-    "id": "trainer-d2df67d0",
-    "kind": "trainer",
-    "text": "Each Basic Pokémon in play (both yours and your opponent's) gets +30 HP. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Each Basic Pokémon in play (both yours and your opponent's) gets +30 HP. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Lively Stadium"
-    ]
-  },
-  {
-    "id": "trainer-7c0720be",
-    "kind": "trainer",
-    "text": "Your opponent counts the cards in their hand, shuffles those cards, and puts them on the bottom of their deck. If they do, they draw that many cards. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "your opponent counts the cards in their hand, shuffles those cards, and puts them on the bottom of their deck.",
-      "if they do, they draw that many cards."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Meddling Memo"
-    ]
-  },
-  {
-    "id": "trainer-7a82b7cf",
-    "kind": "trainer",
-    "text": "Discard all Pokémon Tools and Special Energy from all of your opponent's Pokémon, and discard a Stadium in play. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "discard all pokémon tools and special energy from all of your opponent's pokémon, and discard a stadium in play."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Megaton Blower"
-    ]
-  },
-  {
-    "id": "trainer-e5cfeba3",
-    "kind": "trainer",
-    "text": "If the Pokémon this card is attached to is damaged by an attack from your opponent's Water Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached. Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the pokémon this card is attached to is damaged by an attack from your opponent's water pokémon, it takes 60 less damage (after applying weakness and resistance), and discard this card.",
-      "attach a pokémon tool to 1 of your pokémon that doesn't already have a pokémon tool attached."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Passho Berry"
-    ]
-  },
-  {
-    "id": "trainer-fc6dfe92",
-    "kind": "trainer",
-    "text": "Search your deck for any number of Basic Pokémon and put them onto your Bench. Then, shuffle your deck. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "then, shuffle your deck."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Precious Trolley"
-    ]
-  },
-  {
-    "id": "trainer-7d234d6f",
-    "kind": "trainer",
-    "text": "The Pokémon this card is attached to can use the attack on this card. (You still need the necessary Energy to use this attack.) If this card is attached to 1 of your Pokémon, discard it at the end of your turn. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached. Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "the pokémon this card is attached to can use the attack on this card.",
-      "(you still need the necessary energy to use this attack.) if this card is attached to 1 of your pokémon, discard it at the end of your turn.",
-      "attach a pokémon tool to 1 of your pokémon that doesn't already have a pokémon tool attached."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Technical Machine: Fluorite"
-    ]
-  },
-  {
-    "id": "trainer-fc531711",
-    "kind": "trainer",
-    "text": "Search your deck for a Tera Pokémon, reveal it, and put it into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "then, shuffle your deck."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Tera Orb"
-    ]
-  },
-  {
-    "id": "trainer-94ccb127",
-    "kind": "trainer",
-    "text": "Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Festival Grounds"
-    ]
-  },
-  {
-    "id": "trainer-a4598e32",
-    "kind": "trainer",
-    "text": "If the Pokémon this card is attached to is damaged by an attack from your opponent's Dragon Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the pokémon this card is attached to is damaged by an attack from your opponent's dragon pokémon, it takes 60 less damage (after applying weakness and resistance), and discard this card."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Haban Berry"
-    ]
-  },
-  {
-    "id": "trainer-ca267430",
-    "kind": "trainer",
-    "text": "Put up to 5 in any combination of Pokémon and Basic Energy cards from your discard pile into your hand. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "put up to 5 in any combination of pokémon and basic energy cards from your discard pile into your hand."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Max Rod"
-    ]
-  },
-  {
-    "id": "trainer-b0a56e5d",
-    "kind": "trainer",
-    "text": "Draw 2 cards. Then, if you have 10 or more cards in your hand, draw 2 more cards.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "then, if you have 10 or more cards in your hand, draw 2 more cards."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Billy & O'Nare"
-    ]
-  },
-  {
-    "id": "trainer-3d089985",
-    "kind": "trainer",
-    "text": "Search your deck for up to 2 Basic Hop's Pokémon and put them onto your Bench. Then, shuffle your deck. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "then, shuffle your deck."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Hop's Bag"
-    ]
-  },
-  {
-    "id": "trainer-127286b8",
-    "kind": "trainer",
-    "text": "Attacks used by the Hop's Pokémon this card is attached to cost Colorless less and do 30 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance). You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "attacks used by the hop's pokémon this card is attached to cost colorless less and do 30 more damage to your opponent's active pokémon (before applying weakness and resistance)."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Hop's Choice Band"
-    ]
-  },
-  {
-    "id": "trainer-92eaad73",
-    "kind": "trainer",
-    "text": "If the Lillie's Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, that player takes 1 fewer Prize card. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the lillie's pokémon this card is attached to is knocked out by damage from an attack from your opponent's pokémon, that player takes 1 fewer prize card."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Lillie's Pearl"
-    ]
-  },
-  {
-    "id": "trainer-590f6d86",
-    "kind": "trainer",
-    "text": "Attacks used by Hop's Pokémon (both yours and your opponent's) do 30 more damage to the opponent's Active Pokémon (before applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Attacks used by Hop's Pokémon (both yours and your opponent's) do 30 more damage to the opponent's Active Pokémon (before applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Postwick"
-    ]
-  },
-  {
-    "id": "trainer-48aa7c06",
-    "kind": "trainer",
-    "text": "Count your Prize cards, shuffle them, and put them on the bottom of your deck. Then, take that many cards from the top of your deck and put them face down as your Prize cards. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "count your prize cards, shuffle them, and put them on the bottom of your deck.",
-      "then, take that many cards from the top of your deck and put them face down as your prize cards."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Redeemable Ticket"
-    ]
-  },
-  {
-    "id": "trainer-c3a30867",
-    "kind": "trainer",
-    "text": "Heal 60 damage from 1 of your Pokémon. If you healed any damage in this way, discard an Energy from that Pokémon. You may play any number of Item cards during your turn.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if you healed any damage in this way, discard an energy from that pokémon."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Super Potion"
+      "Surfing Beach"
     ]
   },
   {
@@ -1628,19 +588,6 @@
     "cardCount": 1,
     "exampleCards": [
       "Arven's Sandwich"
-    ]
-  },
-  {
-    "id": "trainer-94a5f007",
-    "kind": "trainer",
-    "text": "The Cynthia's Pokémon this card is attached to gets +70 HP. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "the cynthia's pokémon this card is attached to gets +70 hp."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Cynthia's Power Weight"
     ]
   },
   {
@@ -1738,166 +685,225 @@
     ]
   },
   {
-    "id": "trainer-832420ae",
+    "id": "trainer-94ccb127",
     "kind": "trainer",
-    "text": "The Retreat Cost of the Pokémon this card is attached to is ColorlessColorless less. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached. Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
-    "coverage": "partial",
+    "text": "Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
+    "coverage": "none",
     "unknownClauses": [
-      "the retreat cost of the pokémon this card is attached to is colorlesscolorless less.",
-      "attach a pokémon tool to 1 of your pokémon that doesn't already have a pokémon tool attached."
+      "Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Air Balloon"
+      "Festival Grounds"
     ]
   },
   {
-    "id": "trainer-7502e438",
+    "id": "trainer-ca267430",
     "kind": "trainer",
-    "text": "If the Pokémon this card is attached to doesn't have a Rule Box, the attacks it uses do 30 more damage to your opponent's Active Pokémon ex (before applying Weakness and Resistance). (Pokémon ex, Pokémon V, etc. have Rule Boxes.) You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached. Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
+    "text": "Put up to 5 in any combination of Pokémon and Basic Energy cards from your discard pile into your hand. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
-      "if the pokémon this card is attached to doesn't have a rule box, the attacks it uses do 30 more damage to your opponent's active pokémon ex (before applying weakness and resistance).",
-      "(pokémon ex, pokémon v, etc.",
-      "have rule boxes.) you may attach any number of pokémon tools to your pokémon during your turn.",
-      "attach a pokémon tool to 1 of your pokémon that doesn't already have a pokémon tool attached."
+      "put up to 5 in any combination of pokémon and basic energy cards from your discard pile into your hand."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Brave Bangle"
+      "Max Rod"
     ]
   },
   {
-    "id": "trainer-8ab2901c",
+    "id": "trainer-5399d736",
     "kind": "trainer",
-    "text": "Flip 2 coins. If both of them are heads, search your deck for a Basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck. You may play any number of Item cards during your turn.",
+    "text": "Once during each player's turn, that player may put a card from their hand on top of their deck. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
+    "coverage": "none",
+    "unknownClauses": [
+      "Once during each player's turn, that player may put a card from their hand on top of their deck. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Academy at Night"
+    ]
+  },
+  {
+    "id": "trainer-338b6102",
+    "kind": "trainer",
+    "text": "Heal 150 damage from 1 of your Pokémon.    This card can't be put into your hand or deck from the discard pile. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
-      "flip 2 coins.",
-      "if both of them are heads, search your deck for a basic energy card and attach it to 1 of your pokémon.",
+      "this card can't be put into your hand or deck from the discard pile."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Poké Vital A"
+    ]
+  },
+  {
+    "id": "trainer-ae42aa74",
+    "kind": "trainer",
+    "text": "Reveal the top 5 cards of your opponent's deck. You may choose any number of Basic Pokémon you find there and put those Pokémon onto their Bench. Your opponent shuffles the other cards back into their deck. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "your opponent shuffles the other cards back into their deck."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Accompanying Flute"
+    ]
+  },
+  {
+    "id": "trainer-dc9da026",
+    "kind": "trainer",
+    "text": "Once during each player's turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
+    "coverage": "none",
+    "unknownClauses": [
+      "Once during each player's turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Community Center"
+    ]
+  },
+  {
+    "id": "trainer-791a95b1",
+    "kind": "trainer",
+    "text": "Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
+    "coverage": "none",
+    "unknownClauses": [
+      "Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Festival Grounds"
+    ]
+  },
+  {
+    "id": "trainer-b1bbdc0",
+    "kind": "trainer",
+    "text": "Search your deck for up to 3 Stage 1 Pokémon, reveal them, and put them into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
+    "unknownClauses": [
       "then, shuffle your deck."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Energy Coin"
+      "Hyper Aroma"
     ]
   },
   {
-    "id": "trainer-24d2d790",
+    "id": "trainer-de14effb",
     "kind": "trainer",
-    "text": "Put up to 2 Basic Energy cards from your discard pile into your hand. You may play any number of Item cards during your turn.",
+    "text": "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
+    "coverage": "none",
+    "unknownClauses": [
+      "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Jamming Tower"
+    ]
+  },
+  {
+    "id": "trainer-9a349977",
+    "kind": "trainer",
+    "text": "Search your deck for a Pokémon with the same name as 1 of your opponent's Pokémon in play, reveal it, and put it into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
-      "put up to 2 basic energy cards from your discard pile into your hand."
+      "then, shuffle your deck."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Energy Retrieval"
+      "Love Ball"
     ]
   },
   {
-    "id": "trainer-69c2bff6",
+    "id": "trainer-192c1547",
     "kind": "trainer",
-    "text": "Each player's Grass Pokémon can evolve into Grass Pokémon during the turn they play those Pokémon, except during their first turn. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Each player's Grass Pokémon can evolve into Grass Pokémon during the turn they play those Pokémon, except during their first turn. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Forest of Vitality"
-    ]
-  },
-  {
-    "id": "trainer-d7cd75f3",
-    "kind": "trainer",
-    "text": "During your opponent's next turn, all of your Metal Pokémon take 30 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come into play.) You may play any number of Item cards during your turn.",
+    "text": "Look at the top 5 cards of your deck and discard any number of them. Put the other cards back in any order.",
     "coverage": "partial",
     "unknownClauses": [
-      "(this includes new pokémon that come into play.) you may play any number of item cards during your turn."
+      "put the other cards back in any order."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Iron Defender"
+      "Raifort"
     ]
   },
   {
-    "id": "trainer-3099ce3f",
+    "id": "trainer-fcce209e",
     "kind": "trainer",
-    "text": "Switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.) You may play any number of Item cards during your turn.",
+    "text": "Draw a card for each of your Ancient Pokémon in play. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
-      "(your opponent chooses the new active pokémon.) you may play any number of item cards during your turn."
+      "draw a card for each of your ancient pokémon in play."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Repel"
+      "Awakening Drum"
     ]
   },
   {
-    "id": "trainer-e46ad42d",
+    "id": "trainer-f9d89c05",
     "kind": "trainer",
-    "text": "Whenever any player puts a Basic non-Darkness Pokémon onto their Bench during their turn, place 2 damage counters on that Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Whenever any player puts a Basic non-Darkness Pokémon onto their Bench during their turn, place 2 damage counters on that Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Risky Ruins"
-    ]
-  },
-  {
-    "id": "trainer-6b990b1a",
-    "kind": "trainer",
-    "text": "Devolve 1 of your evolved Psychic Pokémon by putting any number of Evolution cards on it into your hand. (That Pokémon can't evolve this turn.) You may play any number of Item cards during your turn.",
-    "coverage": "none",
-    "unknownClauses": [
-      "devolve 1 of your evolved psychic pokémon by putting any number of evolution cards on it into your hand.",
-      "(that pokémon can't evolve this turn.) you may play any number of item cards during your turn."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Strange Timepiece"
-    ]
-  },
-  {
-    "id": "trainer-227a0a8a",
-    "kind": "trainer",
-    "text": "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Surfing Beach"
-    ]
-  },
-  {
-    "id": "trainer-ddf287f4",
-    "kind": "trainer",
-    "text": "Confused Pokémon (both yours and your opponent's) don't recover from that Special Condition when they evolve or devolve. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Confused Pokémon (both yours and your opponent's) don't recover from that Special Condition when they evolve or devolve. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Dizzying Valley"
-    ]
-  },
-  {
-    "id": "trainer-1eb02732",
-    "kind": "trainer",
-    "text": "Attacks used by the Pikachu ex this card is attached to do 50 more damage to your opponent's Active Pokémon ex (before applying Weakness and Resistance). You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
+    "text": "Search your deck for up to 2 Item cards, reveal them, and put them into your hand. Then, shuffle your deck. Your turn ends. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
-      "attacks used by the pikachu ex this card is attached to do 50 more damage to your opponent's active pokémon ex (before applying weakness and resistance)."
+      "then, shuffle your deck.",
+      "your turn ends."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Light Ball"
+      "Boxed Order"
+    ]
+  },
+  {
+    "id": "trainer-b01c7354",
+    "kind": "trainer",
+    "text": "Metal Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
+    "coverage": "none",
+    "unknownClauses": [
+      "Metal Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Full Metal Lab"
+    ]
+  },
+  {
+    "id": "trainer-856a8bd",
+    "kind": "trainer",
+    "text": "During Pokémon Checkup, put 2 more damage counters on each Poisoned non-Darkness Pokémon (both yours and your opponent's). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
+    "coverage": "none",
+    "unknownClauses": [
+      "During Pokémon Checkup, put 2 more damage counters on each Poisoned non-Darkness Pokémon (both yours and your opponent's). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Perilous Jungle"
+    ]
+  },
+  {
+    "id": "trainer-9414b3fc",
+    "kind": "trainer",
+    "text": "Attach a Basic Energy card from your discard pile to each of your Future Pokémon. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "attach a basic energy card from your discard pile to each of your future pokémon."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Reboot Pod"
+    ]
+  },
+  {
+    "id": "trainer-78a888a9",
+    "kind": "trainer",
+    "text": "Colorless Pokémon in play (both yours and your opponent's) have no Abilities. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played.",
+    "coverage": "none",
+    "unknownClauses": [
+      "Colorless Pokémon in play (both yours and your opponent's) have no Abilities. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Team Rocket's Watchtower"
     ]
   },
   {
@@ -1927,45 +933,6 @@
     ]
   },
   {
-    "id": "trainer-2354dab2",
-    "kind": "trainer",
-    "text": "If the Team Rocket's Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Team Rocket's Pokémon is Knocked Out), the Attacking Pokémon is now Asleep. You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "if the team rocket's pokémon this card is attached to is in the active spot and is damaged by an attack from your opponent's pokémon (even if this team rocket's pokémon is knocked out), the attacking pokémon is now asleep."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Team Rocket's Hypnotizer"
-    ]
-  },
-  {
-    "id": "trainer-78a888a9",
-    "kind": "trainer",
-    "text": "Colorless Pokémon in play (both yours and your opponent's) have no Abilities. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Colorless Pokémon in play (both yours and your opponent's) have no Abilities. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Team Rocket's Watchtower"
-    ]
-  },
-  {
-    "id": "trainer-a2999cd8",
-    "kind": "trainer",
-    "text": "The Dragon Pokémon this card is attached to takes 50 less damage from attacks from your opponent's Grass, Fire, Water, or Lightning Pokémon (after applying Weakness and Resistance). You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "the dragon pokémon this card is attached to takes 50 less damage from attacks from your opponent's grass, fire, water, or lightning pokémon (after applying weakness and resistance)."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Thick Scale"
-    ]
-  },
-  {
     "id": "trainer-d4437f8f",
     "kind": "trainer",
     "text": "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played.",
@@ -1979,150 +946,203 @@
     ]
   },
   {
-    "id": "trainer-827e319b",
+    "id": "trainer-b0a56e5d",
     "kind": "trainer",
-    "text": "The Mega Zygarde ex this card is attached to can use the attack on this card. (You still need the necessary Energy to use this attack.) You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached.",
+    "text": "Draw 2 cards. Then, if you have 10 or more cards in your hand, draw 2 more cards.",
     "coverage": "partial",
     "unknownClauses": [
-      "the mega zygarde ex this card is attached to can use the attack on this card.",
-      "(you still need the necessary energy to use this attack.) you may attach any number of pokémon tools to your pokémon during your turn."
+      "then, if you have 10 or more cards in your hand, draw 2 more cards."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Core Memory"
+      "Billy & O'Nare"
     ]
   },
   {
-    "id": "trainer-2d34b9c8",
+    "id": "trainer-3d089985",
     "kind": "trainer",
-    "text": "Search your deck for a Basic Energy card, reveal it, and put it into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
+    "text": "Search your deck for up to 2 Basic Hop's Pokémon and put them onto your Bench. Then, shuffle your deck. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
       "then, shuffle your deck."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Energy Search"
+      "Hop's Bag"
     ]
   },
   {
-    "id": "trainer-9b4900e8",
+    "id": "trainer-590f6d86",
     "kind": "trainer",
-    "text": "Your opponent reveals their hand, and you choose an Energy card you find there and put it on the bottom of their deck. You may play any number of Item cards during your turn.",
+    "text": "Attacks used by Hop's Pokémon (both yours and your opponent's) do 30 more damage to the opponent's Active Pokémon (before applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
+    "coverage": "none",
+    "unknownClauses": [
+      "Attacks used by Hop's Pokémon (both yours and your opponent's) do 30 more damage to the opponent's Active Pokémon (before applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Postwick"
+    ]
+  },
+  {
+    "id": "trainer-48aa7c06",
+    "kind": "trainer",
+    "text": "Count your Prize cards, shuffle them, and put them on the bottom of your deck. Then, take that many cards from the top of your deck and put them face down as your Prize cards. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
-      "your opponent reveals their hand, and you choose an energy card you find there and put it on the bottom of their deck."
+      "count your prize cards, shuffle them, and put them on the bottom of your deck.",
+      "then, take that many cards from the top of your deck and put them face down as your prize cards."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Energy Swatter"
+      "Redeemable Ticket"
     ]
   },
   {
-    "id": "trainer-ef93ad5a",
+    "id": "trainer-c3a30867",
     "kind": "trainer",
-    "text": "Heal 20 damage and remove a Special Condition from your Active Pokémon. You may play any number of Item cards during your turn.",
+    "text": "Heal 60 damage from 1 of your Pokémon. If you healed any damage in this way, discard an Energy from that Pokémon. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
-      "heal 20 damage and remove a special condition from your active pokémon."
+      "if you healed any damage in this way, discard an energy from that pokémon."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Lumiose Galette"
+      "Super Potion"
     ]
   },
   {
-    "id": "trainer-bd61f597",
+    "id": "trainer-8ab2901c",
     "kind": "trainer",
-    "text": "Flip a coin. If heads, switch in 1 of your opponent's Benched Pokémon to the Active Spot. You may play any number of Item cards during your turn.",
+    "text": "Flip 2 coins. If both of them are heads, search your deck for a Basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck. You may play any number of Item cards during your turn.",
     "coverage": "partial",
     "unknownClauses": [
-      "if heads, switch in 1 of your opponent's benched pokémon to the active spot."
+      "flip 2 coins.",
+      "if both of them are heads, search your deck for a basic energy card and attach it to 1 of your pokémon.",
+      "then, shuffle your deck."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Pokémon Catcher"
+      "Energy Coin"
     ]
   },
   {
-    "id": "trainer-f0995192",
+    "id": "trainer-608a1139",
     "kind": "trainer",
-    "text": "You can put this card into play only if you discard a Prism Tower in play, and you can put this card into play during the same turn you play Prism Tower.\nEach Mega Floette ex in play (both yours and your opponent's) gets +150 HP.",
-    "coverage": "none",
+    "text": "Search your deck for up to 5 cards and discard them. Then, shuffle your deck. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
     "unknownClauses": [
-      "You can put this card into play only if you discard a Prism Tower in play, and you can put this card into play during the same turn you play Prism Tower.\nEach Mega Floette ex in play (both yours and your opponent's) gets +150 HP."
+      "then, shuffle your deck."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Ange Floette"
+      "Brilliant Blender"
     ]
   },
   {
-    "id": "trainer-933460c6",
+    "id": "trainer-996759de",
     "kind": "trainer",
-    "text": "Choose 1 or both:\n• Shuffle up to 3 Water Pokémon from your discard pile into your deck.\n• Shuffle up to 3 Basic Water Energy cards from your discard pile into your deck.",
-    "coverage": "none",
+    "text": "You can use this card only if you go second, and only during your first turn.  Put an Energy attached to 1 of your opponent's Pokémon into their hand. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
     "unknownClauses": [
-      "choose 1 or both: • shuffle up to 3 water pokémon from your discard pile into your deck.",
-      "• shuffle up to 3 basic water energy cards from your discard pile into your deck."
+      "you can use this card only if you go second, and only during your first turn.",
+      "put an energy attached to 1 of your opponent's pokémon into their hand."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Great Haul Net"
+      "Chill Teaser Toy"
     ]
   },
   {
-    "id": "trainer-9cfea9a7",
+    "id": "trainer-196788a0",
     "kind": "trainer",
-    "text": "You must play 2 Transformation Tome cards at once. (This effect works one time for 2 cards.)\n \nChoose a Basic Pokémon in your discard pile and switch it with 1 of your Basic Pokémon in play. Any attached cards, damage counters, Special Conditions, turns in play, and any other effects remain on the new Pokémon.",
-    "coverage": "none",
+    "text": "Look at the bottom 7 cards of your deck. You may reveal a Pokémon you find there and put it into your hand. Shuffle the other cards back into your deck. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
     "unknownClauses": [
-      "you must play 2 transformation tome cards at once.",
-      "(this effect works one time for 2 cards.) choose a basic pokémon in your discard pile and switch it with 1 of your basic pokémon in play.",
-      "any attached cards, damage counters, special conditions, turns in play, and any other effects remain on the new pokémon."
+      "look at the bottom 7 cards of your deck."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Transformation Tome"
+      "Dusk Ball"
     ]
   },
   {
-    "id": "trainer-5d77021",
+    "id": "trainer-916426b5",
     "kind": "trainer",
-    "text": "Put up to 2 Basic Energy cards from your discard pile into your hand.",
-    "coverage": "none",
+    "text": "Search your deck for any number of Basic Energy cards of different types, reveal them, and put them into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
     "unknownClauses": [
-      "put up to 2 basic energy cards from your discard pile into your hand."
+      "then, shuffle your deck."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Energy Retrieval"
+      "Energy Search Pro"
     ]
   },
   {
-    "id": "trainer-9c59b5a7",
+    "id": "trainer-d2df67d0",
     "kind": "trainer",
-    "text": "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon.",
+    "text": "Each Basic Pokémon in play (both yours and your opponent's) gets +30 HP. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
     "coverage": "none",
     "unknownClauses": [
-      "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon."
+      "Each Basic Pokémon in play (both yours and your opponent's) gets +30 HP. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Surfing Beach"
+      "Lively Stadium"
     ]
   },
   {
-    "id": "trainer-12d61616",
+    "id": "trainer-7c0720be",
     "kind": "trainer",
-    "text": "Choose up to 2 Pokémon Tools attached to Pokémon (yours or your opponent's) and discard them.",
-    "coverage": "none",
+    "text": "Your opponent counts the cards in their hand, shuffles those cards, and puts them on the bottom of their deck. If they do, they draw that many cards. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
     "unknownClauses": [
-      "choose up to 2 pokémon tools attached to pokémon (yours or your opponent's) and discard them."
+      "your opponent counts the cards in their hand, shuffles those cards, and puts them on the bottom of their deck.",
+      "if they do, they draw that many cards."
     ],
     "cardCount": 1,
     "exampleCards": [
-      "Tool Scrapper"
+      "Meddling Memo"
+    ]
+  },
+  {
+    "id": "trainer-7a82b7cf",
+    "kind": "trainer",
+    "text": "Discard all Pokémon Tools and Special Energy from all of your opponent's Pokémon, and discard a Stadium in play. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "discard all pokémon tools and special energy from all of your opponent's pokémon, and discard a stadium in play."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Megaton Blower"
+    ]
+  },
+  {
+    "id": "trainer-fc6dfe92",
+    "kind": "trainer",
+    "text": "Search your deck for any number of Basic Pokémon and put them onto your Bench. Then, shuffle your deck. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "then, shuffle your deck."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Precious Trolley"
+    ]
+  },
+  {
+    "id": "trainer-fc531711",
+    "kind": "trainer",
+    "text": "Search your deck for a Tera Pokémon, reveal it, and put it into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
+    "coverage": "partial",
+    "unknownClauses": [
+      "then, shuffle your deck."
+    ],
+    "cardCount": 1,
+    "exampleCards": [
+      "Tera Orb"
     ]
   }
 ]
