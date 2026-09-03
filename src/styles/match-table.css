@@ -1,0 +1,168 @@
+/* PTCGL-inspired match table — layered on existing board card / mat tokens */
+
+.match-table {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto auto;
+  min-height: calc(100vh - 4.5rem);
+  padding-bottom: 5rem;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 45%, rgba(30, 64, 175, 0.12), transparent 60%),
+    radial-gradient(ellipse 90% 50% at 50% 100%, rgba(15, 118, 110, 0.08), transparent 55%);
+}
+
+.match-table__felt {
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  gap: 0;
+  margin: 0 1rem;
+  min-height: 0;
+  border-radius: 1.25rem;
+  border: 2px solid rgba(148, 163, 184, 0.12);
+  background:
+    linear-gradient(180deg, rgba(239, 68, 68, 0.06) 0%, transparent 42%),
+    linear-gradient(0deg, rgba(56, 189, 248, 0.07) 0%, transparent 42%),
+    rgba(2, 6, 23, 0.55);
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.35);
+}
+
+.match-table__center {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: center;
+  align-content: center;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(2, 6, 23, 0.4);
+}
+
+.match-table__stadium {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px dashed rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.06);
+  font-size: 0.8rem;
+  color: #fde68a;
+}
+
+.match-table__stadium--empty {
+  opacity: 0.55;
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.3);
+  background: transparent;
+}
+
+.match-table__stadium-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.68rem;
+}
+
+.match-table__log {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  list-style: none;
+  max-width: 560px;
+  width: 100%;
+  max-height: 110px;
+  overflow-y: auto;
+  border-radius: 0.75rem;
+  background: rgba(2, 6, 23, 0.65);
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.match-table__log li + li {
+  margin-top: 0.25rem;
+}
+
+.match-table__winner {
+  margin: 0;
+  font-weight: 700;
+  color: #86efac;
+}
+
+/* Hidden opponent hand */
+.hidden-hand-bar {
+  margin: 0 1rem 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.75);
+}
+
+.hidden-hand-bar--opponent {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.1), rgba(15, 23, 42, 0.8));
+}
+
+.hidden-hand-bar--empty {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.hidden-hand-bar__label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-bottom: 0.35rem;
+}
+
+.hidden-hand-bar__name {
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.hidden-hand-bar__backs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-height: 52px;
+  padding-left: 0.25rem;
+}
+
+.hidden-hand-bar__back {
+  width: 36px;
+  height: 50px;
+  margin-left: -12px;
+  border-radius: 0.35rem;
+  background: linear-gradient(145deg, #1e3a5f 0%, #0c1929 50%, #172554 100%);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.hidden-hand-bar__back:first-child {
+  margin-left: 0;
+}
+
+.hidden-hand-bar__more {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Larger active Pokémon on the felt */
+.match-table .player-mat__bench-slot,
+.match-table .player-mat__empty-slot {
+  width: 78px;
+  height: 108px;
+}
+
+.match-table .player-mat__active-empty {
+  width: 104px;
+  height: 144px;
+}
+
+.match-table .player-mat--self .player-mat__active .board-card--active {
+  transform: scale(1.02);
+}
+
+.match-table .player-mat--opponent .player-mat__active .board-card--active {
+  transform: scale(1.02);
+}

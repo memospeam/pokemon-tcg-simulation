@@ -5,13 +5,11 @@ import type { PlayerId } from "@/lib/models/enums";
 import { isSupporter } from "@/lib/models/definition";
 import { getTrainerCategory } from "@/lib/ui/trainerHints";
 import { useGameStore } from "@/stores/gameStore";
+import { MatchTable } from "@/components/Match/MatchTable";
+import { useMatchEventClass } from "@/components/Match/useMatchAnimations";
 import { ActionDock } from "./ActionDock";
 import { buildAttackActions, CardPreviewPanel } from "./CardPreviewPanel";
 import { buildHandActions, buildPokemonActions } from "./CardActionMenu";
-import { HandBar } from "./HandBar";
-import { PlayerMat } from "./PlayerMat";
-import { TurnBanner } from "./TurnBanner";
-import { BoardCard } from "./BoardCard";
 import { DiscardPilePanel } from "./DiscardPilePanel";
 import { PendingActionPanel } from "./PendingActionPanel";
 import { useGameBoardController } from "./useGameBoardController";
@@ -21,6 +19,7 @@ export function GameBoard() {
   const vsAI = humanPlayerId !== null;
   const controller = useGameBoardController(engineState, dispatch);
   const [discardViewPlayerId, setDiscardViewPlayerId] = useState<PlayerId | null>(null);
+  const eventClass = useMatchEventClass(engineState);
 
   useEffect(() => {
     if (engineState?.pendingAction?.type === "PICK_DISCARD") {
@@ -77,14 +76,12 @@ export function GameBoard() {
   if (!game || !viewingPlayer || !opponent || !currentPlayer || !viewingId || !opponentId) {
     return (
       <section className="panel">
-        <p>No active game. Return to the lobby to start a match.</p>
+        <p>No active game. Return to Battle to start a match.</p>
       </section>
     );
   }
 
   const boardGame = game;
-  const self = viewingPlayer;
-  const rival = opponent;
   const prompt = controller.getPhasePrompt(boardGame, isMyTurn, currentPlayer.name);
   const highlight = controller.isTargetHighlight(boardGame);
 
@@ -98,88 +95,38 @@ export function GameBoard() {
     return null;
   }
 
-  function handleActiveSelect() {
-    const active = self.active;
-    if (!active) return;
-    controller.handlePokemonSelect(boardGame, active);
-  }
-
   const pendingDiscardPick =
     boardGame.pendingAction?.type === "PICK_DISCARD" ? boardGame.pendingAction : null;
 
+  const opponentTargetPending =
+    highlight &&
+    (boardGame.pendingAction?.type === "BOSS_ORDERS" ||
+      boardGame.pendingAction?.type === "CRUSHING_HAMMER" ||
+      boardGame.pendingAction?.type === "CHOOSE_OPPONENT_POKEMON_DAMAGE" ||
+      (boardGame.pendingAction?.type === "GIOVANNI" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH") ||
+      (boardGame.pendingAction?.type === "PRIME_CATCHER" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH"));
+
   return (
-    <div className="play-screen">
-      <TurnBanner game={boardGame} prompt={prompt} isMyTurn={isMyTurn} />
-
-      <div className="play-screen__mat">
-        <PlayerMat
-          game={boardGame}
-          player={rival}
-          label={rival.name}
-          isOpponent
-          isActiveTurn={boardGame.currentPlayerId === rival.id && boardGame.phase === GamePhase.Active}
-          highlightTargets={
-            highlight &&
-            (boardGame.pendingAction?.type === "BOSS_ORDERS" ||
-              boardGame.pendingAction?.type === "CRUSHING_HAMMER" ||
-              boardGame.pendingAction?.type === "CHOOSE_OPPONENT_POKEMON_DAMAGE" ||
-              (boardGame.pendingAction?.type === "GIOVANNI" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH") ||
-              (boardGame.pendingAction?.type === "PRIME_CATCHER" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH"))
-          }
-          onPokemonSelect={(card) => controller.handlePokemonSelect(boardGame, card)}
-          onDiscardClick={() => setDiscardViewPlayerId(rival.id)}
-          selectedPokemonId={controller.selectedBoardPokemon?.instanceId}
-        />
-
-        <div className="play-screen__center">
-          {boardGame.stadium ? (
-            <div className="play-screen__stadium">
-              <span>Stadium</span>
-              <BoardCard state={boardGame} card={boardGame.stadium} size="mini" showName={false} />
-            </div>
-          ) : (
-            <div className="play-screen__stadium play-screen__stadium--empty">Stadium</div>
-          )}
-
-          <ul className="play-log">
-            {boardGame.log.slice(-8).map((entry, index) => (
-              <li key={`${entry}-${index}`}>{entry}</li>
-            ))}
-          </ul>
-
-          {boardGame.winnerId && (
-            <p className="status-ok play-screen__winner">
-              Winner: {getPlayer(boardGame, boardGame.winnerId).name}
-            </p>
-          )}
-        </div>
-
-        <PlayerMat
-          game={boardGame}
-          player={self}
-          label={self.name}
-          isActiveTurn={isMyTurn && boardGame.phase === GamePhase.Active}
-          highlightTargets={
-            highlight &&
-            boardGame.pendingAction?.type !== "BOSS_ORDERS" &&
-            boardGame.pendingAction?.type !== "CRUSHING_HAMMER" &&
-            boardGame.pendingAction?.type !== "CHOOSE_OPPONENT_POKEMON_DAMAGE" &&
-            !(boardGame.pendingAction?.type === "GIOVANNI" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH") &&
-            !(boardGame.pendingAction?.type === "PRIME_CATCHER" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH")
-          }
-          onPokemonSelect={(card) => controller.handlePokemonSelect(boardGame, card)}
-          onActiveSelect={handleActiveSelect}
-          onDiscardClick={() => setDiscardViewPlayerId(self.id)}
-          selectedPokemonId={controller.selectedBoardPokemon?.instanceId}
-        />
-      </div>
-
-      <HandBar
+    <>
+      <MatchTable
+        className={eventClass}
         game={boardGame}
-        hand={self.hand}
-        selectedId={controller.selectedHandCard?.instanceId}
-        onSelect={controller.handleHandSelect}
-        getQuickLabel={(def) => getHandQuickLabel(def)}
+        viewingPlayerId={viewingId}
+        visibility="player"
+        prompt={prompt}
+        interactive
+        highlightOpponentTargets={!!opponentTargetPending}
+        highlightSelfTargets={highlight && !opponentTargetPending}
+        selectedPokemonId={controller.selectedBoardPokemon?.instanceId}
+        selectedHandId={controller.selectedHandCard?.instanceId}
+        onPokemonSelect={(card) => controller.handlePokemonSelect(boardGame, card)}
+        onActiveSelect={() => {
+          const active = viewingPlayer.active;
+          if (active) controller.handlePokemonSelect(boardGame, active);
+        }}
+        onDiscardClick={setDiscardViewPlayerId}
+        onHandSelect={controller.handleHandSelect}
+        getHandQuickLabel={(def) => getHandQuickLabel(def)}
       />
 
       {controller.selectedHandCard && selectedDef && (
@@ -311,9 +258,7 @@ export function GameBoard() {
       )}
 
       {vsAI && !isMyTurn && !boardGame.winnerId && (
-        <div className="ai-thinking-banner">
-          🤖 AI is playing…
-        </div>
+        <div className="ai-thinking-banner">🤖 AI is playing…</div>
       )}
 
       <ActionDock
@@ -340,6 +285,6 @@ export function GameBoard() {
       <button type="button" className="play-screen__clear" onClick={clearSaved}>
         Reset saved game
       </button>
-    </div>
+    </>
   );
 }

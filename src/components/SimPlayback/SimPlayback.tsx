@@ -5,11 +5,13 @@ import { createBrowserLlmPolicy } from "@/lib/deck/llm/browserPolicy";
 import { useSimStore } from "@/stores/simStore";
 import { getOpponentId, getPlayer, type EngineState } from "@/lib/engine";
 import { PlayerId } from "@/lib/models/enums";
-import { PlayerMat } from "@/components/GameBoard/PlayerMat";
-import { TurnBanner } from "@/components/GameBoard/TurnBanner";
-import { HandBar } from "@/components/GameBoard/HandBar";
-import { BoardCard } from "@/components/GameBoard/BoardCard";
+import { MatchTable } from "@/components/Match/MatchTable";
 import { SimAnalysis } from "./SimAnalysis";
+
+interface SimPlaybackProps {
+  /** When true, omit outer page chrome (used inside Analysis Lab). */
+  embedded?: boolean;
+}
 
 interface SimResult {
   winnerName: string | null;
@@ -26,11 +28,10 @@ const SPEEDS = [
   { label: "5×", ms: 200 },
   { label: "10×", ms: 100 },
 ];
-const NOOP = () => {};
 
 type AiKind = "heuristic" | "llm";
 
-export function SimPlayback() {
+export function SimPlayback({ embedded = false }: SimPlaybackProps) {
   const {
     frames, currentIndex, isPlaying, speedMs, isLive,
     load, beginLive, pushFrame, endLive, stepTo, stepDelta, play, pause, setSpeed,
@@ -151,18 +152,13 @@ export function SimPlayback() {
   const game = currentFrame?.state ?? null;
 
   const selfId = viewingId;
-  const opponentId = getOpponentId(selfId);
-  const self = game ? getPlayer(game, selfId) : null;
-  const opponent = game ? getPlayer(game, opponentId) : null;
-
   const total = frames.length;
-  const winner = game?.winnerId ? getPlayer(game, game.winnerId).name : null;
   // Only reveal the final outcome once the live playback has reached the end —
   // showing it up-front would spoil the AI-vs-AI match.
   const atEnd = total > 0 && currentIndex >= total - 1;
 
   return (
-    <div className="sim-screen">
+    <div className={`sim-screen${embedded ? " sim-screen--embedded" : ""}`}>
       {/* Setup bar */}
       <div className="sim-setup">
         <select
@@ -277,71 +273,16 @@ export function SimPlayback() {
       })()}
 
       {/* Board + Analysis */}
-      {game && self && opponent && (
+      {game && (
         <div className="sim-body">
-          {/* Left: game board */}
           <div className="sim-board-area">
-            <TurnBanner
+            <MatchTable
               game={game}
+              viewingPlayerId={selfId}
+              visibility="spectator"
               prompt={currentFrame?.label ?? ""}
-              isMyTurn={game.currentPlayerId === selfId}
-            />
-
-            {/* Opponent's hand — sits above their board */}
-            <HandBar
-              game={game}
-              hand={opponent.hand}
-              onSelect={NOOP}
-              playerName={opponent.name}
-              isOpponent
-            />
-
-            <div className="play-screen__mat">
-              <PlayerMat
-                game={game}
-                player={opponent}
-                label={opponent.name}
-                isOpponent
-                isActiveTurn={game.currentPlayerId === opponentId}
-                onPokemonSelect={NOOP}
-              />
-
-              <div className="play-screen__center">
-                {game.stadium ? (
-                  <div className="play-screen__stadium">
-                    <span>Stadium</span>
-                    <BoardCard state={game} card={game.stadium} size="mini" showName={false} />
-                  </div>
-                ) : (
-                  <div className="play-screen__stadium play-screen__stadium--empty">Stadium</div>
-                )}
-
-                <ul className="play-log">
-                  {game.log.slice(-8).map((entry, i) => (
-                    <li key={`${i}-${entry}`}>{entry}</li>
-                  ))}
-                </ul>
-
-                {winner && (
-                  <p className="status-ok play-screen__winner">Winner: {winner}</p>
-                )}
-              </div>
-
-              <PlayerMat
-                game={game}
-                player={self}
-                label={self.name}
-                isActiveTurn={game.currentPlayerId === selfId}
-                onPokemonSelect={NOOP}
-              />
-            </div>
-
-            {/* Self's hand — sits below their board */}
-            <HandBar
-              game={game}
-              hand={self.hand}
-              onSelect={NOOP}
-              playerName={self.name}
+              interactive={false}
+              logTail={8}
             />
           </div>
 
