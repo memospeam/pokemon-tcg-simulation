@@ -124,11 +124,19 @@ async function fetchStandardPage(query: string, page: number): Promise<PokemonTc
   const apiKey = getApiKey();
   if (apiKey) headers["X-Api-Key"] = apiKey;
 
-  const response = await fetch(`${API_BASE}/cards?${params.toString()}`, { headers });
-  if (!response.ok) {
+  const url = `${API_BASE}/cards?${params.toString()}`;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const response = await fetch(url, { headers });
+    if (response.ok) {
+      return (await response.json()) as PokemonTcgApiResponse;
+    }
+    if ([429, 500, 502, 503, 504].includes(response.status) && attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
+      continue;
+    }
     throw new Error(`Pokemon TCG API error: ${response.status} ${response.statusText}`);
   }
-  return (await response.json()) as PokemonTcgApiResponse;
+  throw new Error("Pokemon TCG API error: exhausted retries");
 }
 
 async function fetchAllStandardCards(query: string): Promise<CardDefinition[]> {

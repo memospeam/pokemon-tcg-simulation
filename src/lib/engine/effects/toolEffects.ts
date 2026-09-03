@@ -204,6 +204,17 @@ export function getToolAttackBonus(
   return bonus;
 }
 
+/** Hop's Choice Band: attacks cost Colorless less (in addition to the +30 damage above). */
+export function getToolCostReduction(state: EngineState, pokemon: CardInstance): number {
+  const def = getDefinitionSafe(state, pokemon.definitionId);
+  const name = def.name.toLowerCase();
+  let reduction = 0;
+  for (const tool of pokemon.attachedTools ?? []) {
+    if (getToolKind(state, tool) === "hops_choice_band" && name.includes("hop's")) reduction += 1;
+  }
+  return reduction;
+}
+
 /** Berries / Sacred Charm / Thick Scale: reduce damage taken by attacker type
  *  (applied AFTER Weakness/Resistance, via applyDamageReduction). */
 const BERRY_REDUCED_TYPE: Partial<Record<ToolKind, string>> = {

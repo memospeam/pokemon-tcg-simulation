@@ -58,6 +58,8 @@ export interface AttackCostEntry {
 
 const TOURNAMENTS = [
   "535-top16.json",
+  "518-top8.json",
+  "worlds-2026.json",
   "worlds-2025.json",
   "la-regionals-2026.json",
 ];

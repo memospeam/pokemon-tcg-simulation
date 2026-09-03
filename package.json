@@ -15,6 +15,7 @@
     "report:llm-invariants": "vitest run scripts/report-llm-invariants.test.ts --config vitest.corpus.config.ts",
     "test:cri-playtest": "vitest run src/lib/deck/criPlaytest.test.ts src/lib/deck/criPlaytestBatch.test.ts src/lib/deck/criTrainerScenarios.test.ts src/lib/deck/criTrainerT3T4Scenarios.test.ts",
     "generate:tournament-535": "node scripts/generate-tournament-535-decks.mjs",
+    "generate:worlds-2026": "node scripts/generate-limitless-decks.mjs 515 8 data/tournaments/worlds-2026.json",
     "generate:limitless-decks": "node scripts/generate-limitless-decks.mjs",
     "lint": "tsc -b --noEmit",
     "report:selfplay": "vitest run scripts/report-selfplay.test.ts --config vitest.corpus.config.ts"

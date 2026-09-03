@@ -1,0 +1,72 @@
+{
+  "tournamentId": 515,
+  "name": "World Championships 2026",
+  "date": "2026-08-30",
+  "sourceUrl": "https://limitlesstcg.com/tournaments/515",
+  "decks": [
+    {
+      "placement": 1,
+      "player": "Andrew Hedrick",
+      "deckName": "Dragapult",
+      "text": "Pokémon : 19\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Munkidori TWM 95\n2 Budew ASC 16\n1 Dunsparce JTG 120\n1 Dudunsparce TEF 129\n1 Meowth ex POR 62\n1 Fezandipiti ex ASC 142\n\nTrainer : 32\n4 Lillie's Determination MEG 119\n3 Boss's Orders MEG 114\n2 Crispin SCR 133\n1 Rosa's Encouragement POR 84\n4 Poké Pad POR 81\n4 Crushing Hammer POR 71\n4 Buddy-Buddy Poffin TEF 144\n3 Night Stretcher ASC 196\n3 Ultra Ball MEG 131\n1 Unfair Stamp TWM 165\n1 Special Red Card CRI 82\n2 Risky Ruins MEG 127\n\nEnergy : 9\n3 Fire Energy MEE 2\n3 Darkness Energy MEE 7\n3 Psychic Energy MEE 5",
+      "id": "worlds26-1-andrew-hedrick",
+      "label": "#1 Andrew Hedrick — Dragapult"
+    },
+    {
+      "placement": 2,
+      "player": "Diego Cassiraga",
+      "deckName": "Alakazam Dudunsparce",
+      "text": "Pokémon : 22\n4 Abra MEG 54\n4 Kadabra MEG 55\n3 Alakazam MEG 56\n3 Dunsparce JTG 120\n3 Dudunsparce TEF 129\n2 Genesect SFA 40\n1 Dedenne SSP 87\n1 Fezandipiti ex ASC 142\n1 Shaymin DRI 10\n\nTrainer : 32\n4 Dawn PFL 87\n3 Hilda WHT 84\n2 Boss's Orders MEG 114\n1 Lana's Aid TWM 155\n1 Eri TEF 146\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n3 Rare Candy MEG 125\n2 Enhanced Hammer TWM 148\n1 Sacred Ash DRI 168\n2 Air Balloon ASC 181\n1 Lucky Helmet TWM 158\n4 Battle Cage PFL 85\n\nEnergy : 6\n4 Telepathic Psychic Energy POR 88\n1 Psychic Energy MEE 5\n1 Enriching Energy SSP 191",
+      "id": "worlds26-2-diego-cassiraga",
+      "label": "#2 Diego Cassiraga — Alakazam Dudunsparce"
+    },
+    {
+      "placement": 3,
+      "player": "Brent Tonisson",
+      "deckName": "Dragapult",
+      "text": "Pokémon : 18\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Budew ASC 16\n2 Munkidori TWM 95\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n1 Moltres PFL 14\n\nTrainer : 34\n4 Lillie's Determination MEG 119\n3 Boss's Orders MEG 114\n2 Crispin SCR 133\n1 Judge POR 76\n1 Rosa's Encouragement POR 84\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n4 Ultra Ball MEG 131\n4 Crushing Hammer POR 71\n3 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n1 Special Red Card CRI 82\n2 Risky Ruins MEG 127\n\nEnergy : 8\n3 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n2 Darkness Energy MEE 7",
+      "id": "worlds26-3-brent-tonisson",
+      "label": "#3 Brent Tonisson — Dragapult"
+    },
+    {
+      "placement": 4,
+      "player": "Henry Chao",
+      "deckName": "Dragapult Dusknoir",
+      "text": "Pokémon : 22\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n3 Dragapult ex TWM 130\n2 Duskull PRE 35\n2 Dusclops PRE 36\n1 Dusknoir PRE 37\n2 Budew ASC 16\n1 Meowth ex POR 62\n1 Patrat CRI 70\n1 Fezandipiti ex ASC 142\n1 Moltres PFL 14\n\nTrainer : 30\n4 Lillie's Determination MEG 119\n3 Boss's Orders MEG 114\n1 Crispin SCR 133\n1 Rosa's Encouragement POR 84\n1 Dawn PFL 87\n1 Judge POR 76\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n4 Ultra Ball MEG 131\n4 Night Stretcher ASC 196\n1 Special Red Card CRI 82\n1 Unfair Stamp TWM 165\n1 Jamming Tower TWM 153\n\nEnergy : 8\n4 Psychic Energy MEE 5\n4 Fire Energy MEE 2",
+      "id": "worlds26-4-henry-chao",
+      "label": "#4 Henry Chao — Dragapult Dusknoir"
+    },
+    {
+      "placement": 5,
+      "player": "Rune Heiremans",
+      "deckName": "Crustle",
+      "text": "Pokémon : 10\n4 Mega Kangaskhan ex MEG 104\n3 Dwebble DRI 11\n3 Crustle DRI 12\n\nTrainer : 37\n4 Team Rocket's Petrel DRI 176\n4 Lillie's Determination MEG 119\n4 Boss's Orders MEG 114\n3 Eri TEF 146\n2 Hilda WHT 84\n1 Xerosic's Machinations SFA 64\n1 Pokémon Center Lady MEG 123\n4 Jumbo Ice Cream PFL 91\n3 Pokégear 3.0 SVI 186\n2 Buddy-Buddy Poffin TEF 144\n1 Special Red Card CRI 82\n1 Switch MEG 130\n1 Ultra Ball MEG 131\n1 Enhanced Hammer TWM 148\n1 Handheld Fan TWM 150\n1 Hero's Cape TEF 152\n1 Lumiose City POR 77\n1 Festival Grounds TWM 149\n1 Team Rocket's Factory DRI 173\n\nEnergy : 13\n4 Growing Grass Energy POR 86\n4 Mist Energy TEF 161\n4 Spiky Energy JTG 159\n1 Grass Energy MEE 1",
+      "id": "worlds26-5-rune-heiremans",
+      "label": "#5 Rune Heiremans — Crustle"
+    },
+    {
+      "placement": 6,
+      "player": "Satoshi Matsui",
+      "deckName": "Crustle",
+      "text": "Pokémon : 10\n4 Mega Kangaskhan ex MEG 104\n3 Dwebble DRI 11\n3 Crustle DRI 12\n\nTrainer : 37\n4 Team Rocket's Petrel DRI 176\n4 Lillie's Determination MEG 119\n4 Boss's Orders MEG 114\n3 Eri TEF 146\n2 Hilda WHT 84\n1 Xerosic's Machinations SFA 64\n1 Pokémon Center Lady MEG 123\n4 Jumbo Ice Cream PFL 91\n3 Pokégear 3.0 SVI 186\n2 Buddy-Buddy Poffin TEF 144\n1 Special Red Card CRI 82\n1 Switch MEG 130\n1 Ultra Ball MEG 131\n1 Enhanced Hammer TWM 148\n1 Handheld Fan TWM 150\n1 Hero's Cape TEF 152\n1 Lumiose City POR 77\n1 Festival Grounds TWM 149\n1 Team Rocket's Factory DRI 173\n\nEnergy : 13\n4 Growing Grass Energy POR 86\n4 Mist Energy TEF 161\n4 Spiky Energy JTG 159\n1 Grass Energy MEE 1",
+      "id": "worlds26-6-satoshi-matsui",
+      "label": "#6 Satoshi Matsui — Crustle"
+    },
+    {
+      "placement": 7,
+      "player": "Mateusz Łaszkiewicz",
+      "deckName": "Alakazam Dusknoir",
+      "text": "Pokémon : 24\n4 Duskull PRE 35\n2 Dusclops PRE 36\n2 Dusknoir PRE 37\n2 Abra TWM 80\n2 Abra MEG 54\n4 Kadabra MEG 55\n3 Alakazam MEG 56\n2 Budew ASC 16\n1 Shaymin DRI 10\n1 Patrat CRI 70\n1 Fezandipiti ex ASC 142\n\nTrainer : 31\n4 Gwynn PBL 78\n4 Hilda WHT 84\n2 Dawn PFL 87\n1 Boss's Orders MEG 114\n4 Poké Pad POR 81\n4 Rare Candy MEG 125\n3 Buddy-Buddy Poffin TEF 144\n3 Strange Timepiece MEG 128\n2 Night Stretcher ASC 196\n2 Special Red Card CRI 82\n1 Sacred Ash DRI 168\n1 Prime Catcher TEF 157\n\nEnergy : 5\n4 Telepathic Psychic Energy POR 88\n1 Psychic Energy MEE 5",
+      "id": "worlds26-7-mateusz-laszkiewicz",
+      "label": "#7 Mateusz Łaszkiewicz — Alakazam Dusknoir"
+    },
+    {
+      "placement": 8,
+      "player": "Nathan Spry",
+      "deckName": "Ogerpon Box",
+      "text": "Pokémon : 20\n4 Mega Kangaskhan ex MEG 104\n3 Meowth ex POR 62\n2 Latias ex SSP 76\n2 Lillie's Clefairy ex JTG 56\n2 Teal Mask Ogerpon ex TWM 25\n1 Wellspring Mask Ogerpon ex TWM 64\n1 Iron Leaves ex TEF 25\n1 Enamorus TWM 93\n1 Fezandipiti ex ASC 142\n1 Chien-Pao SSP 56\n1 Iron Crown ex TEF 81\n1 Raging Bolt ex TEF 123\n\nTrainer : 27\n4 Crispin SCR 133\n2 Cyrano SSP 170\n2 Boss's Orders MEG 114\n1 Ciphermaniac's Codebreaking TEF 145\n4 Ultra Ball MEG 131\n4 Energy Switch MEG 115\n2 Night Stretcher ASC 196\n2 Glass Trumpet SCR 135\n1 Special Red Card CRI 82\n1 Prime Catcher TEF 157\n3 Area Zero Underdepths SCR 131\n1 Jamming Tower TWM 153\n\nEnergy : 13\n6 Grass Energy MEE 1\n2 Lightning Energy MEE 4\n2 Psychic Energy MEE 5\n2 Fighting Energy MEE 6\n1 Water Energy MEE 3",
+      "id": "worlds26-8-nathan-spry",
+      "label": "#8 Nathan Spry — Ogerpon Box"
+    }
+  ]
+}

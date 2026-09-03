@@ -778,6 +778,33 @@
     ]
   },
   {
+    "pokemonName": "koraidon ex",
+    "apiId": "me2pt5-121",
+    "set": "ASC",
+    "number": "121",
+    "attacks": [
+      {
+        "name": "Orichalcum Fang",
+        "cost": [
+          "Fighting",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "50+"
+      },
+      {
+        "name": "Impact Blow",
+        "cost": [
+          "Fighting",
+          "Fighting",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "200"
+      }
+    ]
+  },
+  {
     "pokemonName": "latias ex",
     "apiId": "sv8-76",
     "set": "SSP",
@@ -1002,6 +1029,34 @@
         ],
         "convertedEnergyCost": 3,
         "damage": "50"
+      }
+    ]
+  },
+  {
+    "pokemonName": "n's reshiram",
+    "apiId": "sv9-116",
+    "set": "JTG",
+    "number": "116",
+    "attacks": [
+      {
+        "name": "Powerful Rage",
+        "cost": [
+          "Fire",
+          "Lightning"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "20×"
+      },
+      {
+        "name": "Virtuous Flame",
+        "cost": [
+          "Fire",
+          "Fire",
+          "Lightning",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 4,
+        "damage": "170"
       }
     ]
   },
@@ -1243,6 +1298,23 @@
     ]
   },
   {
+    "pokemonName": "team rocket's mimikyu",
+    "apiId": "sv10-87",
+    "set": "DRI",
+    "number": "87",
+    "attacks": [
+      {
+        "name": "Gemstone Mimicry",
+        "cost": [
+          "Psychic",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": ""
+      }
+    ]
+  },
+  {
     "pokemonName": "team rocket's murkrow",
     "apiId": "sv10-127",
     "set": "DRI",
@@ -1298,6 +1370,63 @@
         ],
         "convertedEnergyCost": 3,
         "damage": "20×"
+      }
+    ]
+  },
+  {
+    "pokemonName": "team rocket's spidops",
+    "apiId": "sv10-20",
+    "set": "DRI",
+    "number": "20",
+    "attacks": [
+      {
+        "name": "Rocket Rush",
+        "cost": [
+          "Grass",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 2,
+        "damage": "30×"
+      }
+    ]
+  },
+  {
+    "pokemonName": "team rocket's tarountula",
+    "apiId": "sv10-19",
+    "set": "DRI",
+    "number": "19",
+    "attacks": [
+      {
+        "name": "Take Down",
+        "cost": [
+          "Grass"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "30"
+      }
+    ]
+  },
+  {
+    "pokemonName": "torchic",
+    "apiId": "sv10-40",
+    "set": "DRI",
+    "number": "40",
+    "attacks": [
+      {
+        "name": "Collect",
+        "cost": [
+          "Colorless"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": ""
+      },
+      {
+        "name": "Combustion",
+        "cost": [
+          "Fire"
+        ],
+        "convertedEnergyCost": 1,
+        "damage": "10"
       }
     ]
   },

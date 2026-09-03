@@ -6,7 +6,7 @@ import {
   buildShareUrl,
   parseLocationHash,
 } from "@/lib/deck/tcgmastersUrl";
-import { TOURNAMENT_535_TOP16, getTournamentDeckById } from "@/lib/deck/tournamentPresets";
+import { ALL_TOURNAMENTS, getTournamentDeckById } from "@/lib/deck/tournamentPresets";
 import { useDeckStore } from "@/stores/deckStore";
 import { DeckBuilder } from "../DeckBuilder/DeckBuilder";
 
@@ -101,9 +101,14 @@ export function Lobby({ onPlay }: LobbyProps) {
             <h2>Play Match</h2>
             <p>
               Load tournament decks from{" "}
-              <a href={TOURNAMENT_535_TOP16.sourceUrl} target="_blank" rel="noreferrer">
-                {TOURNAMENT_535_TOP16.name} Top 16
-              </a>
+              {ALL_TOURNAMENTS.map((tournament, index) => (
+                <span key={tournament.tournamentId}>
+                  {index > 0 && ", "}
+                  <a href={tournament.sourceUrl} target="_blank" rel="noreferrer">
+                    {tournament.name}
+                  </a>
+                </span>
+              ))}
               , the Dragapult mirror preset, or your saved decklists.
             </p>
           </div>
@@ -160,13 +165,15 @@ export function Lobby({ onPlay }: LobbyProps) {
                   <option value="" disabled>
                     Load deck
                   </option>
-                  <optgroup label={`${TOURNAMENT_535_TOP16.name} Top 16`}>
-                    {TOURNAMENT_535_TOP16.decks.map((preset) => (
-                      <option key={preset.id} value={preset.id}>
-                        {preset.label}
-                      </option>
-                    ))}
-                  </optgroup>
+                  {ALL_TOURNAMENTS.map((tournament) => (
+                    <optgroup key={tournament.tournamentId} label={tournament.name}>
+                      {tournament.decks.map((preset) => (
+                        <option key={preset.id} value={preset.id}>
+                          {preset.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
                   {savedDecks.length > 0 && (
                     <optgroup label="Saved decks">
                       {savedDecks.map((saved) => (

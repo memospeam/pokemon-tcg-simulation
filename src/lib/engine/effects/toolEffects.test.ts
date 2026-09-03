@@ -8,6 +8,7 @@ import {
   attachToolToPokemon,
   countToolsOnPlayerPokemon,
   getToolAttackBonus,
+  getToolCostReduction,
   getToolDamageReduction,
   getToolHpBonus,
   getToolRetreatReduction,
@@ -203,6 +204,27 @@ describe("toolEffects", () => {
     expect(getToolAttackBonus(state, attacker, target)).toBe(80);
     // Occa Berry on the ex reduces incoming Fire damage by 60
     expect(getToolDamageReduction(state, target, attacker)).toBe(60);
+  });
+
+  it("Hop's Choice Band: attack costs Colorless less, gated to Hop's Pokémon", () => {
+    const bandDef = mockTool("Hop's Choice Band", ["cost Colorless less and do 30 more damage."]);
+    const hopsDef = mockPokemon("Hop's Snorlax", "170");
+    const otherDef = mockPokemon("Snorlax", "170");
+
+    const hopsMon = createCardInstance("hops-snorlax", PlayerId.P1, Zone.Active);
+    hopsMon.attachedTools = [createCardInstance("band", PlayerId.P1, Zone.Active)];
+    const otherMon = createCardInstance("snorlax", PlayerId.P1, Zone.Active);
+    otherMon.attachedTools = [createCardInstance("band2", PlayerId.P1, Zone.Active)];
+
+    const state = minimalState({
+      band: bandDef,
+      band2: bandDef,
+      "hops-snorlax": hopsDef,
+      snorlax: otherDef,
+    });
+
+    expect(getToolCostReduction(state, hopsMon)).toBe(1);
+    expect(getToolCostReduction(state, otherMon)).toBe(0);
   });
 
   it("rejects Power Weight on non-Cynthia Pokémon", () => {

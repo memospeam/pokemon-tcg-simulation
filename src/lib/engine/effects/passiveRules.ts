@@ -6,7 +6,7 @@ import { allPokemonInPlay, getOpponentId, getPlayer, type EngineState } from "..
 import { parseAbilityText } from "./parseText";
 import { allOwnedPokemon } from "./modifiers";
 import { getStadiumHpModifier, getStadiumKind } from "./stadiumEffects";
-import { getToolHpBonus } from "./toolEffects";
+import { getToolCostReduction, getToolHpBonus } from "./toolEffects";
 
 export function countPrizesTakenByPlayer(state: EngineState, playerId: PlayerId): number {
   const player = getPlayer(state, playerId);
@@ -37,6 +37,13 @@ export function getEffectiveAttackCost(
   // to Tera Pokémon with no Ability, so do it before the no-ability early return).
   if (getStadiumKind(state) === "nighttime_mine" && def.subtypes.includes("Tera")) {
     cost.push("Colorless");
+  }
+  let toolReduction = getToolCostReduction(state, pokemon);
+  for (let i = cost.length - 1; i >= 0 && toolReduction > 0; i -= 1) {
+    if (cost[i] === "Colorless") {
+      cost.splice(i, 1);
+      toolReduction -= 1;
+    }
   }
   if (!def.abilities?.length) return cost;
 
