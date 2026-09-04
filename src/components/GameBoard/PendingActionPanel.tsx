@@ -20,6 +20,7 @@ interface PendingActionPanelProps {
   onSelectSpikemuthGym?: (instanceId: string) => void;
   onSelectSurfingBeach?: (benchInstanceId: string) => void;
   onSelectMysteryGarden?: (instanceId: string) => void;
+  onSelectPrismTower?: (instanceId: string) => void;
 }
 
 function deckSearchTitle(pending: Extract<EngineState["pendingAction"], { type: "SEARCH_DECK" }>): string {
@@ -69,6 +70,7 @@ export function PendingActionPanel({
   onSelectSpikemuthGym,
   onSelectSurfingBeach,
   onSelectMysteryGarden,
+  onSelectPrismTower,
 }: PendingActionPanelProps) {
   const pending = game.pendingAction;
   if (!pending) return null;
@@ -450,6 +452,34 @@ export function PendingActionPanel({
                 type="button"
                 className="pending-panel__pick"
                 onClick={() => onSelectMysteryGarden?.(card.instanceId)}
+              >
+                <BoardCard state={game} card={card} size="hand" showName={false} />
+                <span>{def?.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (pending.type === "PRISM_TOWER") {
+    const player = getPlayer(game, pending.playerId);
+    const cards = pending.options
+      .map((id) => player.hand.find((entry) => entry.instanceId === id) ?? null)
+      .filter(Boolean) as CardInstance[];
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <h4>Prism Tower — discard {pending.slotsRemaining} card(s) from hand</h4>
+        <div className="pending-panel__cards pending-panel__cards--scroll">
+          {cards.map((card) => {
+            const def = getDefinition(game, card.definitionId);
+            return (
+              <button
+                key={card.instanceId}
+                type="button"
+                className="pending-panel__pick"
+                onClick={() => onSelectPrismTower?.(card.instanceId)}
               >
                 <BoardCard state={game} card={card} size="hand" showName={false} />
                 <span>{def?.name}</span>

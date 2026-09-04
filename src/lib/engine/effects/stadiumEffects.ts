@@ -104,6 +104,20 @@ function toStadiumKind(kind: ParsedEffect["kind"]): StadiumKind | null {
       return "festival_grounds";
     case "stadium_neutralization_zone":
       return "neutralization_zone";
+    case "stadium_prism_tower":
+      return "prism_tower";
+    case "stadium_mystery_garden":
+      return "mystery_garden";
+    case "stadium_dizzying_valley":
+      return "dizzying_valley";
+    case "stadium_academy_at_night":
+      return "academy_at_night";
+    case "stadium_levincia":
+      return "levincia";
+    case "stadium_spikemuth_gym":
+      return "spikemuth_gym";
+    case "stadium_surfing_beach":
+      return "surfing_beach";
     default:
       return null;
   }
@@ -164,6 +178,8 @@ export function logStadiumOnPlay(state: EngineState, def: CardDefinition): void 
       state,
       "Mystery Garden: once per turn, discard Energy to draw until hand matches Psychic Pokémon in play.",
     );
+  } else if (stadiumKindByName(def.name) === "prism_tower") {
+    logMessage(state, "Prism Tower: once per turn, discard 2 cards from hand to draw 1.");
   }
 }
 

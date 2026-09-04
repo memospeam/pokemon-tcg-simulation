@@ -151,6 +151,8 @@ export type GameAction =
   | { type: "SELECT_SURFING_BEACH"; playerId: PlayerId; benchInstanceId: string }
   | { type: "USE_MYSTERY_GARDEN"; playerId: PlayerId }
   | { type: "SELECT_MYSTERY_GARDEN"; playerId: PlayerId; instanceId: string }
+  | { type: "USE_PRISM_TOWER"; playerId: PlayerId }
+  | { type: "SELECT_PRISM_TOWER"; playerId: PlayerId; instanceId: string }
   | { type: "SELECT_GRAND_TREE_BASIC"; playerId: PlayerId; targetId: string }
   | { type: "SELECT_GRAND_TREE_STAGE1"; playerId: PlayerId; instanceId: string }
   | { type: "SELECT_GRAND_TREE_STAGE2"; playerId: PlayerId; instanceId: string }
@@ -330,6 +332,13 @@ export type PendingAction =
   | { type: "SPIKEMUTH_GYM"; playerId: PlayerId; options: string[] }
   | { type: "SURFING_BEACH"; playerId: PlayerId; options: string[] }
   | { type: "MYSTERY_GARDEN"; playerId: PlayerId; options: string[] }
+  | {
+      type: "PRISM_TOWER";
+      playerId: PlayerId;
+      options: string[];
+      pickedIds: string[];
+      slotsRemaining: number;
+    }
   | { type: "RECON_DIRECTIVE"; playerId: PlayerId; options: string[] }
   | { type: "RARE_CANDY"; playerId: PlayerId }
   | { type: "CRUSHING_HAMMER"; playerId: PlayerId; options: { pokemonId: string; energyId: string }[] }

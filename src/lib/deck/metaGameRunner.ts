@@ -21,6 +21,7 @@ import {
   canUseAcademyAtNight,
   canUseLevincia,
   canUseMysteryGarden,
+  canUsePrismTower,
   canUseSpikemuthGym,
   canUseSurfingBeach,
 } from "../engine/effects/stadiumOptionalEffects";
@@ -674,6 +675,10 @@ export function pickAutoStadiumAction(state: EngineState, playerId: PlayerId): G
 
   if (canUseMysteryGarden(state, playerId)) {
     return { type: "USE_MYSTERY_GARDEN", playerId };
+  }
+
+  if (canUsePrismTower(state, playerId)) {
+    return { type: "USE_PRISM_TOWER", playerId };
   }
 
   if (canUseLumioseCity(state, playerId)) {
@@ -3268,6 +3273,10 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     case "MYSTERY_GARDEN": {
       if (pending.options.length === 0) return null;
       return gameReducer(state, { type: "SELECT_MYSTERY_GARDEN", playerId, instanceId: pending.options[0]! });
+    }
+    case "PRISM_TOWER": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "SELECT_PRISM_TOWER", playerId, instanceId: pending.options[0]! });
     }
     case "GRAND_TREE": {
       if (pending.step === "BASIC") {

@@ -63,6 +63,9 @@ import {
   startSurfingBeach,
   startMysteryGarden,
   canUseMysteryGarden,
+  canUsePrismTower,
+  startPrismTower,
+  continuePrismTowerPick,
 } from "./effects/stadiumOptionalEffects";
 import { logStadiumOnPlay, getStadiumKind, getMaxBenchSize, canUseLumioseCity, getLumioseDeckOptions, canUseCommunityCenter, applyCommunityCenter } from "./effects/stadiumEffects";
 import { markMovedFromBenchToActive } from "./effects/pokemonZoneHelpers";
@@ -1811,6 +1814,19 @@ function handleSelectMysteryGarden(state: EngineState, playerId: PlayerId, insta
   return state;
 }
 
+function handleUsePrismTower(state: EngineState, playerId: PlayerId): EngineState {
+  if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
+  if (state.pendingAction) return state;
+  if (!canUsePrismTower(state, playerId)) return state;
+  startPrismTower(state, playerId);
+  return state;
+}
+
+function handleSelectPrismTower(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  continuePrismTowerPick(state, playerId, instanceId);
+  return state;
+}
+
 function handleUseLumioseCity(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
   if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
   if (state.pendingAction) return state;
@@ -1987,6 +2003,10 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleUseMysteryGarden(nextState, action.playerId);
     case "SELECT_MYSTERY_GARDEN":
       return handleSelectMysteryGarden(nextState, action.playerId, action.instanceId);
+    case "USE_PRISM_TOWER":
+      return handleUsePrismTower(nextState, action.playerId);
+    case "SELECT_PRISM_TOWER":
+      return handleSelectPrismTower(nextState, action.playerId, action.instanceId);
     case "USE_TR_FACTORY_DRAW":
       return handleUseTrFactoryDraw(nextState, action.playerId);
     case "USE_GRAND_TREE":
@@ -2497,6 +2517,13 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       }
       break;
     }
+    case "PRISM_TOWER": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_PRISM_TOWER", playerId: current, instanceId });
+      }
+      break;
+    }
     case "ROTO_STICK": {
       if (pending.playerId !== current) break;
       for (const instanceId of pending.options) {
@@ -2994,6 +3021,10 @@ function appendActiveTurnActions(
 
   if (canUseMysteryGarden(state, current)) {
     actions.push({ type: "USE_MYSTERY_GARDEN", playerId: current });
+  }
+
+  if (canUsePrismTower(state, current)) {
+    actions.push({ type: "USE_PRISM_TOWER", playerId: current });
   }
 
   if (canUseGrandTree(state, current)) {

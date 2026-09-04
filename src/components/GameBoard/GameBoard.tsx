@@ -374,6 +374,13 @@ export function GameBoard() {
             instanceId,
           })
         }
+        onSelectPrismTower={(instanceId) =>
+          controller.runAction({
+            type: "SELECT_PRISM_TOWER",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+            instanceId,
+          })
+        }
       />
 
       <StadiumAbilityPanel

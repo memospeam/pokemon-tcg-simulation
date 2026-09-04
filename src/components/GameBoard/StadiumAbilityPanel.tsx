@@ -11,6 +11,7 @@ import {
   canUseAcademyAtNight,
   canUseLevincia,
   canUseMysteryGarden,
+  canUsePrismTower,
   canUseSpikemuthGym,
   canUseSurfingBeach,
 } from "@/lib/engine/effects/stadiumOptionalEffects";
@@ -43,6 +44,8 @@ function stadiumLabel(kind: ReturnType<typeof getStadiumKind>): string {
       return "Surfing Beach";
     case "mystery_garden":
       return "Mystery Garden";
+    case "prism_tower":
+      return "Prism Tower";
     default:
       return "Stadium";
   }
@@ -61,6 +64,7 @@ export function StadiumAbilityPanel({ game, viewingId, isMyTurn, onRun }: Stadiu
   const showSpikemuth = canUseSpikemuthGym(game, viewingId);
   const showSurfing = canUseSurfingBeach(game, viewingId);
   const showMysteryGarden = canUseMysteryGarden(game, viewingId);
+  const showPrismTower = canUsePrismTower(game, viewingId);
 
   if (
     !showFactory &&
@@ -71,7 +75,8 @@ export function StadiumAbilityPanel({ game, viewingId, isMyTurn, onRun }: Stadiu
     !showLevincia &&
     !showSpikemuth &&
     !showSurfing &&
-    !showMysteryGarden
+    !showMysteryGarden &&
+    !showPrismTower
   ) {
     return null;
   }
@@ -152,6 +157,15 @@ export function StadiumAbilityPanel({ game, viewingId, isMyTurn, onRun }: Stadiu
             onClick={() => onRun({ type: "USE_MYSTERY_GARDEN", playerId: viewingId })}
           >
             Discard Energy to draw
+          </button>
+        )}
+        {showPrismTower && (
+          <button
+            type="button"
+            className="pending-panel__pick"
+            onClick={() => onRun({ type: "USE_PRISM_TOWER", playerId: viewingId })}
+          >
+            Discard 2, draw 1
           </button>
         )}
         {showGrandTree && (

@@ -391,6 +391,34 @@ const STADIUM_PATTERNS: { test: RegExp; kind: ParsedEffect["kind"] }[] = [
     test: /prevent all damage done to pok[ée]mon that don't have a rule box \(both yours and your opponent's\) by attacks from the opponent's pok[ée]mon ex and pok[ée]mon v/,
     kind: "stadium_neutralization_zone",
   },
+  {
+    test: /once during each player's turn, that player may discard 2 cards from their hand in order to draw a card/,
+    kind: "stadium_prism_tower",
+  },
+  {
+    test: /once during each player's turn, that player may discard an energy card from their hand in order to draw cards until they have as many cards in their hand as they have psychic pok[ée]mon in play/,
+    kind: "stadium_mystery_garden",
+  },
+  {
+    test: /confused pok[ée]mon \(both yours and your opponent's\) don't recover from that special condition when they evolve or devolve/,
+    kind: "stadium_dizzying_valley",
+  },
+  {
+    test: /once during each player's turn, that player may put a card from their hand on top of their deck/,
+    kind: "stadium_academy_at_night",
+  },
+  {
+    test: /once during each player's turn, that player may put up to 2 basic lightning energy cards from their discard pile into their hand/,
+    kind: "stadium_levincia",
+  },
+  {
+    test: /once during each player's turn, that player may search their deck for a marnie's pok[ée]mon/,
+    kind: "stadium_spikemuth_gym",
+  },
+  {
+    test: /once during each player's turn, that player may switch their active water pok[ée]mon with 1 of their benched water pok[ée]mon/,
+    kind: "stadium_surfing_beach",
+  },
 ];
 
 export function parseTrainerFullText(text: string): ParsedEffect[] | null {

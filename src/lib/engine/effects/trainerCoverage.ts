@@ -84,6 +84,13 @@ const TRAINER_IMPLEMENTED_KINDS = new Set<ParsedEffect["kind"]>([
   "stadium_ns_castle",
   "stadium_festival_grounds",
   "stadium_neutralization_zone",
+  "stadium_prism_tower",
+  "stadium_mystery_garden",
+  "stadium_dizzying_valley",
+  "stadium_academy_at_night",
+  "stadium_levincia",
+  "stadium_spikemuth_gym",
+  "stadium_surfing_beach",
 ]);
 
 export function isTrainerKindImplemented(kind: ParsedEffect["kind"]): boolean {

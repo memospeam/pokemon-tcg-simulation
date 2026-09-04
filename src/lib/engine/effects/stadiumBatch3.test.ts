@@ -13,6 +13,11 @@ import {
   getStatusConditionsAfterEvolution,
 } from "./stadiumEffects";
 import { transferPokemonStateOntoEvolution } from "./toolEffects";
+import {
+  canUsePrismTower,
+  continuePrismTowerPick,
+  startPrismTower,
+} from "./stadiumOptionalEffects";
 import { getToolKind } from "./toolEffects";
 import type { EngineState } from "../types";
 import { emptyTurnFlags } from "../types";
@@ -151,5 +156,29 @@ describe("Batch 3 stadiums (passives)", () => {
   it("classifies Mystery Garden and Dizzying Valley by name", () => {
     expect(getStadiumKind(stateWithStadium("Mystery Garden", {}))).toBe("mystery_garden");
     expect(getStadiumKind(stateWithStadium("Dizzying Valley", {}))).toBe("dizzying_valley");
+  });
+
+  it("Prism Tower discards 2 hand cards then draws 1", () => {
+    const state = stateWithStadium("Prism Tower", {
+      c1: mockPokemon("Card 1"),
+      c2: mockPokemon("Card 2"),
+      c3: mockPokemon("Card 3"),
+      deck1: mockPokemon("Deck 1"),
+    });
+    const player = state.players[PlayerId.P1];
+    player.hand = [
+      createCardInstance("c1", PlayerId.P1, Zone.Hand),
+      createCardInstance("c2", PlayerId.P1, Zone.Hand),
+      createCardInstance("c3", PlayerId.P1, Zone.Hand),
+    ];
+    player.deck = [createCardInstance("deck1", PlayerId.P1, Zone.Deck)];
+    expect(canUsePrismTower(state, PlayerId.P1)).toBe(true);
+    startPrismTower(state, PlayerId.P1);
+    continuePrismTowerPick(state, PlayerId.P1, player.hand[0]!.instanceId);
+    continuePrismTowerPick(state, PlayerId.P1, player.hand[0]!.instanceId);
+    expect(player.hand).toHaveLength(2);
+    expect(player.discard).toHaveLength(2);
+    expect(state.turnFlags.stadiumOncePerTurnUsed).toBe(true);
+    expect(state.pendingAction).toBeNull();
   });
 });

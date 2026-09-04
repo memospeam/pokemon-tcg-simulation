@@ -535,6 +535,13 @@ export type ParsedEffect =
   | { kind: "stadium_ns_castle" }
   | { kind: "stadium_festival_grounds" }
   | { kind: "stadium_neutralization_zone" }
+  | { kind: "stadium_prism_tower" }
+  | { kind: "stadium_mystery_garden" }
+  | { kind: "stadium_dizzying_valley" }
+  | { kind: "stadium_academy_at_night" }
+  | { kind: "stadium_levincia" }
+  | { kind: "stadium_spikemuth_gym" }
+  | { kind: "stadium_surfing_beach" }
   | { kind: "generic_effect_stub"; text: string }
   | { kind: "unknown"; text: string };
 

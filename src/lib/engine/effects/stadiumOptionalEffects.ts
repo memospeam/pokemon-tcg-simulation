@@ -249,3 +249,50 @@ export function resolveMysteryGarden(state: EngineState, playerId: PlayerId, ins
     `${player.name} discarded ${getDefinitionSafe(state, energy.definitionId).name} and drew ${drawn} card(s) (Mystery Garden).`,
   );
 }
+
+export function canUsePrismTower(state: EngineState, playerId: PlayerId): boolean {
+  if (!stadiumGate(state, playerId, "prism_tower")) return false;
+  const player = getPlayer(state, playerId);
+  return player.hand.length >= 2 && player.deck.length > 0;
+}
+
+export function startPrismTower(state: EngineState, playerId: PlayerId): void {
+  const player = getPlayer(state, playerId);
+  state.pendingAction = {
+    type: "PRISM_TOWER",
+    playerId,
+    options: player.hand.map((card) => card.instanceId),
+    pickedIds: [],
+    slotsRemaining: 2,
+  };
+  logMessage(state, "Prism Tower: choose 2 cards from your hand to discard.");
+}
+
+export function continuePrismTowerPick(state: EngineState, playerId: PlayerId, instanceId: string): void {
+  const pending = state.pendingAction;
+  if (pending?.type !== "PRISM_TOWER" || pending.playerId !== playerId) return;
+  if (!pending.options.includes(instanceId) || pending.pickedIds.includes(instanceId)) return;
+  const player = getPlayer(state, playerId);
+  const index = player.hand.findIndex((card) => card.instanceId === instanceId);
+  if (index === -1) return;
+  const card = player.hand.splice(index, 1)[0]!;
+  moveToDiscard(player, card);
+  const pickedIds = [...pending.pickedIds, instanceId];
+  const slotsRemaining = pending.slotsRemaining - 1;
+  const remainingOptions = player.hand.map((entry) => entry.instanceId);
+  if (slotsRemaining > 0 && remainingOptions.length > 0) {
+    state.pendingAction = {
+      type: "PRISM_TOWER",
+      playerId,
+      options: remainingOptions,
+      pickedIds,
+      slotsRemaining,
+    };
+    logMessage(state, `Prism Tower: discarded ${getDefinitionSafe(state, card.definitionId).name}. Choose another.`);
+    return;
+  }
+  const drawn = drawCards(state, playerId, 1);
+  state.turnFlags.stadiumOncePerTurnUsed = true;
+  state.pendingAction = null;
+  logMessage(state, `${player.name} drew ${drawn} card (Prism Tower).`);
+}

@@ -192,6 +192,88 @@ describe("parseTrainerText", () => {
     expect(parsed.effects[0]).toEqual({ kind: "stadium_grand_tree" });
   });
 
+  it("parses batch-4 optional stadiums", () => {
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Prism Tower",
+          ["Once during each player's turn, that player may discard 2 cards from their hand in order to draw a card."],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_prism_tower" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Mystery Garden",
+          [
+            "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have Psychic Pokémon in play.",
+          ],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_mystery_garden" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Dizzying Valley",
+          [
+            "Confused Pokémon (both yours and your opponent's) don't recover from that Special Condition when they evolve or devolve.",
+          ],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_dizzying_valley" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Academy at Night",
+          ["Once during each player's turn, that player may put a card from their hand on top of their deck."],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_academy_at_night" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Levincia",
+          [
+            "Once during each player's turn, that player may put up to 2 Basic Lightning Energy cards from their discard pile into their hand.",
+          ],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_levincia" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Spikemuth Gym",
+          [
+            "Once during each player's turn, that player may search their deck for a Marnie's Pokémon, reveal it, and put it into their hand. Then, that player shuffles their deck.",
+          ],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_spikemuth_gym" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Surfing Beach",
+          [
+            "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon.",
+          ],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_surfing_beach" });
+  });
+
   it("parses batch-5 meta trainers", () => {
     expect(
       parseTrainerText(
