@@ -44,10 +44,7 @@ import {
 } from "./effects/trainerBatch3Effects";
 import {
   applyTrainerBatch10Kind,
-  applyGlassTrumpetAttach,
-  applyJanineAttach,
   canPlayTrainerBatch10Kind,
-  finishMortysConviction,
   startSalvatoreEvolve,
 } from "./effects/trainerBatch10Effects";
 import {

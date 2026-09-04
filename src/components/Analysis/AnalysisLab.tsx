@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ALL_TOURNAMENTS,
   getWorlds2026Decks,
@@ -11,7 +11,7 @@ import {
   DEFAULT_PLAYTEST_RUN,
   DEFAULT_PLAYTEST_SETUP,
   defaultBatchSeeds,
-  runPresetMatrix,
+  runPresetMatrixAsync,
   summarizeSimHealth,
   computeDeckTierList,
   type MatchupStats,
@@ -50,6 +50,8 @@ export function AnalysisLab() {
   const [seedCount, setSeedCount] = useState(3);
   const [presetSeedMode, setPresetSeedMode] = useState<PresetSeedMode>("ci");
   const [matrixRunning, setMatrixRunning] = useState(false);
+  const [matrixProgress, setMatrixProgress] = useState<{ done: number; total: number; currentLabel: string } | null>(null);
+  const matrixAbortRef = useRef<AbortController | null>(null);
   const [matrixReport, setMatrixReport] = useState<string | null>(null);
   const [matrixMatchups, setMatrixMatchups] = useState<MatchupStats[] | null>(null);
   const [matrixPresets, setMatrixPresets] = useState<TournamentDeckPreset[] | null>(null);
@@ -62,7 +64,12 @@ export function AnalysisLab() {
   const metaDecks = useMemo(() => getMetaArchetypeDecks(), []);
 
   const runMatrix = useCallback(async () => {
+    matrixAbortRef.current?.abort();
+    const controller = new AbortController();
+    matrixAbortRef.current = controller;
+
     setMatrixRunning(true);
+    setMatrixProgress(null);
     setMatrixReport(null);
     setMatrixMatchups(null);
     setMatrixPresets(null);
@@ -79,11 +86,16 @@ export function AnalysisLab() {
         matrixSource === "meta11" || matrixSource === "worlds26"
           ? seedsForPreset(presetSeedMode)
           : Array.from({ length: seedCount }, (_, i) => i + 1);
-      const matchups = runPresetMatrix(presets, {
-        seeds,
-        setup: DEFAULT_PLAYTEST_SETUP,
-        run: { ...DEFAULT_PLAYTEST_RUN, maxTurns: 30, maxActions: 240 },
-      });
+      const matchups = await runPresetMatrixAsync(
+        presets,
+        {
+          seeds,
+          setup: DEFAULT_PLAYTEST_SETUP,
+          run: { ...DEFAULT_PLAYTEST_RUN, maxTurns: 30, maxActions: 240 },
+        },
+        (progress) => setMatrixProgress(progress),
+        controller.signal,
+      );
       const health = summarizeSimHealth(matchups);
       const tiers = computeDeckTierList(presets, health.matchups);
       const title =
@@ -113,10 +125,22 @@ export function AnalysisLab() {
       setMatrixMatchups(health.matchups);
       setMatrixPresets(presets);
       setMatrixTiers(tiers);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setMatrixReport("Matrix run cancelled.");
+      } else {
+        throw error;
+      }
     } finally {
       setMatrixRunning(false);
+      setMatrixProgress(null);
+      matrixAbortRef.current = null;
     }
   }, [deckCount, matrixSource, metaDecks, presetSeedMode, seedCount, selectedTournament, worldsDecks]);
+
+  const cancelMatrix = useCallback(() => {
+    matrixAbortRef.current?.abort();
+  }, []);
 
   const presetCount =
     matrixSource === "meta11"
@@ -243,12 +267,30 @@ export function AnalysisLab() {
                   ? "Run matrix"
                   : `Run ${matrixSizeLabel(matrixSource, presetCount)} matrix`}
             </button>
+            {matrixRunning && (
+              <button type="button" className="matrix-runner__cancel" onClick={cancelMatrix}>
+                Cancel
+              </button>
+            )}
             {matrixMatchups && matrixPresets && matrixTiers && (
               <button type="button" className="matrix-runner__export" onClick={exportMatrixCsv}>
                 Export CSV
               </button>
             )}
           </div>
+          {matrixProgress && matrixRunning && (
+            <div className="matrix-runner__progress" role="status" aria-live="polite">
+              <div
+                className="matrix-runner__progress-bar"
+                style={{
+                  width: `${matrixProgress.total > 0 ? Math.round((matrixProgress.done / matrixProgress.total) * 100) : 0}%`,
+                }}
+              />
+              <span className="matrix-runner__progress-label">
+                {matrixProgress.done}/{matrixProgress.total} — {matrixProgress.currentLabel}
+              </span>
+            </div>
+          )}
           {matrixMatchups && matrixPresets && (
             <MatrixGrid presets={matrixPresets} matchups={matrixMatchups} />
           )}

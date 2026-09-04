@@ -86,11 +86,20 @@ export function defaultBatchSeeds(count: number, base = 1): number[] {
   return Array.from({ length: count }, (_, index) => base + index * 13);
 }
 
-function recordMatchResult(stats: Omit<MatchupStats, "avgTurnCount" | "avgActionCount" | "avgPrizeMargin"> & {
-  turnTotal: number;
-  actionTotal: number;
-  prizeMarginTotal: number;
-}, result: TournamentMatchResult): void {
+function recordMatchResult(
+  stats: {
+    games: number;
+    p1Wins: number;
+    p2Wins: number;
+    draws: number;
+    stalls: number;
+    setupFailures: number;
+    turnTotal: number;
+    actionTotal: number;
+    prizeMarginTotal: number;
+  },
+  result: TournamentMatchResult,
+): void {
   stats.games += 1;
   stats.turnTotal += result.turnCount;
   stats.actionTotal += result.actionCount;
@@ -219,6 +228,47 @@ export function runPresetMatrix(
       stats.push(runPresetMatchupBatch(presets[i]!, presets[j]!, options));
     }
   }
+  return stats;
+}
+
+export interface MatrixRunProgress {
+  done: number;
+  total: number;
+  currentLabel: string;
+}
+
+/** Async matrix runner — yields to the event loop between matchups for UI progress. */
+export async function runPresetMatrixAsync(
+  presets: TournamentDeckPreset[],
+  options: MatchBatchOptions,
+  onProgress?: (progress: MatrixRunProgress) => void,
+  signal?: AbortSignal,
+): Promise<MatchupStats[]> {
+  const pairs: Array<[TournamentDeckPreset, TournamentDeckPreset]> = [];
+  for (let i = 0; i < presets.length; i += 1) {
+    for (let j = i; j < presets.length; j += 1) {
+      pairs.push([presets[i]!, presets[j]!]);
+    }
+  }
+
+  const stats: MatchupStats[] = [];
+  for (let index = 0; index < pairs.length; index += 1) {
+    if (signal?.aborted) throw new DOMException("Matrix run cancelled", "AbortError");
+    const [p1, p2] = pairs[index]!;
+    onProgress?.({
+      done: index,
+      total: pairs.length,
+      currentLabel: `${p1.deckName} vs ${p2.deckName}`,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    stats.push(runPresetMatchupBatch(p1, p2, options));
+  }
+
+  onProgress?.({
+    done: pairs.length,
+    total: pairs.length,
+    currentLabel: "Done",
+  });
   return stats;
 }
 

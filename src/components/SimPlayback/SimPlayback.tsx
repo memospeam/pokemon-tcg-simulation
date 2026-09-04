@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { capturePresetSimulation, capturePresetPolicySimulation } from "@/lib/deck/simulationCapture";
-import { ALL_TOURNAMENTS } from "@/lib/deck/tournamentPresets";
+import { ALL_TOURNAMENTS, WORLDS_2026 } from "@/lib/deck/tournamentPresets";
 import { createBrowserLlmPolicy } from "@/lib/deck/llm/browserPolicy";
 import { useSimStore } from "@/stores/simStore";
 import { getOpponentId, getPlayer, type EngineState } from "@/lib/engine";
@@ -20,7 +20,9 @@ interface SimResult {
   stalled: boolean;
 }
 
-const DEFAULT_TOURNAMENT = ALL_TOURNAMENTS[0]!;
+const DEFAULT_TOURNAMENT = WORLDS_2026;
+const WORLDS_DEFAULT_P1 = "worlds26-1-andrew-hedrick";
+const WORLDS_DEFAULT_P2 = "worlds26-2-diego-cassiraga";
 const SPEEDS = [
   { label: "0.5×", ms: 2000 },
   { label: "1×", ms: 1000 },
@@ -39,8 +41,12 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
 
   const [tournament, setTournament] = useState(DEFAULT_TOURNAMENT);
   const decks = tournament.decks;
-  const [p1Id, setP1Id] = useState(decks[1]?.id ?? "");
-  const [p2Id, setP2Id] = useState(decks[7]?.id ?? "");
+  const [p1Id, setP1Id] = useState(
+    decks.find((d) => d.id === WORLDS_DEFAULT_P1)?.id ?? decks[0]?.id ?? "",
+  );
+  const [p2Id, setP2Id] = useState(
+    decks.find((d) => d.id === WORLDS_DEFAULT_P2)?.id ?? decks[1]?.id ?? "",
+  );
   const [seed, setSeed] = useState(42);
   const [noLimit, setNoLimit] = useState(false);
   const [aiKind, setAiKind] = useState<AiKind>("heuristic");
@@ -56,8 +62,13 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
   const handleTournamentChange = useCallback((id: string) => {
     const t = ALL_TOURNAMENTS.find((t) => String(t.tournamentId) === id) ?? DEFAULT_TOURNAMENT;
     setTournament(t);
-    setP1Id(t.decks[1]?.id ?? t.decks[0]?.id ?? "");
-    setP2Id(t.decks[7]?.id ?? t.decks[t.decks.length - 1]?.id ?? "");
+    if (t.tournamentId === WORLDS_2026.tournamentId) {
+      setP1Id(t.decks.find((d) => d.id === WORLDS_DEFAULT_P1)?.id ?? t.decks[0]?.id ?? "");
+      setP2Id(t.decks.find((d) => d.id === WORLDS_DEFAULT_P2)?.id ?? t.decks[1]?.id ?? "");
+    } else {
+      setP1Id(t.decks[1]?.id ?? t.decks[0]?.id ?? "");
+      setP2Id(t.decks[7]?.id ?? t.decks[t.decks.length - 1]?.id ?? "");
+    }
     setResult(null);
   }, []);
 

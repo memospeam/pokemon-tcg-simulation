@@ -23,5 +23,6 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src", "data/standard/*.json"]
+  "include": ["src", "data/standard/*.json"],
+  "exclude": ["src/**/*.test.ts"]
 }

@@ -565,8 +565,26 @@ export function runAISingleTurn(
   return current;
 }
 
+/** Last-resort pending resolver when typed handlers return null. */
+function emergencyResolvePending(state: EngineState): EngineState | null {
+  const pending = state.pendingAction;
+  if (!pending) return null;
+  const playerId = pending.playerId;
+  const legal = getLegalActions(state).filter(
+    (action) => "playerId" in action && action.playerId === playerId,
+  );
+  const skip = legal.find((action) => action.type === "SKIP_OPTIONAL");
+  if (skip) return gameReducer(state, skip);
+  for (const action of legal) {
+    const next = gameReducer(state, action);
+    if (next === state) continue;
+    if (!next.pendingAction || next.pendingAction.type !== pending.type) return next;
+  }
+  return null;
+}
+
 /** Resolve simple optional/target pending actions so corpus playtests can finish. */
-export function drainAutoPending(state: EngineState, maxSteps = 12, ctx?: StrategyContext): { state: EngineState; steps: number } {
+export function drainAutoPending(state: EngineState, maxSteps = 24, ctx?: StrategyContext): { state: EngineState; steps: number } {
   let next = state;
   let steps = 0;
   while (
@@ -575,7 +593,7 @@ export function drainAutoPending(state: EngineState, maxSteps = 12, ctx?: Strate
     next.phase === GamePhase.Active &&
     !next.winnerId
   ) {
-    const resolved = tryResolveAutoPending(next, ctx);
+    const resolved = tryResolveAutoPending(next, ctx) ?? emergencyResolvePending(next);
     if (!resolved) break;
     next = resolved;
     steps += 1;
@@ -2229,10 +2247,10 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext,
         score = opponent.prizes.length <= 3 ? 45 : 10;
       } else if (name.includes("air balloon")) {
         // Lopunny: Air Balloon on Lopunny enables Gale Thrust retreat cycle
-        const lopunnyNeedsBalloon = (player.active && !player.active.toolId &&
+        const lopunnyNeedsBalloon = (player.active && !player.active.attachedTools.length &&
           getDefinition(state, player.active.definitionId)?.name?.toLowerCase().includes("lopunny")) ||
-          player.bench.some((p) => !p.toolId && getDefinition(state, p.definitionId)?.name?.toLowerCase().includes("lopunny"));
-        score = lopunnyNeedsBalloon ? 65 : (player.active && !player.active.toolId ? 22 : -1);
+          player.bench.some((p) => !p.attachedTools.length && getDefinition(state, p.definitionId)?.name?.toLowerCase().includes("lopunny"));
+        score = lopunnyNeedsBalloon ? 65 : (player.active && !player.active.attachedTools.length ? 22 : -1);
       } else if (name.includes("energy switch")) {
         score = player.bench.length > 0 ? 28 : -1;
       } else if (name.includes("battle cage")) {
@@ -2242,7 +2260,7 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext,
         score = !state.stadium ? 80 : 25; // Very high if no stadium in play
       } else if (name.includes("mist energy")) {
         // Mist Energy: blocks Bench attack effects — best on Lopunny bench (prevents Phantom Dive counters)
-        const hasBenchNeedsMist = player.bench.some((p) => !p.toolId &&
+        const hasBenchNeedsMist = player.bench.some((p) => !p.attachedTools.length &&
           (getDefinition(state, p.definitionId)?.name?.toLowerCase().includes("lopunny") ?? false));
         score = hasBenchNeedsMist ? 50 : 20;
       } else if (name.includes("enriching energy") || name.includes("ignition energy")) {
@@ -3226,7 +3244,6 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
           .filter((p) => p.damageCounters > 0)
           .map((p) => {
             const def = getDefinition(state, p.definitionId);
-            const maxHp = parseInt(def?.hp ?? "100", 10) || 100;
             const remaining = remainingHp(state, p);
             // Prefer taking from Pokémon with most "excess" damage (already near KO — harvest overflow)
             // or from support Pokémon (low max HP = less important)

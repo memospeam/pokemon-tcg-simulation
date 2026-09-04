@@ -56,7 +56,6 @@ import {
   getItemPlayBlockReason,
   getToolPlayBlockReason,
 } from "./effects/playRestrictions";
-import { parseTrainerText } from "./effects/trainerText";
 import {
   activatePendingModifiersForTurnStart,
   canPokemonAttack,

@@ -1,22 +1,20 @@
 # Pokémon TCG Simulation
 
-Web-based simulation for the [Pokémon Trading Card Game](https://www.pokemon.com/us/pokemon-tcg/) built with TypeScript, React, and Vite. Import Limitless decklists, resolve real cards via [pokemontcg.io](https://docs.pokemontcg.io/), and play both sides solo like [tcgmasters.net](https://tcgmasters.net/).
+Web-based simulation for the [Pokémon Trading Card Game](https://www.pokemon.com/us/pokemon-tcg/) built with TypeScript, React, and Vite. Import Limitless decklists, resolve real cards via [pokemontcg.io](https://docs.pokemontcg.io/), play vs AI, or run batch meta simulations.
 
 ## Features
 
-- Import Limitless/PTCGL decklists from clipboard
-- Resolve real card data and images via pokemontcg.io API
-- Deck validation (60 cards, copy limits, Basic Pokémon requirement)
-- Save decks locally ("My Decks")
-- Solo match simulation with board, turns, energy, trainers, attacks, KO, and prizes
-- Switch sides to control both players
-- Save/load in-progress games in localStorage
-- Booster pack opener (sample pool)
+- **Deck Builder** — paste Limitless/PTCGL lists, resolve card data + images, validate 60-card decks
+- **Battle** — PTCGL-style match table vs heuristic AI (energy/evolve drag-drop, VFX, coin flips)
+- **Analysis Lab** — watch AI vs AI replays, run N×N matchup matrices (Utrecht meta 11, Worlds 2026 Top 8), export CSV
+- **Standard corpus** — parsed attack/ability/trainer effects for regulation marks H/I/J
+- Tournament presets (Worlds 2026, NAIC, regionals, …) from Limitless imports
+- Save decks and in-progress games in localStorage
 
 ## Requirements
 
 - Node.js 20+
-- Internet access for card resolution and images
+- Internet for card resolution, images, and corpus refresh
 
 ## Setup
 
@@ -37,19 +35,37 @@ VITE_POKEMONTCG_API_KEY=your-key-here
 npm run dev
 ```
 
-Open the URL shown in the terminal (usually `http://localhost:5173`).
+Open `http://localhost:5173` — routes:
 
-## Usage
+| Route | Purpose |
+| --- | --- |
+| `/battle` | Pick decks + AI → VS screen → match |
+| `/decks` | Deck Builder |
+| `/analysis` | Sim Playback + batch matrix |
 
-1. Open **Deck Builder** or **Lobby**
-2. Paste a Limitless decklist (or click **Import from clipboard**)
-3. Click **Resolve deck** to fetch card data
-4. Save decks and select one deck for each player in **Lobby**
-5. Click **Play** to start the match
-6. Place Active Pokémon, optionally bench, then **Start game**
-7. Use **Switch side** to control both players solo
+Production build (Vite only; full `npm run lint` type-checks app sources):
 
-### Deck import format
+```bash
+npx vite build
+npm run lint
+```
+
+## Quick start — play a match
+
+1. Go to **Battle** (`/battle`)
+2. Load tournament presets or pick saved decks for Player 1 / AI opponent
+3. Click **Start battle** → VS screen → game board
+4. Place Active (and optional Bench), **Start game**
+5. Your turn: click cards or drag Energy/Evolution onto Pokémon; **End turn** when done
+
+## Quick start — meta matrix
+
+1. Go to **Analysis** → **Batch matrix**
+2. Choose **Standard meta (11)** or **Worlds 2026 Top 8**
+3. Pick seed set (CI / Quick / Extended) → **Run matrix**
+4. View heatmap + tier list → **Export CSV**
+
+## Deck import format
 
 ```
 Pokémon: 18
@@ -65,53 +81,58 @@ Energy: 10
 
 ## Standard format effect corpus
 
-Prepared attack/ability texts for all **Standard-legal Pokémon** (regulation marks **H, I, J** — 2026 rotation) live in `data/standard/`:
+Prepared texts for **Standard-legal Pokémon** (regulation **H, I, J**) live in `data/standard/`:
 
 | File | Contents |
 | --- | --- |
-| `manifest.json` | Card counts and parser coverage stats |
-| `effect-texts.json` | Unique attack/ability texts with parsed effects |
-| `cards-index.json` | Per-card index linking to effect text IDs |
-| `unknown-patterns.json` | Texts not fully automated yet (priority list) |
+| `manifest.json` | Card counts and parser coverage |
+| `effect-texts.json` | Unique attack/ability texts + parsed effects |
+| `cards-index.json` | Per-card index |
+| `unknown-patterns.json` | Unparsed texts (priority backlog) |
 
-**Development focus:** current Standard, with **Chaos Rising** (`CRI` / `ME4`, regulation **J**, released 2026-05-22) as the primary expansion for new parser/engine work. See `STANDARD_FORMAT.focusExpansion` and `summarizeFocusExpansion()` in `@/lib/format`.
-
-Regenerate after parser updates or rotation changes:
+Regenerate after API/parser updates:
 
 ```bash
 npm run prepare:standard
 ```
 
-Load in code via `loadStandardCorpus()` from `@/lib/format`.
-
-Current coverage (auto-generated): ~830 attack texts, ~239 abilities, ~228 trainer texts; Pokémon parse is full for all non-empty clauses. CRI indexes **119** Pokémon (set total **122** — slots 84–86 are Special Energy excluded from the Pokémon corpus). See `unknown-patterns.json` and `summarizeFocusExpansion()` for remaining engine gaps.
+Load in code: `loadStandardCorpus()` from `@/lib/format`.
 
 ## Scripts
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start Vite dev server |
-| `npm run build` | Type-check and build for production |
+| `npm run dev` | Vite dev server |
+| `npm run build` | `tsc -b` + production bundle |
 | `npm run preview` | Preview production build |
-| `npm test` | Run Vitest unit tests |
-| `npm run prepare:standard` | Fetch all Standard (H/I/J) Pokémon from API and regenerate `data/standard/` |
-| `npm run lint` | Type-check the project |
+| `npm test` | Vitest unit tests |
+| `npm run lint` | Type-check app (`tsconfig.app.json`) |
+| `npm run prepare:standard` | Refresh `data/standard/` from pokemontcg.io |
+| `npm run generate:worlds-2026` | Regenerate Worlds 2026 Top 8 JSON |
+| `npm run report:cri-meta` | CRI meta readiness report (slow) |
+| `npm run report:invariants` | Deep invariant sweep (slow) |
 
 ## Project structure
 
 ```
 src/
+  AppRouter.tsx          # /battle, /decks, /analysis
   components/
-    DeckBuilder/   # paste/import decklists
-    Lobby/         # pick 2 decks and play
-    GameBoard/     # solo match UI
+    Battle/              # setup, VS screen, turn phase bar
+    Match/               # MatchTable, VFX, drag-drop
+    GameBoard/           # human match UI + controller
+    Analysis/            # AnalysisLab, matrix grid
+    DeckBuilder/
+    SimPlayback/
   lib/
-    catalog/       # pokemontcg.io client + resolver + cache
-    deck/          # Limitless parser, validator, storage
-    engine/        # game rules and reducer
-    format/      # Standard format definition + effect corpus loader
-    models/        # card definitions and instances
-  stores/          # Zustand state for decks and game
+    catalog/             # pokemontcg.io client
+    deck/                # parser, playtest runner, meta AI
+    engine/              # rules reducer
+    format/              # Standard corpus
+  stores/                # Zustand (game, deck, sim)
+data/
+  standard/              # generated corpus
+  tournaments/           # Limitless preset JSON
 ```
 
 ## License

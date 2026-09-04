@@ -54,6 +54,8 @@ export function buildCriMetaReadinessReport(
         stallRate: 0,
         completionRate: 0,
         setupFailureRate: 0,
+        drawsByStall: 0,
+        drawsByCap: 0,
       }
     : summarizeSimHealth(
         runPresetMatrix(presets, {

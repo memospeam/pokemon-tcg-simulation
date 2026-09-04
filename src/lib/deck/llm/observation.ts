@@ -69,7 +69,9 @@ function pokemonLine(state: EngineState, c: CardInstance, withText: boolean): st
     ? ` E:${c.attachedEnergy.map((e) => getDefinition(state, e.definitionId)?.types?.[0]?.[0] ?? "?").join("")}`
     : "";
   const status = c.statusConditions?.length ? ` [${c.statusConditions.join(",")}]` : "";
-  const tool = c.toolId ? ` tool:${defName(state, c.toolId)}` : "";
+  const tool = c.attachedTools[0]
+    ? ` tool:${defName(state, c.attachedTools[0].definitionId)}`
+    : "";
   const text = withText ? ` {${cardEffectText(def)}}` : "";
   return `${def?.name ?? "?"} HP ${hp}${energy}${status}${tool}${text}`;
 }

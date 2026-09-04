@@ -37,8 +37,6 @@ function knockedOutNames(prev: EngineState, cur: EngineState, actor: ReturnType<
   return names;
 }
 
-const FROM_LABEL = /(?:attached|played|evolved|retreated|used|drew)/i;
-
 /** Extract a card / attack / Pokémon name from a log line like
  *  "Alice attached Darkness Energy to N's Zoroark ex." */
 function tailName(label: string, after: RegExp): string | null {

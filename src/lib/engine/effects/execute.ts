@@ -37,7 +37,7 @@ function matchesDeckBasicEnergyType(def: CardDefinition, energyType: string): bo
   if (!isBasicEnergy(def)) return false;
   if (energyType.toLowerCase() === "any") return true;
   const type = energyType.toLowerCase();
-  return def.name.toLowerCase().includes(type) || def.types?.some((entry) => entry.toLowerCase() === type);
+  return def.name.toLowerCase().includes(type) || (def.types?.some((entry) => entry.toLowerCase() === type) ?? false);
 }
 
 function searchAttachEnergyFromDeck(
