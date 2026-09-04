@@ -274,6 +274,45 @@ describe("parseTrainerText", () => {
     ).toEqual({ kind: "stadium_surfing_beach" });
   });
 
+  it("parses batch-3 passive stadiums", () => {
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Ange Floette",
+          [
+            "You can put this card into play only if you discard a Prism Tower in play, and you can put this card into play during the same turn you play Prism Tower.",
+            "Each Mega Floette ex in play (both yours and your opponent's) gets +150 HP.",
+          ],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_ange_floette" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Nighttime Mine",
+          [
+            "Attacks used by each Tera Pokémon in play (both yours and your opponent's) cost Colorless more.",
+          ],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_nighttime_mine" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Perilous Jungle",
+          [
+            "During Pokémon Checkup, put 2 more damage counters on each Poisoned non-Darkness Pokémon (both yours and your opponent's).",
+          ],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_perilous_jungle" });
+  });
+
   it("parses batch-5 meta trainers", () => {
     expect(
       parseTrainerText(

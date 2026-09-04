@@ -31,7 +31,7 @@ import {
   type PendingAction,
 } from "./types";
 import type { ParsedEffect } from "./effects/types";
-import { applyRiskyRuinsOnBenchPlay } from "./effects/stadiumEffects";
+import { applyRiskyRuinsOnBenchPlay, canPlayAngeFloetteStadium } from "./effects/stadiumEffects";
 import { transferPokemonStateOntoEvolution } from "./effects/toolEffects";
 import {
   applyTrainerMetaKind,
@@ -371,6 +371,8 @@ function canPlayTrainerKind(
       }
       return { ok: true };
     }
+    case "stadium_ange_floette":
+      return canPlayAngeFloetteStadium(state);
     default: {
       const batch10Check = canPlayTrainerBatch10Kind(state, playerId, kind);
       if (!batch10Check.ok) return batch10Check;
@@ -782,6 +784,11 @@ function canPlayLegacyTrainerEffect(
     if (!hasMega) {
       return { ok: false, reason: "Wally's Compassion requires a Mega Evolution Pokémon ex in play." };
     }
+  }
+
+  if (matchesTrainer(def, "ange floette")) {
+    const check = canPlayAngeFloetteStadium(state);
+    if (!check.ok) return check;
   }
 
   return { ok: true };

@@ -27,6 +27,7 @@ import {
   shufflePokemonAndAttachmentsToDeck,
 } from "./pokemonZoneHelpers";
 import { pokemonMatchesNameFilter, evolvePokemonFromDeck } from "./attackFlow";
+import { devolveEachOpponentEvolved } from "./devolutionEffects";
 import { applySpecialCondition, getMaxBenchSize } from "./stadiumEffects";
 import { returnNitroFireAfterSelfAttackDiscard } from "./specialEnergyEffects";
 import type { EffectContext, ParsedEffect } from "./types";
@@ -1326,7 +1327,6 @@ function executeSingleEffect(
     case "damage_per_all_opponent_counters":
     case "defending_damage_increase_next_turn":
     case "damage_each_opponent_tag":
-    case "devolve_each_opponent":
     case "clear_self_special_conditions":
     case "reveal_opponent_deck_top":
     case "damage_bonus_if_discard_energy_at_least":
@@ -1356,6 +1356,10 @@ function executeSingleEffect(
     case "require_hand_energy_if_name":
     case "poison_on_attach_energy":
     case "counter_on_opponent_switch":
+    case "devolve_each_opponent": {
+      devolveEachOpponentEvolved(state, ctx.playerId);
+      return "complete";
+    }
     case "generic_effect_stub":
       logMessage(state, `Effect applied: ${effect.kind.replace(/_/g, " ")}.`);
       return "complete";

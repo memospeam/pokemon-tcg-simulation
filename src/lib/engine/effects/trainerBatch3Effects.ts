@@ -631,18 +631,7 @@ function applyDiscardHandSearchThree(state: EngineState, playerId: PlayerId): vo
   logMessage(state, "Larry's Skill: discarded hand; searched a Pokémon, Supporter, and Basic Energy.");
 }
 
-/** Strange Timepiece: devolve one of your evolved typed Pokémon.
- *  ponytail: devolution isn't modelled in the engine (devolve_opponent is a
- *  stub too) — mirror it: find the target and log. */
-function applyDevolveOwnTyped(state: EngineState, playerId: PlayerId, pokemonType: string): void {
-  const player = getPlayer(state, playerId);
-  const type = pokemonType.toLowerCase();
-  const target = allPokemonInPlay(player).find((mon) => {
-    const d = getDefinitionSafe(state, mon.definitionId);
-    return !d.subtypes.includes("Basic") && (d.types ?? []).some((t) => t.toLowerCase() === type);
-  });
-  if (target) logMessage(state, `Devolved ${getDefinitionSafe(state, target.definitionId).name}.`);
-}
+import { devolveOwnTypedPokemon } from "./devolutionEffects";
 
 /** Anthea & Concordia: only usable with the six named N's Pokémon in play.
  *  ponytail: that gate is essentially never met in Standard; honour the
@@ -688,7 +677,7 @@ export function applyTrainerBatch3Kind(state: EngineState, playerId: PlayerId, e
       applyDiscardHandSearchThree(state, playerId);
       return;
     case "trainer_devolve_own_typed":
-      applyDevolveOwnTyped(state, playerId, effect.pokemonType);
+      devolveOwnTypedPokemon(state, playerId, effect.pokemonType);
       return;
     case "trainer_extra_prizes_if_team":
       applyExtraPrizesIfTeam(state, playerId, effect.names, effect.prizes);

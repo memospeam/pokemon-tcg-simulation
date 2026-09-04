@@ -5,6 +5,7 @@ import type { CardInstance } from "../../models/instance";
 import { createCardInstance } from "../../models/instance";
 import {
   areToolEffectsDisabled,
+  canPlayAngeFloetteStadium,
   getStadiumAttackBonus,
   getStadiumDamageReduction,
   getStadiumHpModifier,
@@ -153,9 +154,30 @@ describe("Batch 3 stadiums (passives)", () => {
     expect(getStatusConditionsAfterEvolution(state, from)).toEqual([]);
   });
 
-  it("classifies Mystery Garden and Dizzying Valley by name", () => {
+  it("Ange Floette gives Mega Floette ex +150 HP", () => {
+    const state = stateWithStadium("Ange Floette", {
+      floette: mockPokemon("Mega Floette ex"),
+      other: mockPokemon("Pikachu"),
+    });
+    expect(getStadiumHpModifier(state, inst("floette"))).toBe(150);
+    expect(getStadiumHpModifier(state, inst("other"))).toBe(0);
+  });
+
+  it("Ange Floette requires Prism Tower in play", () => {
+    const noStadium = stateWithStadium("Lively Stadium", {});
+    noStadium.stadium = null;
+    expect(canPlayAngeFloetteStadium(noStadium).ok).toBe(false);
+
+    const withPrism = stateWithStadium("Prism Tower", {});
+    expect(canPlayAngeFloetteStadium(withPrism).ok).toBe(true);
+  });
+
+  it("classifies batch-3 stadium names", () => {
     expect(getStadiumKind(stateWithStadium("Mystery Garden", {}))).toBe("mystery_garden");
     expect(getStadiumKind(stateWithStadium("Dizzying Valley", {}))).toBe("dizzying_valley");
+    expect(getStadiumKind(stateWithStadium("Ange Floette", {}))).toBe("ange_floette");
+    expect(getStadiumKind(stateWithStadium("Nighttime Mine", {}))).toBe("nighttime_mine");
+    expect(getStadiumKind(stateWithStadium("Perilous Jungle", {}))).toBe("perilous_jungle");
   });
 
   it("Prism Tower discards 2 hand cards then draws 1", () => {

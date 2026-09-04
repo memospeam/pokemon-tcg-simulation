@@ -1,0 +1,164 @@
+import { isBasicPokemon, isStage1, isStage2 } from "../../models/definition";
+import type { CardDefinition } from "../../models/definition";
+import type { CardInstance } from "../../models/instance";
+import { PlayerId, Zone } from "../../models/enums";
+import { findDefinitionByName, getDefinitionSafe } from "../rules";
+import { logMessage, shufflePlayerDeck } from "../helpers";
+import {
+  allPokemonInPlay,
+  getOpponentId,
+  getPlayer,
+  type EngineState,
+  type PlayerState,
+} from "../types";
+import { createCardInstance } from "../../models/instance";
+import { getStatusConditionsAfterEvolution } from "./stadiumEffects";
+import { resetPokemonCombatState } from "./pokemonZoneHelpers";
+
+function definitionIdFor(state: EngineState, def: CardDefinition): string | null {
+  const entry = Object.entries(state.definitions).find(
+    ([, candidate]) => candidate.apiId === def.apiId || candidate.name === def.name,
+  );
+  return entry?.[0] ?? def.apiId ?? null;
+}
+
+function evolutionStageRank(def: CardDefinition): number {
+  if (isStage2(def)) return 2;
+  if (isStage1(def)) return 1;
+  return 0;
+}
+
+function transferInPlayStateOntoDevolution(
+  state: EngineState,
+  from: CardInstance,
+  to: CardInstance,
+  ownerId: PlayerId,
+): void {
+  to.attachedEnergy = [...from.attachedEnergy];
+  to.attachedTools = [...(from.attachedTools ?? [])];
+  to.damageCounters = from.damageCounters;
+  to.enteredPlayTurn = from.enteredPlayTurn;
+  to.zone = from.zone;
+  to.ownerId = ownerId;
+  to.statusConditions = getStatusConditionsAfterEvolution(state, from);
+  from.attachedTools = [];
+}
+
+function replacePokemonInPlay(player: PlayerState, outgoing: CardInstance, incoming: CardInstance): boolean {
+  if (player.active?.instanceId === outgoing.instanceId) {
+    player.active = incoming;
+    return true;
+  }
+  const benchIndex = player.bench.findIndex((entry) => entry.instanceId === outgoing.instanceId);
+  if (benchIndex >= 0) {
+    player.bench[benchIndex] = incoming;
+    return true;
+  }
+  return false;
+}
+
+function sendEvolutionCardToZone(
+  state: EngineState,
+  player: PlayerState,
+  definitionId: string,
+  destination: "hand" | "deck",
+): void {
+  const evoCard = createCardInstance(definitionId, player.id, destination === "hand" ? Zone.Hand : Zone.Deck);
+  resetPokemonCombatState(evoCard);
+  if (destination === "hand") {
+    player.hand.push(evoCard);
+    return;
+  }
+  player.deck.push(evoCard);
+  shufflePlayerDeck(state, player.id);
+}
+
+/** Devolve one stage: the current evolution card leaves play; the Pokémon becomes its previous stage. */
+export function devolvePokemonOneStage(
+  state: EngineState,
+  playerId: PlayerId,
+  pokemon: CardInstance,
+  evoDestination: "hand" | "deck",
+): boolean {
+  const player = getPlayer(state, playerId);
+  const def = getDefinitionSafe(state, pokemon.definitionId);
+  if (isBasicPokemon(def) || !def.evolvesFrom) return false;
+
+  const prevDef = findDefinitionByName(state.definitions, def.evolvesFrom);
+  if (!prevDef) return false;
+
+  const prevDefId = definitionIdFor(state, prevDef);
+  if (!prevDefId) return false;
+
+  const reverted = createCardInstance(prevDefId, playerId, pokemon.zone);
+  transferInPlayStateOntoDevolution(state, pokemon, reverted, playerId);
+  if (!replacePokemonInPlay(player, pokemon, reverted)) return false;
+
+  sendEvolutionCardToZone(state, player, pokemon.definitionId, evoDestination);
+  logMessage(
+    state,
+    `${player.name}'s ${def.name} devolved to ${prevDef.name} (${evoDestination === "hand" ? "evolution card to hand" : "evolution card shuffled into deck"}).`,
+  );
+  return true;
+}
+
+export function findEvolvedPokemon(
+  state: EngineState,
+  player: PlayerState,
+  filter?: (def: CardDefinition) => boolean,
+): CardInstance | null {
+  let best: CardInstance | null = null;
+  let bestRank = 0;
+  for (const pokemon of allPokemonInPlay(player)) {
+    const def = getDefinitionSafe(state, pokemon.definitionId);
+    if (isBasicPokemon(def)) continue;
+    if (filter && !filter(def)) continue;
+    const rank = evolutionStageRank(def);
+    if (rank > bestRank) {
+      best = pokemon;
+      bestRank = rank;
+    }
+  }
+  return best;
+}
+
+export function devolveOneOpponentEvolved(state: EngineState, playerId: PlayerId): boolean {
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  const target = findEvolvedPokemon(state, opponent);
+  if (!target) {
+    logMessage(state, "No evolved opponent Pokémon to devolve.");
+    return false;
+  }
+  return devolvePokemonOneStage(state, opponent.id, target, "hand");
+}
+
+export function devolveEachOpponentEvolved(state: EngineState, playerId: PlayerId): void {
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  const evolved = allPokemonInPlay(opponent).filter(
+    (pokemon) => !isBasicPokemon(getDefinitionSafe(state, pokemon.definitionId)),
+  );
+  if (evolved.length === 0) {
+    logMessage(state, "No evolved opponent Pokémon to devolve.");
+    return;
+  }
+  for (const pokemon of evolved) {
+    devolvePokemonOneStage(state, opponent.id, pokemon, "deck");
+  }
+}
+
+export function devolveOwnTypedPokemon(
+  state: EngineState,
+  playerId: PlayerId,
+  pokemonType: string,
+): boolean {
+  const player = getPlayer(state, playerId);
+  const type = pokemonType.toLowerCase();
+  const target = findEvolvedPokemon(state, player, (def) =>
+    (def.types ?? []).some((entry) => entry.toLowerCase() === type),
+  );
+  if (!target) {
+    logMessage(state, `No evolved ${pokemonType} Pokémon to devolve.`);
+    return false;
+  }
+  return devolvePokemonOneStage(state, playerId, target, "hand");
+}

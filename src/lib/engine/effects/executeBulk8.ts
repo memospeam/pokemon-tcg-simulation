@@ -15,6 +15,7 @@ import {
   type EngineState,
 } from "../types";
 import { discardAttachedEnergy, attachEnergyToPokemon } from "../trainerEffects";
+import { devolveOneOpponentEvolved } from "./devolutionEffects";
 import { applySpecialCondition, canReturnCardFromDiscardToHandOrDeck } from "./stadiumEffects";
 import type { EffectContext, ParsedEffect } from "./types";
 import { countersToDamage } from "./types";
@@ -204,13 +205,7 @@ export function executeBulk8Effect(
     }
 
     case "devolve_opponent": {
-      const opponent = opponentPlayer(state, ctx);
-      const evolved = [...(opponent.active ? [opponent.active] : []), ...opponent.bench].find(
-        (mon) => !getDefinitionSafe(state, mon.definitionId).subtypes.includes("Basic"),
-      );
-      if (evolved) {
-        logMessage(state, `Devolved ${getDefinitionSafe(state, evolved.definitionId).name}.`);
-      }
+      devolveOneOpponentEvolved(state, ctx.playerId);
       return "complete";
     }
 

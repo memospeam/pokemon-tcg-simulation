@@ -419,6 +419,18 @@ const STADIUM_PATTERNS: { test: RegExp; kind: ParsedEffect["kind"] }[] = [
     test: /once during each player's turn, that player may switch their active water pok[ée]mon with 1 of their benched water pok[ée]mon/,
     kind: "stadium_surfing_beach",
   },
+  {
+    test: /each mega floette ex in play \(both yours and your opponent's\) gets \+150 hp/,
+    kind: "stadium_ange_floette",
+  },
+  {
+    test: /attacks used by each tera pok[ée]mon in play \(both yours and your opponent's\) cost colorless more/,
+    kind: "stadium_nighttime_mine",
+  },
+  {
+    test: /during pok[ée]mon checkup, put 2 more damage counters on each poisoned non-darkness pok[ée]mon \(both yours and your opponent's\)/,
+    kind: "stadium_perilous_jungle",
+  },
 ];
 
 export function parseTrainerFullText(text: string): ParsedEffect[] | null {

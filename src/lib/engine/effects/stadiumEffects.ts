@@ -118,6 +118,12 @@ function toStadiumKind(kind: ParsedEffect["kind"]): StadiumKind | null {
       return "spikemuth_gym";
     case "stadium_surfing_beach":
       return "surfing_beach";
+    case "stadium_ange_floette":
+      return "ange_floette";
+    case "stadium_nighttime_mine":
+      return "nighttime_mine";
+    case "stadium_perilous_jungle":
+      return "perilous_jungle";
     default:
       return null;
   }
@@ -138,6 +144,22 @@ export function getStatusConditionsAfterEvolution(state: EngineState, from: Card
     return ["Confused"];
   }
   return [];
+}
+
+/** Alias used by devolution — same Special Condition rules as evolution under Dizzying Valley. */
+export const getStatusConditionsAfterDevolution = getStatusConditionsAfterEvolution;
+
+export function canPlayAngeFloetteStadium(state: EngineState): { ok: true } | { ok: false; reason: string } {
+  if (!state.stadium) {
+    return { ok: false, reason: "Ange Floette requires Prism Tower in play." };
+  }
+  const stadiumDef = getDefinitionSafe(state, state.stadium.definitionId);
+  const isPrismTower =
+    getStadiumKind(state) === "prism_tower" || stadiumDef.name.toLowerCase().includes("prism tower");
+  if (!isPrismTower) {
+    return { ok: false, reason: "Ange Floette requires Prism Tower in play." };
+  }
+  return { ok: true };
 }
 
 export function logStadiumOnPlay(state: EngineState, def: CardDefinition): void {
@@ -180,6 +202,12 @@ export function logStadiumOnPlay(state: EngineState, def: CardDefinition): void 
     );
   } else if (stadiumKindByName(def.name) === "prism_tower") {
     logMessage(state, "Prism Tower: once per turn, discard 2 cards from hand to draw 1.");
+  } else if (kind === "nighttime_mine" || stadiumKindByName(def.name) === "nighttime_mine") {
+    logMessage(state, "Nighttime Mine: Tera Pokémon's attacks cost Colorless more.");
+  } else if (kind === "perilous_jungle" || stadiumKindByName(def.name) === "perilous_jungle") {
+    logMessage(state, "Perilous Jungle: Poisoned non-Darkness Pokémon take +2 damage counters at Checkup.");
+  } else if (kind === "ange_floette" || stadiumKindByName(def.name) === "ange_floette") {
+    logMessage(state, "Ange Floette: each Mega Floette ex in play gets +150 HP.");
   }
 }
 

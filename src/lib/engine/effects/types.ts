@@ -542,6 +542,9 @@ export type ParsedEffect =
   | { kind: "stadium_levincia" }
   | { kind: "stadium_spikemuth_gym" }
   | { kind: "stadium_surfing_beach" }
+  | { kind: "stadium_ange_floette" }
+  | { kind: "stadium_nighttime_mine" }
+  | { kind: "stadium_perilous_jungle" }
   | { kind: "generic_effect_stub"; text: string }
   | { kind: "unknown"; text: string };
 
