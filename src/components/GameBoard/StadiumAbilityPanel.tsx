@@ -10,6 +10,7 @@ import {
 import {
   canUseAcademyAtNight,
   canUseLevincia,
+  canUseMysteryGarden,
   canUseSpikemuthGym,
   canUseSurfingBeach,
 } from "@/lib/engine/effects/stadiumOptionalEffects";
@@ -40,6 +41,8 @@ function stadiumLabel(kind: ReturnType<typeof getStadiumKind>): string {
       return "Spikemuth Gym";
     case "surfing_beach":
       return "Surfing Beach";
+    case "mystery_garden":
+      return "Mystery Garden";
     default:
       return "Stadium";
   }
@@ -57,6 +60,7 @@ export function StadiumAbilityPanel({ game, viewingId, isMyTurn, onRun }: Stadiu
   const showLevincia = canUseLevincia(game, viewingId);
   const showSpikemuth = canUseSpikemuthGym(game, viewingId);
   const showSurfing = canUseSurfingBeach(game, viewingId);
+  const showMysteryGarden = canUseMysteryGarden(game, viewingId);
 
   if (
     !showFactory &&
@@ -66,7 +70,8 @@ export function StadiumAbilityPanel({ game, viewingId, isMyTurn, onRun }: Stadiu
     !showAcademy &&
     !showLevincia &&
     !showSpikemuth &&
-    !showSurfing
+    !showSurfing &&
+    !showMysteryGarden
   ) {
     return null;
   }
@@ -138,6 +143,15 @@ export function StadiumAbilityPanel({ game, viewingId, isMyTurn, onRun }: Stadiu
             onClick={() => onRun({ type: "USE_SURFING_BEACH", playerId: viewingId })}
           >
             Switch Water Active
+          </button>
+        )}
+        {showMysteryGarden && (
+          <button
+            type="button"
+            className="pending-panel__pick"
+            onClick={() => onRun({ type: "USE_MYSTERY_GARDEN", playerId: viewingId })}
+          >
+            Discard Energy to draw
           </button>
         )}
         {showGrandTree && (

@@ -136,7 +136,7 @@ function evolveFromDeckOntoTarget(
     return null;
   }
 
-  transferPokemonStateOntoEvolution(target, evolution, playerId);
+  transferPokemonStateOntoEvolution(state, target, evolution, playerId);
   replacePokemonInPlay(state, playerId, targetId, evolution);
   logMessage(state, `${player.name} evolved to ${evoDef.name} with Grand Tree.`);
   return evolution;

@@ -56,10 +56,13 @@ import {
   resolveAcademyAtNight,
   resolveSpikemuthGym,
   resolveSurfingBeach,
+  resolveMysteryGarden,
   startAcademyAtNight,
   startLevincia,
   startSpikemuthGym,
   startSurfingBeach,
+  startMysteryGarden,
+  canUseMysteryGarden,
 } from "./effects/stadiumOptionalEffects";
 import { logStadiumOnPlay, getStadiumKind, getMaxBenchSize, canUseLumioseCity, getLumioseDeckOptions, canUseCommunityCenter, applyCommunityCenter } from "./effects/stadiumEffects";
 import { markMovedFromBenchToActive } from "./effects/pokemonZoneHelpers";
@@ -550,7 +553,7 @@ function handleEvolve(
     if (!canEvolvePokemonThisTurn(state, target)) return false;
     const targetDef = getDefinitionSafe(state, target.definitionId);
     if (!canEvolveInto(targetDef, evoDef)) return false;
-    transferPokemonStateOntoEvolution(target, evolution, playerId);
+    transferPokemonStateOntoEvolution(state, target, evolution, playerId);
     // Mark the evolved form as having entered play this turn so it
     // cannot itself be evolved again in the same turn
     // (prevents Dreepy → Drakloak → Dragapult chains in one turn).
@@ -1795,6 +1798,19 @@ function handleSelectSurfingBeach(state: EngineState, playerId: PlayerId, benchI
   return state;
 }
 
+function handleUseMysteryGarden(state: EngineState, playerId: PlayerId): EngineState {
+  if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
+  if (state.pendingAction) return state;
+  if (!canUseMysteryGarden(state, playerId)) return state;
+  startMysteryGarden(state, playerId);
+  return state;
+}
+
+function handleSelectMysteryGarden(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  resolveMysteryGarden(state, playerId, instanceId);
+  return state;
+}
+
 function handleUseLumioseCity(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
   if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
   if (state.pendingAction) return state;
@@ -1967,6 +1983,10 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleUseSurfingBeach(nextState, action.playerId);
     case "SELECT_SURFING_BEACH":
       return handleSelectSurfingBeach(nextState, action.playerId, action.benchInstanceId);
+    case "USE_MYSTERY_GARDEN":
+      return handleUseMysteryGarden(nextState, action.playerId);
+    case "SELECT_MYSTERY_GARDEN":
+      return handleSelectMysteryGarden(nextState, action.playerId, action.instanceId);
     case "USE_TR_FACTORY_DRAW":
       return handleUseTrFactoryDraw(nextState, action.playerId);
     case "USE_GRAND_TREE":
@@ -2470,6 +2490,13 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       }
       break;
     }
+    case "MYSTERY_GARDEN": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_MYSTERY_GARDEN", playerId: current, instanceId });
+      }
+      break;
+    }
     case "ROTO_STICK": {
       if (pending.playerId !== current) break;
       for (const instanceId of pending.options) {
@@ -2963,6 +2990,10 @@ function appendActiveTurnActions(
 
   if (canUseSurfingBeach(state, current)) {
     actions.push({ type: "USE_SURFING_BEACH", playerId: current });
+  }
+
+  if (canUseMysteryGarden(state, current)) {
+    actions.push({ type: "USE_MYSTERY_GARDEN", playerId: current });
   }
 
   if (canUseGrandTree(state, current)) {

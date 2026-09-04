@@ -15,7 +15,7 @@ import {
 } from "../types";
 import { attachEnergyToPokemon } from "../trainerEffects";
 import { parseToolKind, type ToolKind } from "./parseTextTool";
-import { areToolEffectsDisabled } from "./stadiumEffects";
+import { areToolEffectsDisabled, getStatusConditionsAfterEvolution } from "./stadiumEffects";
 
 export function getToolKind(state: EngineState, tool: CardInstance): ToolKind {
   // Jamming Tower: Pokémon Tools have no effect. Gate effect lookups here so every
@@ -25,13 +25,19 @@ export function getToolKind(state: EngineState, tool: CardInstance): ToolKind {
   return parseToolKind(def);
 }
 
-export function transferPokemonStateOntoEvolution(from: CardInstance, to: CardInstance, ownerId: PlayerId): void {
+export function transferPokemonStateOntoEvolution(
+  state: EngineState,
+  from: CardInstance,
+  to: CardInstance,
+  ownerId: PlayerId,
+): void {
   to.attachedEnergy = [...from.attachedEnergy];
   to.attachedTools = [...(from.attachedTools ?? [])];
   to.damageCounters = from.damageCounters;
   to.enteredPlayTurn = from.enteredPlayTurn;
   to.zone = from.zone;
   to.ownerId = ownerId;
+  to.statusConditions = getStatusConditionsAfterEvolution(state, from);
   from.attachedTools = [];
 }
 

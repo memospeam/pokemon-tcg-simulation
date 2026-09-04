@@ -1697,7 +1697,7 @@ export function applyRareCandy(
   const evoCard = player.hand.splice(evoIndex, 1)[0]!;
   const evoDef = getDefinitionSafe(state, evoCard.definitionId);
 
-  transferPokemonStateOntoEvolution(basic, evoCard, playerId);
+  transferPokemonStateOntoEvolution(state, basic, evoCard, playerId);
   // Stage 2 from Rare Candy just entered play this turn (can't be
   // re-evolved on the same turn — symmetric with normal evolution).
   evoCard.enteredPlayTurn = state.turnNumber;

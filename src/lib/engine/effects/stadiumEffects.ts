@@ -119,6 +119,13 @@ export function getStadiumKind(state: EngineState): StadiumKind | null {
   return stadiumKindByName(def.name) ?? "unknown";
 }
 
+export function getStatusConditionsAfterEvolution(state: EngineState, from: CardInstance): string[] {
+  if (getStadiumKind(state) === "dizzying_valley" && from.statusConditions.includes("Confused")) {
+    return ["Confused"];
+  }
+  return [];
+}
+
 export function logStadiumOnPlay(state: EngineState, def: CardDefinition): void {
   const parsed = parseStadiumFullText(def.rules?.join(" ") ?? "");
   const kind = parsed ? toStadiumKind(parsed.kind) : null;
@@ -146,6 +153,16 @@ export function logStadiumOnPlay(state: EngineState, def: CardDefinition): void 
     logMessage(
       state,
       "Neutralization Zone: non-Rule Box Pokémon are protected from opponent ex/V attack damage.",
+    );
+  } else if (stadiumKindByName(def.name) === "dizzying_valley") {
+    logMessage(
+      state,
+      "Dizzying Valley: Confused Pokémon keep Confused when they evolve or devolve.",
+    );
+  } else if (stadiumKindByName(def.name) === "mystery_garden") {
+    logMessage(
+      state,
+      "Mystery Garden: once per turn, discard Energy to draw until hand matches Psychic Pokémon in play.",
     );
   }
 }

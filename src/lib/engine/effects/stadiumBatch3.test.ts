@@ -10,7 +10,9 @@ import {
   getStadiumHpModifier,
   getStadiumKind,
   getStadiumRetreatReduction,
+  getStatusConditionsAfterEvolution,
 } from "./stadiumEffects";
+import { transferPokemonStateOntoEvolution } from "./toolEffects";
 import { getToolKind } from "./toolEffects";
 import type { EngineState } from "../types";
 import { emptyTurnFlags } from "../types";
@@ -129,5 +131,25 @@ describe("Batch 3 stadiums (passives)", () => {
     });
     expect(areToolEffectsDisabled(state)).toBe(true);
     expect(getToolKind(state, inst("balloon"))).toBe("unknown");
+  });
+
+  it("Dizzying Valley keeps Confused on evolution but clears other conditions", () => {
+    const state = stateWithStadium("Dizzying Valley", {
+      basic: mockPokemon("Abra", { types: ["Psychic"] }),
+    });
+    const from = inst("basic");
+    from.statusConditions = ["Confused", "Burned"];
+    const to = createCardInstance("evo", PlayerId.P1, Zone.Active);
+    transferPokemonStateOntoEvolution(state, from, to, PlayerId.P1);
+    expect(to.statusConditions).toEqual(["Confused"]);
+    expect(getStatusConditionsAfterEvolution(state, from)).toEqual(["Confused"]);
+
+    from.statusConditions = ["Burned"];
+    expect(getStatusConditionsAfterEvolution(state, from)).toEqual([]);
+  });
+
+  it("classifies Mystery Garden and Dizzying Valley by name", () => {
+    expect(getStadiumKind(stateWithStadium("Mystery Garden", {}))).toBe("mystery_garden");
+    expect(getStadiumKind(stateWithStadium("Dizzying Valley", {}))).toBe("dizzying_valley");
   });
 });

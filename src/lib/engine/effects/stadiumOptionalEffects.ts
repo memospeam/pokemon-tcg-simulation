@@ -1,9 +1,10 @@
 import { isBasicEnergy } from "../../models/definition";
+import type { CardDefinition } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import { PlayerId, Zone } from "../../models/enums";
-import { getDefinitionSafe } from "../rules";
+import { getDefinitionSafe, drawCards } from "../rules";
 import { logMessage, shufflePlayerDeck } from "../helpers";
-import { getPlayer, type EngineState } from "../types";
+import { allPokemonInPlay, getPlayer, moveToDiscard, type EngineState } from "../types";
 import { getStadiumKind } from "./stadiumEffects";
 
 function stadiumGate(state: EngineState, playerId: PlayerId, kind: ReturnType<typeof getStadiumKind>): boolean {
@@ -29,6 +30,29 @@ function isWaterPokemon(state: EngineState, pokemon: CardInstance): boolean {
 function isMarniesPokemon(state: EngineState, card: CardInstance): boolean {
   const def = getDefinitionSafe(state, card.definitionId);
   return def.supertype === "Pokémon" && def.name.toLowerCase().includes("marnie's");
+}
+
+function isEnergyCard(def: CardDefinition): boolean {
+  return def.supertype === "Energy";
+}
+
+function countPsychicPokemonInPlay(state: EngineState, playerId: PlayerId): number {
+  const player = getPlayer(state, playerId);
+  return allPokemonInPlay(player).filter((pokemon) => {
+    const def = getDefinitionSafe(state, pokemon.definitionId);
+    return def.types?.includes("Psychic") ?? false;
+  }).length;
+}
+
+export function canUseMysteryGarden(state: EngineState, playerId: PlayerId): boolean {
+  if (!stadiumGate(state, playerId, "mystery_garden")) return false;
+  const player = getPlayer(state, playerId);
+  const psychicCount = countPsychicPokemonInPlay(state, playerId);
+  if (psychicCount === 0) return false;
+  const energyInHand = player.hand.filter((card) => isEnergyCard(getDefinitionSafe(state, card.definitionId)));
+  if (energyInHand.length === 0) return false;
+  const handAfterDiscard = player.hand.length - 1;
+  return handAfterDiscard < psychicCount && player.deck.length > 0;
 }
 
 export function canUseAcademyAtNight(state: EngineState, playerId: PlayerId): boolean {
@@ -190,5 +214,38 @@ export function resolveSurfingBeach(state: EngineState, playerId: PlayerId, benc
   logMessage(
     state,
     `${player.name} switched ${getDefinitionSafe(state, outgoing.definitionId).name} with ${getDefinitionSafe(state, incoming.definitionId).name} (Surfing Beach).`,
+  );
+}
+
+export function startMysteryGarden(state: EngineState, playerId: PlayerId): void {
+  const player = getPlayer(state, playerId);
+  const options = player.hand
+    .filter((card) => isEnergyCard(getDefinitionSafe(state, card.definitionId)))
+    .map((card) => card.instanceId);
+  state.pendingAction = {
+    type: "MYSTERY_GARDEN",
+    playerId,
+    options,
+  };
+  logMessage(state, "Mystery Garden: choose an Energy card from your hand to discard.");
+}
+
+export function resolveMysteryGarden(state: EngineState, playerId: PlayerId, instanceId: string): void {
+  const pending = state.pendingAction;
+  if (pending?.type !== "MYSTERY_GARDEN" || pending.playerId !== playerId) return;
+  if (!pending.options.includes(instanceId)) return;
+  const player = getPlayer(state, playerId);
+  const index = player.hand.findIndex((card) => card.instanceId === instanceId);
+  if (index === -1) return;
+  const energy = player.hand.splice(index, 1)[0]!;
+  moveToDiscard(player, energy);
+  const targetHand = countPsychicPokemonInPlay(state, playerId);
+  const toDraw = Math.max(0, targetHand - player.hand.length);
+  const drawn = drawCards(state, playerId, toDraw);
+  state.turnFlags.stadiumOncePerTurnUsed = true;
+  state.pendingAction = null;
+  logMessage(
+    state,
+    `${player.name} discarded ${getDefinitionSafe(state, energy.definitionId).name} and drew ${drawn} card(s) (Mystery Garden).`,
   );
 }

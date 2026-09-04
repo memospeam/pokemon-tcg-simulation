@@ -19,6 +19,7 @@ interface PendingActionPanelProps {
   onSelectLevincia?: (instanceId: string) => void;
   onSelectSpikemuthGym?: (instanceId: string) => void;
   onSelectSurfingBeach?: (benchInstanceId: string) => void;
+  onSelectMysteryGarden?: (instanceId: string) => void;
 }
 
 function deckSearchTitle(pending: Extract<EngineState["pendingAction"], { type: "SEARCH_DECK" }>): string {
@@ -67,6 +68,7 @@ export function PendingActionPanel({
   onSelectLevincia,
   onSelectSpikemuthGym,
   onSelectSurfingBeach,
+  onSelectMysteryGarden,
 }: PendingActionPanelProps) {
   const pending = game.pendingAction;
   if (!pending) return null;
@@ -422,6 +424,34 @@ export function PendingActionPanel({
                 onClick={() => onSelectSurfingBeach?.(card.instanceId)}
               >
                 <BoardCard state={game} card={card} size="bench" showName={false} />
+                <span>{def?.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (pending.type === "MYSTERY_GARDEN") {
+    const player = getPlayer(game, pending.playerId);
+    const cards = pending.options
+      .map((id) => player.hand.find((entry) => entry.instanceId === id) ?? null)
+      .filter(Boolean) as CardInstance[];
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <h4>Mystery Garden — discard an Energy card</h4>
+        <div className="pending-panel__cards pending-panel__cards--scroll">
+          {cards.map((card) => {
+            const def = getDefinition(game, card.definitionId);
+            return (
+              <button
+                key={card.instanceId}
+                type="button"
+                className="pending-panel__pick"
+                onClick={() => onSelectMysteryGarden?.(card.instanceId)}
+              >
+                <BoardCard state={game} card={card} size="hand" showName={false} />
                 <span>{def?.name}</span>
               </button>
             );

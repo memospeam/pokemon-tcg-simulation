@@ -367,6 +367,13 @@ export function GameBoard() {
             benchInstanceId,
           })
         }
+        onSelectMysteryGarden={(instanceId) =>
+          controller.runAction({
+            type: "SELECT_MYSTERY_GARDEN",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+            instanceId,
+          })
+        }
       />
 
       <StadiumAbilityPanel

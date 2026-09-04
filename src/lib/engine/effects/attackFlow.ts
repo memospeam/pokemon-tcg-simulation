@@ -559,7 +559,7 @@ export function evolvePokemonFromDeck(
     return false;
   }
 
-  transferPokemonStateOntoEvolution(target, evolution, playerId);
+  transferPokemonStateOntoEvolution(state, target, evolution, playerId);
 
   if (player.active?.instanceId === targetId) {
     player.active = evolution;
