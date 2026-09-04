@@ -9,9 +9,9 @@ interface HandBarProps {
   selectedId?: string;
   onSelect: (card: CardInstance) => void;
   getQuickLabel?: (def: CardDefinition) => string | null;
-  canDragEnergy?: (instanceId: string) => boolean;
-  onEnergyDragStart?: (card: CardInstance) => void;
-  onEnergyDragEnd?: () => void;
+  canDragHandCard?: (instanceId: string) => boolean;
+  onHandDragStart?: (card: CardInstance) => void;
+  onHandDragEnd?: () => void;
   /** Player name shown as prefix in the label */
   playerName?: string;
   /** Flips border/gradient direction (for the opponent row at the top) */
@@ -24,9 +24,9 @@ export function HandBar({
   selectedId,
   onSelect,
   getQuickLabel,
-  canDragEnergy,
-  onEnergyDragStart,
-  onEnergyDragEnd,
+  canDragHandCard,
+  onHandDragStart,
+  onHandDragEnd,
   playerName,
   isOpponent,
 }: HandBarProps) {
@@ -45,7 +45,7 @@ export function HandBar({
         {hand.map((card) => {
           const def = game.definitions[card.definitionId];
           const quick = def && getQuickLabel ? getQuickLabel(def) : null;
-          const draggable = canDragEnergy?.(card.instanceId) ?? false;
+          const draggable = canDragHandCard?.(card.instanceId) ?? false;
           return (
             <div
               key={card.instanceId}
@@ -56,11 +56,11 @@ export function HandBar({
                   ? (event) => {
                       event.dataTransfer.setData("text/plain", card.instanceId);
                       event.dataTransfer.effectAllowed = "move";
-                      onEnergyDragStart?.(card);
+                      onHandDragStart?.(card);
                     }
                   : undefined
               }
-              onDragEnd={draggable ? () => onEnergyDragEnd?.() : undefined}
+              onDragEnd={draggable ? () => onHandDragEnd?.() : undefined}
             >
               <BoardCard
                 state={game}

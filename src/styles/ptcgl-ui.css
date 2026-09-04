@@ -266,6 +266,72 @@
   color: #e2e8f0;
 }
 
+.matrix-runner__hint {
+  margin: 0;
+  align-self: center;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.matrix-grid-wrap {
+  margin-top: 1.25rem;
+  overflow-x: auto;
+}
+
+.matrix-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.matrix-grid th,
+.matrix-grid td {
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  padding: 0.35rem 0.45rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.matrix-grid th[scope="row"],
+.matrix-grid th[scope="col"] {
+  background: rgba(15, 23, 42, 0.85);
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.matrix-grid__corner {
+  min-width: 8rem;
+}
+
+.matrix-grid__cell--mirror {
+  background: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+}
+
+.matrix-grid__cell--strong {
+  background: rgba(34, 197, 94, 0.25);
+  color: #bbf7d0;
+}
+
+.matrix-grid__cell--even {
+  background: rgba(34, 197, 94, 0.12);
+  color: #d1fae5;
+}
+
+.matrix-grid__cell--weak {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fecaca;
+}
+
+.matrix-grid__cell--bad {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+}
+
+.matrix-grid__cell--empty {
+  color: #64748b;
+}
+
 /* Match event flash (Phase 4 hook) */
 .match-table--event-damage .match-table__felt {
   animation: match-damage-flash 0.35s ease-out;

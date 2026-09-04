@@ -186,6 +186,57 @@
   box-shadow: 0 0 12px rgba(74, 222, 128, 0.35);
 }
 
+.board-card-wrap--drop-energy .board-card {
+  outline: 2px dashed rgba(74, 222, 128, 0.85);
+  outline-offset: 2px;
+  box-shadow: 0 0 12px rgba(74, 222, 128, 0.35);
+}
+
+.board-card-wrap--drop-evolve .board-card {
+  outline: 2px dashed rgba(167, 139, 250, 0.9);
+  outline-offset: 2px;
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.4);
+}
+
+.player-mat__bench-slot,
+.player-mat__active {
+  position: relative;
+}
+
+.damage-float-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  z-index: 5;
+}
+
+.damage-float {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #fecaca;
+  text-shadow:
+    0 0 8px rgba(239, 68, 68, 0.9),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+  animation: damage-float-rise 1s ease-out forwards;
+}
+
+@keyframes damage-float-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.85);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-28px) scale(1);
+  }
+}
+
 /* Coin flip overlay */
 .coin-flip-overlay {
   position: fixed;

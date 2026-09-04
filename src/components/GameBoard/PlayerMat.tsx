@@ -2,6 +2,9 @@ import type { CardInstance } from "@/lib/models/instance";
 import type { EngineState } from "@/lib/engine";
 import type { PlayerState } from "@/lib/engine";
 import { BoardCard } from "./BoardCard";
+import { DamageFloatLayer } from "@/components/Match/DamageFloatLayer";
+import type { DamageFloat } from "@/components/Match/useDamageFloat";
+import type { HandDragKind } from "@/components/Match/useHandDragDrop";
 
 interface PileZoneProps {
   label: string;
@@ -39,8 +42,9 @@ interface PlayerMatProps {
   onActiveSelect?: (card: CardInstance) => void;
   onDiscardClick?: () => void;
   selectedPokemonId?: string;
-  isDropTarget?: (instanceId: string) => boolean;
-  onEnergyDrop?: (card: CardInstance) => void;
+  dropKindForTarget?: (instanceId: string) => HandDragKind | null;
+  onHandDrop?: (card: CardInstance) => void;
+  damageFloats?: DamageFloat[];
 }
 
 export function PlayerMat({
@@ -54,9 +58,11 @@ export function PlayerMat({
   onActiveSelect,
   onDiscardClick,
   selectedPokemonId,
-  isDropTarget,
-  onEnergyDrop,
+  dropKindForTarget,
+  onHandDrop,
+  damageFloats = [],
 }: PlayerMatProps) {
+  const matSide = isOpponent ? "opponent" : "self";
   const benchSlots = Array.from({ length: 5 }, (_, i) => player.bench[i] ?? null);
 
   return (
@@ -77,16 +83,25 @@ export function PlayerMat({
             {benchSlots.map((card, index) => (
               <div key={card?.instanceId ?? `empty-${index}`} className="player-mat__bench-slot">
                 {card ? (
-                  <BoardCard
-                    state={game}
-                    card={card}
-                    size="bench"
-                    highlight={highlightTargets}
-                    selected={selectedPokemonId === card.instanceId}
-                    dropHighlight={isDropTarget?.(card.instanceId)}
-                    onEnergyDrop={onEnergyDrop ? () => onEnergyDrop(card) : undefined}
-                    onSelect={() => onPokemonSelect(card)}
-                  />
+                  <>
+                    <BoardCard
+                      state={game}
+                      card={card}
+                      size="bench"
+                      highlight={highlightTargets}
+                      selected={selectedPokemonId === card.instanceId}
+                      dropKind={dropKindForTarget?.(card.instanceId) ?? undefined}
+                      dropHighlight={Boolean(dropKindForTarget?.(card.instanceId))}
+                      onHandDrop={onHandDrop ? () => onHandDrop(card) : undefined}
+                      onSelect={() => onPokemonSelect(card)}
+                    />
+                    <DamageFloatLayer
+                      floats={damageFloats}
+                      mat={matSide}
+                      slot="bench"
+                      benchIndex={index}
+                    />
+                  </>
                 ) : (
                   <div className="player-mat__empty-slot" />
                 )}
@@ -96,16 +111,20 @@ export function PlayerMat({
 
           <div className="player-mat__active">
             {player.active ? (
-              <BoardCard
-                state={game}
-                card={player.active}
-                size="active"
-                highlight={highlightTargets}
-                selected={selectedPokemonId === player.active.instanceId}
-                dropHighlight={isDropTarget?.(player.active.instanceId)}
-                onEnergyDrop={onEnergyDrop ? () => onEnergyDrop(player.active!) : undefined}
-                onSelect={() => (onActiveSelect ?? onPokemonSelect)(player.active!)}
-              />
+              <>
+                <BoardCard
+                  state={game}
+                  card={player.active}
+                  size="active"
+                  highlight={highlightTargets}
+                  selected={selectedPokemonId === player.active.instanceId}
+                  dropKind={dropKindForTarget?.(player.active.instanceId) ?? undefined}
+                  dropHighlight={Boolean(dropKindForTarget?.(player.active.instanceId))}
+                  onHandDrop={onHandDrop ? () => onHandDrop(player.active!) : undefined}
+                  onSelect={() => (onActiveSelect ?? onPokemonSelect)(player.active!)}
+                />
+                <DamageFloatLayer floats={damageFloats} mat={matSide} slot="active" />
+              </>
             ) : (
               <div className="player-mat__active-empty">Active</div>
             )}

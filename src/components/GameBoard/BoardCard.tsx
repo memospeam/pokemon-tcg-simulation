@@ -41,7 +41,8 @@ interface BoardCardProps {
   selected?: boolean;
   highlight?: boolean;
   dropHighlight?: boolean;
-  onEnergyDrop?: () => void;
+  dropKind?: "energy" | "evolve";
+  onHandDrop?: () => void;
   size?: BoardCardSize;
   showName?: boolean;
 }
@@ -53,27 +54,31 @@ export function BoardCard({
   selected,
   highlight,
   dropHighlight,
-  onEnergyDrop,
+  dropKind,
+  onHandDrop,
   size = "bench",
   showName = true,
 }: BoardCardProps) {
   const def = getDefinition(state, card.definitionId);
   if (!def) return null;
 
-  const isPokemonDrop = def.supertype === "Pokémon" && Boolean(onEnergyDrop);
+  const isPokemonDrop = def.supertype === "Pokémon" && Boolean(onHandDrop);
+  const showDrop = isPokemonDrop && (dropHighlight || Boolean(dropKind));
 
   return (
     <div
       className={[
         "board-card-wrap",
-        dropHighlight ? "board-card-wrap--drop" : "",
+        dropKind === "energy" ? "board-card-wrap--drop-energy" : "",
+        dropKind === "evolve" ? "board-card-wrap--drop-evolve" : "",
+        dropHighlight && !dropKind ? "board-card-wrap--drop" : "",
       ]
         .filter(Boolean)
         .join(" ")}
       onDragOver={
         isPokemonDrop
           ? (event) => {
-              if (!dropHighlight) return;
+              if (!showDrop) return;
               event.preventDefault();
               event.dataTransfer.dropEffect = "move";
             }
@@ -82,9 +87,9 @@ export function BoardCard({
       onDrop={
         isPokemonDrop
           ? (event) => {
-              if (!dropHighlight) return;
+              if (!showDrop) return;
               event.preventDefault();
-              onEnergyDrop?.();
+              onHandDrop?.();
             }
           : undefined
       }

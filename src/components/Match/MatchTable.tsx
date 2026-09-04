@@ -12,7 +12,9 @@ import { BoardCard } from "@/components/GameBoard/BoardCard";
 import { TurnPhaseBar } from "@/components/Battle/TurnPhaseBar";
 import { HiddenHandBar } from "./HiddenHandBar";
 import { useMatchView } from "./useMatchView";
+import { useDamageFloats } from "./useDamageFloat";
 import type { MatchVisibility } from "./types";
+import type { HandDragKind } from "./useHandDragDrop";
 
 export interface MatchTableProps {
   game: EngineState;
@@ -29,11 +31,11 @@ export interface MatchTableProps {
   onDiscardClick?: (playerId: PlayerId) => void;
   onHandSelect?: (card: CardInstance) => void;
   getHandQuickLabel?: (def: CardDefinition) => string | null;
-  canDragEnergy?: (instanceId: string) => boolean;
-  onEnergyDragStart?: (card: CardInstance) => void;
-  onEnergyDragEnd?: () => void;
-  isDropTarget?: (instanceId: string) => boolean;
-  onEnergyDrop?: (card: CardInstance) => void;
+  canDragHandCard?: (instanceId: string) => boolean;
+  onHandDragStart?: (card: CardInstance) => void;
+  onHandDragEnd?: () => void;
+  dropKindForTarget?: (instanceId: string) => HandDragKind | null;
+  onHandDrop?: (card: CardInstance) => void;
   logTail?: number;
   showPhaseBar?: boolean;
   footer?: ReactNode;
@@ -57,17 +59,18 @@ export function MatchTable({
   onDiscardClick,
   onHandSelect,
   getHandQuickLabel,
-  canDragEnergy,
-  onEnergyDragStart,
-  onEnergyDragEnd,
-  isDropTarget,
-  onEnergyDrop,
+  canDragHandCard,
+  onHandDragStart,
+  onHandDragEnd,
+  dropKindForTarget,
+  onHandDrop,
   logTail = 8,
   showPhaseBar = true,
   footer,
   className = "",
 }: MatchTableProps) {
   const view = useMatchView(game, viewingPlayerId, visibility);
+  const damageFloats = useDamageFloats(game, viewingPlayerId);
   if (!view) return null;
 
   const { self, opponent, opponentPlayerId, isMyTurn, hideOpponentHand, opponentHandCount } = view;
@@ -103,6 +106,7 @@ export function MatchTable({
           onPokemonSelect={onPokemon}
           onDiscardClick={onDiscardClick ? () => onDiscardClick(opponentPlayerId) : undefined}
           selectedPokemonId={selectedPokemonId}
+          damageFloats={damageFloats}
         />
 
         <div className="match-table__center">
@@ -141,8 +145,9 @@ export function MatchTable({
           }
           onDiscardClick={onDiscardClick ? () => onDiscardClick(viewingPlayerId) : undefined}
           selectedPokemonId={selectedPokemonId}
-          isDropTarget={isDropTarget}
-          onEnergyDrop={onEnergyDrop}
+          dropKindForTarget={dropKindForTarget}
+          onHandDrop={onHandDrop}
+          damageFloats={damageFloats}
         />
       </div>
 
@@ -152,9 +157,9 @@ export function MatchTable({
         selectedId={selectedHandId}
         onSelect={onHand}
         getQuickLabel={getHandQuickLabel}
-        canDragEnergy={canDragEnergy}
-        onEnergyDragStart={onEnergyDragStart}
-        onEnergyDragEnd={onEnergyDragEnd}
+        canDragHandCard={canDragHandCard}
+        onHandDragStart={onHandDragStart}
+        onHandDragEnd={onHandDragEnd}
         playerName={self.name}
       />
 

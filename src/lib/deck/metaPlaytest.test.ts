@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getTournamentDeckById } from "./tournamentPresets";
+import { getMetaArchetypeDecks } from "./metaArchetypes";
 import {
   CI_BATCH_SEEDS,
   computeDeckTierList,
@@ -10,26 +10,7 @@ import {
   summarizeSimHealth,
 } from "./playtestRunner";
 
-// One representative per unique archetype from Utrecht Regional 2026-05-16
-const META_DECK_IDS = [
-  "utrecht-1-miloslav-posledni",     // Lopunny Dudunsparce  — 1st
-  "utrecht-2-hasan-kunukcu",         // Dragapult             — 2nd
-  "utrecht-4-joshua-vanoverschelde", // Rocket's Honchkrow    — 4th
-  "utrecht-7-luke-burke",            // Dragapult Dusknoir    — 7th
-  "utrecht-8-fabio-battistella",     // Ogerpon Box           — 8th
-  "utrecht-11-hermanni-hietalahti",  // N's Zoroark           — 11th
-  "utrecht-12-joris-van-dijk",       // Alakazam Dudunsparce  — 12th
-  "utrecht-13-constantin-geisb-sch", // Cynthia's Garchomp    — 13th
-  "utrecht-14-niklas-leitz",         // Greninja              — 14th
-  "utrecht-15-oscar-madsen",         // Dragapult Dudunsparce — 15th
-  "utrecht-16-fabian-kern",          // Hydrapple             — 16th
-];
-
-const META_DECKS = META_DECK_IDS.map((id) => {
-  const deck = getTournamentDeckById(id);
-  if (!deck) throw new Error(`Deck preset not found: ${id}`);
-  return deck;
-});
+const META_DECKS = getMetaArchetypeDecks();
 
 const BATCH_OPTIONS = {
   seeds: CI_BATCH_SEEDS,
