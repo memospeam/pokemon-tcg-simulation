@@ -156,6 +156,18 @@ describe("parseTrainerText", () => {
     expect(parsed.effects[0]).toEqual({ kind: "stadium_gravity_mountain" });
   });
 
+  it("parses Community Center stadium", () => {
+    const def = mockTrainer(
+      "Community Center",
+      [
+        "Once during each player's turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon.",
+      ],
+      ["Stadium"],
+    );
+    const parsed = parseTrainerText(def);
+    expect(parsed.effects[0]).toEqual({ kind: "stadium_community_center" });
+  });
+
   it("parses Lumiose City stadium", () => {
     const def = mockTrainer(
       "Lumiose City",

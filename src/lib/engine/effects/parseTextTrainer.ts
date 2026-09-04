@@ -372,6 +372,10 @@ const STADIUM_PATTERNS: { test: RegExp; kind: ParsedEffect["kind"] }[] = [
     kind: "stadium_lumiose_city",
   },
   {
+    test: /once during each player's turn, if they played a supporter card from their hand this turn, they may heal 10 damage from each of their pok[ée]mon/,
+    kind: "stadium_community_center",
+  },
+  {
     test: /once during each player's turn, if they played a supporter card that has "team rocket" in its name from their hand this turn, they may draw 2 cards/,
     kind: "stadium_team_rocket_factory",
   },

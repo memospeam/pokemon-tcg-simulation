@@ -94,6 +94,8 @@ function toStadiumKind(kind: ParsedEffect["kind"]): StadiumKind | null {
       return "grand_tree";
     case "stadium_lumiose_city":
       return "lumiose_city";
+    case "stadium_community_center":
+      return "community_center";
     case "stadium_team_rocket_factory":
       return "team_rocket_factory";
     case "stadium_ns_castle":
@@ -261,6 +263,32 @@ export function canUseLumioseCity(state: EngineState, playerId: PlayerId): boole
 export function getLumioseDeckOptions(state: EngineState, playerId: PlayerId): CardInstance[] {
   const player = getPlayer(state, playerId);
   return player.deck.filter((card) => isBasicPokemon(getDefinitionSafe(state, card.definitionId)));
+}
+
+export function canUseCommunityCenter(state: EngineState, playerId: PlayerId): boolean {
+  if (getStadiumKind(state) !== "community_center") return false;
+  if (state.turnFlags.stadiumOncePerTurnUsed) return false;
+  if (state.pendingAction) return false;
+  if (!state.turnFlags.supporterPlayed) return false;
+  const player = getPlayer(state, playerId);
+  return allPokemonInPlay(player).some((pokemon) => pokemon.damageCounters > 0);
+}
+
+export function applyCommunityCenter(state: EngineState, playerId: PlayerId): void {
+  const player = getPlayer(state, playerId);
+  let healed = 0;
+  for (const pokemon of allPokemonInPlay(player)) {
+    if (pokemon.damageCounters <= 0) continue;
+    pokemon.damageCounters = Math.max(0, pokemon.damageCounters - 10);
+    healed += 1;
+  }
+  state.turnFlags.stadiumOncePerTurnUsed = true;
+  logMessage(
+    state,
+    healed > 0
+      ? `Community Center: healed 10 damage from each of ${player.name}'s Pokémon in play.`
+      : `Community Center: no damage to heal.`,
+  );
 }
 
 export function parseStadiumRules(def: CardDefinition): { kind: StadiumKind } | null {

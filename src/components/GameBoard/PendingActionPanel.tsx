@@ -12,6 +12,9 @@ interface PendingActionPanelProps {
   onChooseBenchAttack: (benchPokemonId: string, attackName: string) => void;
   onSkipOptional: () => void;
   onConfirmDrawUntil: () => void;
+  onSelectGrandTreeBasic?: (targetId: string) => void;
+  onSelectGrandTreeDeck?: (instanceId: string) => void;
+  onSkipGrandTreeStage2?: () => void;
 }
 
 function deckSearchTitle(pending: Extract<EngineState["pendingAction"], { type: "SEARCH_DECK" }>): string {
@@ -53,6 +56,9 @@ export function PendingActionPanel({
   onChooseBenchAttack,
   onSkipOptional,
   onConfirmDrawUntil,
+  onSelectGrandTreeBasic,
+  onSelectGrandTreeDeck,
+  onSkipGrandTreeStage2,
 }: PendingActionPanelProps) {
   const pending = game.pendingAction;
   if (!pending) return null;
@@ -297,6 +303,72 @@ export function PendingActionPanel({
                   {def?.name} — {option.attackName}
                   {attack?.damage ? ` (${attack.damage})` : ""}
                 </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (pending.type === "GRAND_TREE") {
+    const player = getPlayer(game, pending.playerId);
+    if (pending.step === "BASIC") {
+      const targets = pending.options
+        .map((id) => {
+          if (player.active?.instanceId === id) return player.active;
+          return player.bench.find((entry) => entry.instanceId === id) ?? null;
+        })
+        .filter(Boolean) as CardInstance[];
+      return (
+        <div className="pending-panel pending-panel--deck">
+          <h4>Grand Tree — choose a Basic Pokémon to evolve</h4>
+          <div className="pending-panel__cards pending-panel__cards--scroll">
+            {targets.map((card) => {
+              const def = getDefinition(game, card.definitionId);
+              return (
+                <button
+                  key={card.instanceId}
+                  type="button"
+                  className="pending-panel__pick"
+                  onClick={() => onSelectGrandTreeBasic?.(card.instanceId)}
+                >
+                  <BoardCard state={game} card={card} size="bench" showName={false} />
+                  <span>{def?.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    const deckCards = pending.options
+      .map((id) => player.deck.find((entry) => entry.instanceId === id) ?? null)
+      .filter(Boolean) as CardInstance[];
+    const stepLabel = pending.step === "STAGE1" ? "Stage 1" : "Stage 2";
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <div className="pending-panel__header">
+          <h4>Grand Tree — choose {stepLabel} from deck</h4>
+          {pending.step === "STAGE2" && (
+            <button type="button" className="pending-panel__skip" onClick={onSkipGrandTreeStage2}>
+              Skip Stage 2
+            </button>
+          )}
+        </div>
+        <div className="pending-panel__cards pending-panel__cards--scroll">
+          {deckCards.map((card) => {
+            const def = getDefinition(game, card.definitionId);
+            return (
+              <button
+                key={card.instanceId}
+                type="button"
+                className="pending-panel__pick"
+                onClick={() => onSelectGrandTreeDeck?.(card.instanceId)}
+              >
+                <BoardCard state={game} card={card} size="hand" showName={false} />
+                <span>{def?.name}</span>
               </button>
             );
           })}

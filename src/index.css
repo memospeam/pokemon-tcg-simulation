@@ -2227,4 +2227,69 @@ button {
     min-height: auto;
     padding-bottom: 4.5rem;
   }
+
+  .action-dock {
+    left: 0.5rem;
+    right: 0.5rem;
+    transform: none;
+    width: auto;
+    max-width: none;
+    border-radius: 1rem;
+    bottom: 0.5rem;
+    padding: 0.5rem 0.65rem;
+  }
+
+  .action-dock button {
+    padding: 0.45rem 0.75rem;
+    font-size: 0.78rem;
+  }
+
+  .action-dock__hints {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .action-dock__hint {
+    font-size: 0.68rem;
+    color: #64748b;
+    letter-spacing: 0.04em;
+  }
+
+  .stadium-ability-panel__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .stadium-ability-panel__title {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    color: #fde68a;
+  }
+
+  .card-preview {
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 5.5rem;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  .pending-panel {
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    max-width: none;
+  }
+
+  .pending-panel--deck {
+    max-height: 42vh;
+    overflow-y: auto;
+  }
+
+  .ai-thinking-banner {
+    top: 3.5rem;
+    max-width: calc(100vw - 1rem);
+    text-align: center;
+  }
 }

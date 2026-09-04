@@ -530,6 +530,7 @@ export type ParsedEffect =
   | { kind: "stadium_gravity_mountain"; hpReduction: number }
   | { kind: "stadium_grand_tree" }
   | { kind: "stadium_lumiose_city" }
+  | { kind: "stadium_community_center" }
   | { kind: "stadium_team_rocket_factory" }
   | { kind: "stadium_ns_castle" }
   | { kind: "stadium_festival_grounds" }

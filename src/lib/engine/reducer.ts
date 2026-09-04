@@ -47,7 +47,7 @@ import {
   skipGrandTreeStage2,
   startGrandTreeFlow,
 } from "./effects/grandTreeEffects";
-import { logStadiumOnPlay, getStadiumKind, getMaxBenchSize, canUseLumioseCity, getLumioseDeckOptions } from "./effects/stadiumEffects";
+import { logStadiumOnPlay, getStadiumKind, getMaxBenchSize, canUseLumioseCity, getLumioseDeckOptions, canUseCommunityCenter, applyCommunityCenter } from "./effects/stadiumEffects";
 import { markMovedFromBenchToActive } from "./effects/pokemonZoneHelpers";
 import {
   canPlayToolFromHand,
@@ -1721,6 +1721,14 @@ function handleSelectRosaEnergy(state: EngineState, playerId: PlayerId, instance
   return state;
 }
 
+function handleUseCommunityCenter(state: EngineState, playerId: PlayerId): EngineState {
+  if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
+  if (state.pendingAction) return state;
+  if (!canUseCommunityCenter(state, playerId)) return state;
+  applyCommunityCenter(state, playerId);
+  return state;
+}
+
 function handleUseLumioseCity(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
   if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
   if (state.pendingAction) return state;
@@ -1875,6 +1883,8 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleSelectRosaEnergy(nextState, action.playerId, action.instanceId);
     case "USE_LUMIOSE_CITY":
       return handleUseLumioseCity(nextState, action.playerId, action.instanceId);
+    case "USE_COMMUNITY_CENTER":
+      return handleUseCommunityCenter(nextState, action.playerId);
     case "USE_TR_FACTORY_DRAW":
       return handleUseTrFactoryDraw(nextState, action.playerId);
     case "USE_GRAND_TREE":
@@ -2823,6 +2833,10 @@ function appendActiveTurnActions(
     for (const card of getLumioseDeckOptions(state, current)) {
       actions.push({ type: "USE_LUMIOSE_CITY", playerId: current, instanceId: card.instanceId });
     }
+  }
+
+  if (canUseCommunityCenter(state, current)) {
+    actions.push({ type: "USE_COMMUNITY_CENTER", playerId: current });
   }
 
   if (canUseGrandTree(state, current)) {

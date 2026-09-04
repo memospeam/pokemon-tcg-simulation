@@ -79,6 +79,7 @@ const TRAINER_IMPLEMENTED_KINDS = new Set<ParsedEffect["kind"]>([
   "stadium_gravity_mountain",
   "stadium_grand_tree",
   "stadium_lumiose_city",
+  "stadium_community_center",
   "stadium_team_rocket_factory",
   "stadium_ns_castle",
   "stadium_festival_grounds",

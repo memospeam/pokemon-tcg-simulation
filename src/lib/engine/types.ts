@@ -139,6 +139,7 @@ export type GameAction =
   | { type: "SELECT_ROSA_ENERGY"; playerId: PlayerId; instanceId: string }
   | { type: "USE_LUMIOSE_CITY"; playerId: PlayerId; instanceId: string }
   | { type: "USE_TR_FACTORY_DRAW"; playerId: PlayerId }
+  | { type: "USE_COMMUNITY_CENTER"; playerId: PlayerId }
   | { type: "USE_GRAND_TREE"; playerId: PlayerId }
   | { type: "SELECT_GRAND_TREE_BASIC"; playerId: PlayerId; targetId: string }
   | { type: "SELECT_GRAND_TREE_STAGE1"; playerId: PlayerId; instanceId: string }

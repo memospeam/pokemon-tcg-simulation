@@ -56,10 +56,14 @@ export function ActionDock({
           </button>
         )}
         {phase === GamePhase.Active && isMyTurn && !hasPendingAction && (
-          <button type="button" className="action-dock__primary" onClick={onEndTurn}>
+          <button type="button" className="action-dock__primary" onClick={onEndTurn} title="End turn (E)">
             End turn
           </button>
         )}
+      </div>
+
+      <div className="action-dock__group action-dock__hints" aria-hidden="true">
+        <span className="action-dock__hint">E · Esc</span>
       </div>
 
       <div className="action-dock__group">

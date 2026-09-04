@@ -11,7 +11,8 @@ import { canAffordAttack, canAffordRetreat } from "../engine/energy";
 import { applyWeaknessAndResistance, canRareCandyEvolveInto, checkMulliganNeeded, parseDamage } from "../engine/rules";
 import { beginGame, gameReducer, getLegalActions, startActiveGame } from "../engine/reducer";
 import { getDefinitionSafe } from "../engine/rules";
-import { getStadiumKind } from "../engine/effects/stadiumEffects";
+import { getStadiumKind, canUseLumioseCity, getLumioseDeckOptions, canUseCommunityCenter } from "../engine/effects/stadiumEffects";
+import { canUseGrandTree } from "../engine/effects/grandTreeEffects";
 import { isBasicEnergy, isBasicPokemon, isStage2, isSupporter } from "../models/definition";
 import type { CardInstance } from "../models/instance";
 import { GamePhase, PlayerId } from "../models/enums";
@@ -313,6 +314,19 @@ export function runEngineAutoPlay(
     }
 
     if (!state.pendingAction && !state.turnFlags.attacked) {
+      const stadiumAction = pickAutoStadiumAction(state, playerId);
+      if (stadiumAction) {
+        const r = applyAndDrain(state, stadiumAction, ctx);
+        state = r.state;
+        actionCount += r.steps;
+        if (r.terminal === "stall") return { state, turnCount, actionCount, stalled: true, winnerId: state.winnerId };
+        if (r.terminal === "end") break;
+        if (r.turnAdvanced) turnCount += 1;
+        continue;
+      }
+    }
+
+    if (!state.pendingAction && !state.turnFlags.attacked) {
       const evolveAction = pickAutoEvolveAction(state, ctx);
       if (evolveAction) {
         state = gameReducer(state, evolveAction);
@@ -492,6 +506,18 @@ export function runAISingleTurn(
       if (evolveAction) { current = gameReducer(current, evolveAction); continue; }
     }
 
+    // 3b. Once-per-turn stadium abilities
+    if (!current.pendingAction && !current.turnFlags.attacked) {
+      const stadiumAction = pickAutoStadiumAction(current, aiPlayerId);
+      if (stadiumAction) {
+        current = gameReducer(current, stadiumAction);
+        const { state: drained } = drainAutoPending(current, 12, ctx);
+        current = drained;
+        if (current.turnNumber > startTurn) break;
+        continue;
+      }
+    }
+
     // 4. Attach energy (with type-matching)
     if (
       !current.turnFlags.energyAttached &&
@@ -607,6 +633,30 @@ export function isPlayStalled(state: EngineState): boolean {
     state.phase === GamePhase.Active &&
     !state.winnerId
   );
+}
+
+export function pickAutoStadiumAction(state: EngineState, playerId: PlayerId): GameAction | null {
+  if (state.pendingAction || state.turnFlags.stadiumOncePerTurnUsed || state.turnFlags.attacked) {
+    return null;
+  }
+
+  if (canUseCommunityCenter(state, playerId)) {
+    return { type: "USE_COMMUNITY_CENTER", playerId };
+  }
+
+  if (canUseLumioseCity(state, playerId)) {
+    const player = getPlayer(state, playerId);
+    if (player.bench.length < 3) {
+      const option = getLumioseDeckOptions(state, playerId)[0];
+      if (option) return { type: "USE_LUMIOSE_CITY", playerId, instanceId: option.instanceId };
+    }
+  }
+
+  if (canUseGrandTree(state, playerId)) {
+    return { type: "USE_GRAND_TREE", playerId };
+  }
+
+  return null;
 }
 
 export function pickAutoPlayBasicAction(

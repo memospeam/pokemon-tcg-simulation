@@ -14,6 +14,7 @@ import { buildAttackActions, CardPreviewPanel } from "./CardPreviewPanel";
 import { buildHandActions, buildPokemonActions } from "./CardActionMenu";
 import { DiscardPilePanel } from "./DiscardPilePanel";
 import { PendingActionPanel } from "./PendingActionPanel";
+import { StadiumAbilityPanel } from "./StadiumAbilityPanel";
 import { useGameBoardController } from "./useGameBoardController";
 
 export function GameBoard() {
@@ -50,6 +51,42 @@ export function GameBoard() {
       setDiscardViewPlayerId(engineState.pendingAction.playerId);
     }
   }, [engineState?.pendingAction]);
+
+  useEffect(() => {
+    function isEditableTarget(target: EventTarget | null): boolean {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName;
+      return tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || target.isContentEditable;
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (isEditableTarget(event.target)) return;
+      if (!engineState || engineState.winnerId) return;
+
+      if (event.key === "Escape") {
+        controller.clearSelection();
+        setDiscardViewPlayerId(null);
+        return;
+      }
+
+      if (event.key === "e" || event.key === "E") {
+        const myTurn = humanPlayerId !== null
+          ? engineState.currentPlayerId === humanPlayerId
+          : engineState.currentPlayerId === engineState.viewingPlayerId;
+        if (
+          engineState.phase === GamePhase.Active &&
+          myTurn &&
+          !engineState.pendingAction
+        ) {
+          event.preventDefault();
+          dispatch({ type: "END_TURN" });
+        }
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [controller, dispatch, engineState, humanPlayerId]);
 
   const game = engineState;
   const viewingId = game?.viewingPlayerId;
@@ -255,6 +292,42 @@ export function GameBoard() {
             playerId: boardGame.pendingAction?.playerId ?? viewingId,
           })
         }
+        onSelectGrandTreeBasic={(targetId) =>
+          controller.runAction({
+            type: "SELECT_GRAND_TREE_BASIC",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+            targetId,
+          })
+        }
+        onSelectGrandTreeDeck={(instanceId) => {
+          const step = boardGame.pendingAction?.type === "GRAND_TREE" ? boardGame.pendingAction.step : null;
+          controller.runAction(
+            step === "STAGE1"
+              ? {
+                  type: "SELECT_GRAND_TREE_STAGE1",
+                  playerId: boardGame.pendingAction?.playerId ?? viewingId,
+                  instanceId,
+                }
+              : {
+                  type: "SELECT_GRAND_TREE_STAGE2",
+                  playerId: boardGame.pendingAction?.playerId ?? viewingId,
+                  instanceId,
+                },
+          );
+        }}
+        onSkipGrandTreeStage2={() =>
+          controller.runAction({
+            type: "SKIP_GRAND_TREE_STAGE2",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+          })
+        }
+      />
+
+      <StadiumAbilityPanel
+        game={boardGame}
+        viewingId={viewingId}
+        isMyTurn={isMyTurn}
+        onRun={controller.runAction}
       />
 
       {boardGame.pendingAction?.type === "DISTRIBUTE_BENCH_DAMAGE" && (
@@ -262,28 +335,6 @@ export function GameBoard() {
           <p>
             {boardGame.pendingAction.countersRemaining} damage counter(s) left — click opponent Bench Pokémon
           </p>
-        </div>
-      )}
-
-      {boardGame.turnFlags.trFactoryDrawAvailable && isMyTurn && !boardGame.pendingAction && (
-        <div className="pending-panel pending-panel--compact pending-panel--top">
-          <p>Team Rocket's Factory — draw 2 cards?</p>
-          <div className="pending-panel__actions">
-            <button
-              type="button"
-              className="pending-panel__pick"
-              onClick={() => controller.runAction({ type: "USE_TR_FACTORY_DRAW", playerId: viewingId })}
-            >
-              Draw 2
-            </button>
-            <button
-              type="button"
-              className="pending-panel__skip"
-              onClick={() => controller.runAction({ type: "SKIP_OPTIONAL", playerId: viewingId })}
-            >
-              Skip
-            </button>
-          </div>
         </div>
       )}
 
