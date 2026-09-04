@@ -135,7 +135,34 @@ describe("devolutionEffects", () => {
     const state = stateWithStadium("Lively Stadium", { abra, kadabra });
     getPlayer(state, PlayerId.P1).active = createCardInstance("kadabra", PlayerId.P1, Zone.Active);
 
-    expect(devolveOwnTypedPokemon(state, PlayerId.P1, "Psychic")).toBe(true);
+    expect(devolveOwnTypedPokemon(state, PlayerId.P1, "Psychic", { untilBasic: false })).toBe(true);
     expect(getPlayer(state, PlayerId.P1).active?.definitionId).toBe("abra");
+    expect(getPlayer(state, PlayerId.P1).hand).toHaveLength(1);
+  });
+
+  it("devolves through all stages to Basic for Strange Timepiece", () => {
+    const abra = mockPokemon("Abra", { types: ["Psychic"] });
+    const kadabra = mockPokemon("Kadabra", {
+      subtypes: ["Stage 1"],
+      evolvesFrom: "Abra",
+      types: ["Psychic"],
+    });
+    const alakazam = mockPokemon("Alakazam", {
+      subtypes: ["Stage 2"],
+      evolvesFrom: "Kadabra",
+      types: ["Psychic"],
+    });
+    const state = stateWithStadium("Lively Stadium", { abra, kadabra, alakazam });
+    state.turnNumber = 4;
+    getPlayer(state, PlayerId.P1).active = createCardInstance("alakazam", PlayerId.P1, Zone.Active);
+
+    expect(devolveOwnTypedPokemon(state, PlayerId.P1, "Psychic")).toBe(true);
+    const active = getPlayer(state, PlayerId.P1).active;
+    expect(active?.definitionId).toBe("abra");
+    expect(active?.enteredPlayTurn).toBe(4);
+    expect(getPlayer(state, PlayerId.P1).hand.map((card) => card.definitionId).sort()).toEqual([
+      "alakazam",
+      "kadabra",
+    ]);
   });
 });

@@ -313,6 +313,74 @@ describe("parseTrainerText", () => {
     ).toEqual({ kind: "stadium_perilous_jungle" });
   });
 
+  it("parses batch-3 passive stadiums", () => {
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Lively Stadium",
+          ["Each Basic Pokémon in play (both yours and your opponent's) gets +30 HP."],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_lively_stadium" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Jamming Tower",
+          ["Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect."],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_jamming_tower" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Full Metal Lab",
+          [
+            "Metal Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance).",
+          ],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_full_metal_lab" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Granite Cave",
+          [
+            "Steven's Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance).",
+          ],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_granite_cave" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Postwick",
+          [
+            "Attacks used by Hop's Pokémon (both yours and your opponent's) do 30 more damage to the opponent's Active Pokémon (before applying Weakness and Resistance).",
+          ],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_postwick" });
+
+    expect(
+      parseTrainerText(
+        mockTrainer(
+          "Paradise Resort",
+          ["Each Psyduck in play (both yours and your opponent's) gets -1 Retreat Cost."],
+          ["Stadium"],
+        ),
+      ).effects[0],
+    ).toEqual({ kind: "stadium_paradise_resort" });
+  });
+
   it("parses batch-5 meta trainers", () => {
     expect(
       parseTrainerText(

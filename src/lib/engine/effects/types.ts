@@ -545,6 +545,12 @@ export type ParsedEffect =
   | { kind: "stadium_ange_floette" }
   | { kind: "stadium_nighttime_mine" }
   | { kind: "stadium_perilous_jungle" }
+  | { kind: "stadium_lively_stadium" }
+  | { kind: "stadium_jamming_tower" }
+  | { kind: "stadium_full_metal_lab" }
+  | { kind: "stadium_granite_cave" }
+  | { kind: "stadium_postwick" }
+  | { kind: "stadium_paradise_resort" }
   | { kind: "generic_effect_stub"; text: string }
   | { kind: "unknown"; text: string };
 

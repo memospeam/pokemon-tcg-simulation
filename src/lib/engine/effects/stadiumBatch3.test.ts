@@ -178,6 +178,18 @@ describe("Batch 3 stadiums (passives)", () => {
     expect(getStadiumKind(stateWithStadium("Ange Floette", {}))).toBe("ange_floette");
     expect(getStadiumKind(stateWithStadium("Nighttime Mine", {}))).toBe("nighttime_mine");
     expect(getStadiumKind(stateWithStadium("Perilous Jungle", {}))).toBe("perilous_jungle");
+    expect(getStadiumKind(stateWithStadium("Lively Stadium", {}))).toBe("lively_stadium");
+    expect(getStadiumKind(stateWithStadium("Jamming Tower", {}))).toBe("jamming_tower");
+  });
+
+  it("parses batch-3 passive stadium rules text", () => {
+    const livelyDef = {
+      ...mockStadium("Lively Stadium"),
+      rules: ["Each Basic Pokémon in play (both yours and your opponent's) gets +30 HP."],
+    };
+    const state = stateWithStadium("Lively Stadium", {});
+    state.definitions.stadium = livelyDef;
+    expect(getStadiumKind(state)).toBe("lively_stadium");
   });
 
   it("Prism Tower discards 2 hand cards then draws 1", () => {

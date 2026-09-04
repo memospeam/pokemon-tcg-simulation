@@ -431,6 +431,30 @@ const STADIUM_PATTERNS: { test: RegExp; kind: ParsedEffect["kind"] }[] = [
     test: /during pok[ée]mon checkup, put 2 more damage counters on each poisoned non-darkness pok[ée]mon \(both yours and your opponent's\)/,
     kind: "stadium_perilous_jungle",
   },
+  {
+    test: /each basic pok[ée]mon in play \(both yours and your opponent's\) gets \+30 hp/,
+    kind: "stadium_lively_stadium",
+  },
+  {
+    test: /pok[ée]mon tools attached to each pok[ée]mon \(both yours and your opponent's\) have no effect/,
+    kind: "stadium_jamming_tower",
+  },
+  {
+    test: /metal pok[ée]mon \(both yours and your opponent's\) take 30 less damage from attacks from the opponent's pok[ée]mon \(after applying weakness and resistance\)/,
+    kind: "stadium_full_metal_lab",
+  },
+  {
+    test: /steven's pok[ée]mon \(both yours and your opponent's\) take 30 less damage from attacks from the opponent's pok[ée]mon \(after applying weakness and resistance\)/,
+    kind: "stadium_granite_cave",
+  },
+  {
+    test: /attacks used by hop's pok[ée]mon \(both yours and your opponent's\) do 30 more damage to the opponent's active pok[ée]mon \(before applying weakness and resistance\)/,
+    kind: "stadium_postwick",
+  },
+  {
+    test: /each psyduck in play \(both yours and your opponent's\) gets -1 retreat cost/,
+    kind: "stadium_paradise_resort",
+  },
 ];
 
 export function parseTrainerFullText(text: string): ParsedEffect[] | null {

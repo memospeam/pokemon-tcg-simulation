@@ -57,6 +57,19 @@ function replacePokemonInPlay(player: PlayerState, outgoing: CardInstance, incom
   return false;
 }
 
+type PlaySlot = { where: "active" } | { where: "bench"; index: number };
+
+function playSlotForPokemon(player: PlayerState, pokemon: CardInstance): PlaySlot | null {
+  if (player.active?.instanceId === pokemon.instanceId) return { where: "active" };
+  const benchIndex = player.bench.findIndex((entry) => entry.instanceId === pokemon.instanceId);
+  if (benchIndex >= 0) return { where: "bench", index: benchIndex };
+  return null;
+}
+
+function pokemonAtSlot(player: PlayerState, slot: PlaySlot): CardInstance | null {
+  return slot.where === "active" ? player.active : (player.bench[slot.index] ?? null);
+}
+
 function sendEvolutionCardToZone(
   state: EngineState,
   player: PlayerState,
@@ -150,7 +163,10 @@ export function devolveOwnTypedPokemon(
   state: EngineState,
   playerId: PlayerId,
   pokemonType: string,
+  options?: { untilBasic?: boolean; blockEvolveThisTurn?: boolean },
 ): boolean {
+  const untilBasic = options?.untilBasic ?? true;
+  const blockEvolveThisTurn = options?.blockEvolveThisTurn ?? true;
   const player = getPlayer(state, playerId);
   const type = pokemonType.toLowerCase();
   const target = findEvolvedPokemon(state, player, (def) =>
@@ -160,5 +176,23 @@ export function devolveOwnTypedPokemon(
     logMessage(state, `No evolved ${pokemonType} Pokémon to devolve.`);
     return false;
   }
-  return devolvePokemonOneStage(state, playerId, target, "hand");
+  const slot = playSlotForPokemon(player, target);
+  if (!slot) return false;
+
+  let devolvedAny = false;
+  while (true) {
+    const mon = pokemonAtSlot(player, slot);
+    if (!mon) break;
+    const def = getDefinitionSafe(state, mon.definitionId);
+    if (isBasicPokemon(def) || !def.evolvesFrom) break;
+    if (!devolvePokemonOneStage(state, playerId, mon, "hand")) break;
+    devolvedAny = true;
+    if (!untilBasic) break;
+  }
+
+  if (devolvedAny && blockEvolveThisTurn) {
+    const finalMon = pokemonAtSlot(player, slot);
+    if (finalMon) finalMon.enteredPlayTurn = state.turnNumber;
+  }
+  return devolvedAny;
 }

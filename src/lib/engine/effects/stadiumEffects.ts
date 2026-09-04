@@ -124,6 +124,18 @@ function toStadiumKind(kind: ParsedEffect["kind"]): StadiumKind | null {
       return "nighttime_mine";
     case "stadium_perilous_jungle":
       return "perilous_jungle";
+    case "stadium_lively_stadium":
+      return "lively_stadium";
+    case "stadium_jamming_tower":
+      return "jamming_tower";
+    case "stadium_full_metal_lab":
+      return "full_metal_lab";
+    case "stadium_granite_cave":
+      return "granite_cave";
+    case "stadium_postwick":
+      return "postwick";
+    case "stadium_paradise_resort":
+      return "paradise_resort";
     default:
       return null;
   }
@@ -208,6 +220,18 @@ export function logStadiumOnPlay(state: EngineState, def: CardDefinition): void 
     logMessage(state, "Perilous Jungle: Poisoned non-Darkness Pokémon take +2 damage counters at Checkup.");
   } else if (kind === "ange_floette" || stadiumKindByName(def.name) === "ange_floette") {
     logMessage(state, "Ange Floette: each Mega Floette ex in play gets +150 HP.");
+  } else if (kind === "lively_stadium" || stadiumKindByName(def.name) === "lively_stadium") {
+    logMessage(state, "Lively Stadium: each Basic Pokémon gets +30 HP.");
+  } else if (kind === "jamming_tower" || stadiumKindByName(def.name) === "jamming_tower") {
+    logMessage(state, "Jamming Tower: Pokémon Tools have no effect.");
+  } else if (kind === "full_metal_lab" || stadiumKindByName(def.name) === "full_metal_lab") {
+    logMessage(state, "Full Metal Lab: Metal Pokémon take 30 less damage from attacks.");
+  } else if (kind === "granite_cave" || stadiumKindByName(def.name) === "granite_cave") {
+    logMessage(state, "Granite Cave: Steven's Pokémon take 30 less damage from attacks.");
+  } else if (kind === "postwick" || stadiumKindByName(def.name) === "postwick") {
+    logMessage(state, "Postwick: Hop's Pokémon do +30 damage to the opponent's Active.");
+  } else if (kind === "paradise_resort" || stadiumKindByName(def.name) === "paradise_resort") {
+    logMessage(state, "Paradise Resort: each Psyduck's Retreat Cost is Colorless less.");
   }
 }
 
