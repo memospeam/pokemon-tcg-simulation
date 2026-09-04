@@ -1,4 +1,4 @@
-import type { DamageFloat } from "./useDamageFloat";
+import type { DamageFloat } from "./useBoardSlotVfx";
 
 interface DamageFloatLayerProps {
   floats: DamageFloat[];

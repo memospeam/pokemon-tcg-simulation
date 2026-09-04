@@ -12,7 +12,7 @@ import { BoardCard } from "@/components/GameBoard/BoardCard";
 import { TurnPhaseBar } from "@/components/Battle/TurnPhaseBar";
 import { HiddenHandBar } from "./HiddenHandBar";
 import { useMatchView } from "./useMatchView";
-import { useDamageFloats } from "./useDamageFloat";
+import { useBoardSlotVfx } from "./useBoardSlotVfx";
 import type { MatchVisibility } from "./types";
 import type { HandDragKind } from "./useHandDragDrop";
 
@@ -70,7 +70,7 @@ export function MatchTable({
   className = "",
 }: MatchTableProps) {
   const view = useMatchView(game, viewingPlayerId, visibility);
-  const damageFloats = useDamageFloats(game, viewingPlayerId);
+  const { damageFloats, evolvingSlots, koSlots } = useBoardSlotVfx(game, viewingPlayerId);
   if (!view) return null;
 
   const { self, opponent, opponentPlayerId, isMyTurn, hideOpponentHand, opponentHandCount } = view;
@@ -107,6 +107,8 @@ export function MatchTable({
           onDiscardClick={onDiscardClick ? () => onDiscardClick(opponentPlayerId) : undefined}
           selectedPokemonId={selectedPokemonId}
           damageFloats={damageFloats}
+          evolvingSlots={evolvingSlots}
+          koSlots={koSlots}
         />
 
         <div className="match-table__center">
@@ -148,6 +150,8 @@ export function MatchTable({
           dropKindForTarget={dropKindForTarget}
           onHandDrop={onHandDrop}
           damageFloats={damageFloats}
+          evolvingSlots={evolvingSlots}
+          koSlots={koSlots}
         />
       </div>
 

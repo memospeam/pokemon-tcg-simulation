@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ALL_TOURNAMENTS,
+  getWorlds2026Decks,
   type TournamentDeckPreset,
   type TournamentPresetBundle,
 } from "@/lib/deck/tournamentPresets";
@@ -18,13 +19,18 @@ import { SimPlayback } from "@/components/SimPlayback/SimPlayback";
 import { MatrixGrid } from "./MatrixGrid";
 
 type AnalysisTab = "watch" | "matrix";
-type MatrixSource = "tournament" | "meta11";
+type MatrixSource = "meta11" | "worlds26" | "tournament";
 type DeckCountOption = "4" | "8" | "all";
 
 function decksForRun(tournament: TournamentPresetBundle, count: DeckCountOption): TournamentDeckPreset[] {
   if (count === "all") return tournament.decks;
   const n = count === "4" ? 4 : 8;
   return tournament.decks.slice(0, Math.min(n, tournament.decks.length));
+}
+
+function matrixSizeLabel(source: MatrixSource, presetCount: number): string {
+  if (source === "meta11") return "11×11";
+  return `${presetCount}×${presetCount}`;
 }
 
 export function AnalysisLab() {
@@ -41,6 +47,9 @@ export function AnalysisLab() {
   const selectedTournament =
     ALL_TOURNAMENTS.find((t) => String(t.tournamentId) === tournamentId) ?? ALL_TOURNAMENTS[0]!;
 
+  const worldsDecks = useMemo(() => getWorlds2026Decks(), []);
+  const metaDecks = useMemo(() => getMetaArchetypeDecks(), []);
+
   const runMatrix = useCallback(async () => {
     setMatrixRunning(true);
     setMatrixReport(null);
@@ -49,9 +58,15 @@ export function AnalysisLab() {
     await new Promise((resolve) => setTimeout(resolve, 0));
     try {
       const presets =
-        matrixSource === "meta11" ? getMetaArchetypeDecks() : decksForRun(selectedTournament, deckCount);
+        matrixSource === "meta11"
+          ? metaDecks
+          : matrixSource === "worlds26"
+            ? worldsDecks
+            : decksForRun(selectedTournament, deckCount);
       const seeds =
-        matrixSource === "meta11" ? CI_BATCH_SEEDS : Array.from({ length: seedCount }, (_, i) => i + 1);
+        matrixSource === "meta11" || matrixSource === "worlds26"
+          ? CI_BATCH_SEEDS
+          : Array.from({ length: seedCount }, (_, i) => i + 1);
       const matchups = runPresetMatrix(presets, {
         seeds,
         setup: DEFAULT_PLAYTEST_SETUP,
@@ -62,7 +77,9 @@ export function AnalysisLab() {
       const title =
         matrixSource === "meta11"
           ? "Standard meta — 11 archetypes (Utrecht)"
-          : `${selectedTournament.name} — ${presets.length}-deck matrix`;
+          : matrixSource === "worlds26"
+            ? "World Championships 2026 — Top 8"
+            : `${selectedTournament.name} — ${presets.length}-deck matrix`;
       const lines = [
         `# ${title} (${seeds.length} seeds)`,
         "",
@@ -86,7 +103,14 @@ export function AnalysisLab() {
     } finally {
       setMatrixRunning(false);
     }
-  }, [deckCount, matrixSource, seedCount, selectedTournament]);
+  }, [deckCount, matrixSource, metaDecks, seedCount, selectedTournament, worldsDecks]);
+
+  const presetCount =
+    matrixSource === "meta11"
+      ? metaDecks.length
+      : matrixSource === "worlds26"
+        ? worldsDecks.length
+        : decksForRun(selectedTournament, deckCount).length;
 
   return (
     <div className="analysis-lab">
@@ -118,7 +142,7 @@ export function AnalysisLab() {
       {tab === "matrix" && (
         <section className="panel matrix-runner">
           <p>
-            Run cross-play simulations and view an {matrixSource === "meta11" ? "11×11" : "N×N"} win-rate grid.
+            Run cross-play simulations and view a {matrixSizeLabel(matrixSource, presetCount)} win-rate grid.
             For full CI meta reports use <code>npm run report:cri-meta</code>.
           </p>
           <div className="matrix-runner__controls">
@@ -129,6 +153,7 @@ export function AnalysisLab() {
                 onChange={(e) => setMatrixSource(e.target.value as MatrixSource)}
               >
                 <option value="meta11">Standard meta (11 archetypes)</option>
+                <option value="worlds26">Worlds 2026 Top 8</option>
                 <option value="tournament">Tournament preset</option>
               </select>
             </label>
@@ -166,13 +191,21 @@ export function AnalysisLab() {
             )}
             {matrixSource === "meta11" && (
               <p className="matrix-runner__hint">
-                Uses {getMetaArchetypeDecks().length} Utrecht Regional archetype reps · seeds{" "}
-                {CI_BATCH_SEEDS.join(", ")}
+                {metaDecks.length} Utrecht Regional archetype reps · seeds {CI_BATCH_SEEDS.join(", ")}
+              </p>
+            )}
+            {matrixSource === "worlds26" && (
+              <p className="matrix-runner__hint">
+                {worldsDecks.length} Worlds 2026 Top 8 lists · seeds {CI_BATCH_SEEDS.join(", ")}
               </p>
             )}
           </div>
           <button type="button" disabled={matrixRunning} onClick={() => void runMatrix()}>
-            {matrixRunning ? "Running…" : matrixSource === "meta11" ? "Run 11×11 matrix" : "Run matrix"}
+            {matrixRunning
+              ? "Running…"
+              : matrixSource === "tournament"
+                ? "Run matrix"
+                : `Run ${matrixSizeLabel(matrixSource, presetCount)} matrix`}
           </button>
           {matrixMatchups && matrixPresets && (
             <MatrixGrid presets={matrixPresets} matchups={matrixMatchups} />

@@ -3,7 +3,7 @@ import type { EngineState } from "@/lib/engine";
 import type { PlayerState } from "@/lib/engine";
 import { BoardCard } from "./BoardCard";
 import { DamageFloatLayer } from "@/components/Match/DamageFloatLayer";
-import type { DamageFloat } from "@/components/Match/useDamageFloat";
+import { isSlotAnimating, type DamageFloat } from "@/components/Match/useBoardSlotVfx";
 import type { HandDragKind } from "@/components/Match/useHandDragDrop";
 
 interface PileZoneProps {
@@ -45,6 +45,8 @@ interface PlayerMatProps {
   dropKindForTarget?: (instanceId: string) => HandDragKind | null;
   onHandDrop?: (card: CardInstance) => void;
   damageFloats?: DamageFloat[];
+  evolvingSlots?: Set<string>;
+  koSlots?: Set<string>;
 }
 
 export function PlayerMat({
@@ -61,6 +63,8 @@ export function PlayerMat({
   dropKindForTarget,
   onHandDrop,
   damageFloats = [],
+  evolvingSlots = new Set<string>(),
+  koSlots = new Set<string>(),
 }: PlayerMatProps) {
   const matSide = isOpponent ? "opponent" : "self";
   const benchSlots = Array.from({ length: 5 }, (_, i) => player.bench[i] ?? null);
@@ -93,6 +97,8 @@ export function PlayerMat({
                       dropKind={dropKindForTarget?.(card.instanceId) ?? undefined}
                       dropHighlight={Boolean(dropKindForTarget?.(card.instanceId))}
                       onHandDrop={onHandDrop ? () => onHandDrop(card) : undefined}
+                      animateEvolve={isSlotAnimating(evolvingSlots, matSide, "bench", index)}
+                      animateKo={isSlotAnimating(koSlots, matSide, "bench", index)}
                       onSelect={() => onPokemonSelect(card)}
                     />
                     <DamageFloatLayer
@@ -121,6 +127,8 @@ export function PlayerMat({
                   dropKind={dropKindForTarget?.(player.active.instanceId) ?? undefined}
                   dropHighlight={Boolean(dropKindForTarget?.(player.active.instanceId))}
                   onHandDrop={onHandDrop ? () => onHandDrop(player.active!) : undefined}
+                  animateEvolve={isSlotAnimating(evolvingSlots, matSide, "active")}
+                  animateKo={isSlotAnimating(koSlots, matSide, "active")}
                   onSelect={() => (onActiveSelect ?? onPokemonSelect)(player.active!)}
                 />
                 <DamageFloatLayer floats={damageFloats} mat={matSide} slot="active" />

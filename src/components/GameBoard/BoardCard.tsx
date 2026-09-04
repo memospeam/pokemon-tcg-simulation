@@ -43,6 +43,8 @@ interface BoardCardProps {
   dropHighlight?: boolean;
   dropKind?: "energy" | "evolve";
   onHandDrop?: () => void;
+  animateEvolve?: boolean;
+  animateKo?: boolean;
   size?: BoardCardSize;
   showName?: boolean;
 }
@@ -56,6 +58,8 @@ export function BoardCard({
   dropHighlight,
   dropKind,
   onHandDrop,
+  animateEvolve = false,
+  animateKo = false,
   size = "bench",
   showName = true,
 }: BoardCardProps) {
@@ -102,6 +106,8 @@ export function BoardCard({
         `board-card--${size}`,
         selected ? "board-card--selected" : "",
         highlight ? "board-card--highlight" : "",
+        animateEvolve ? "board-card--evolve" : "",
+        animateKo ? "board-card--ko" : "",
       ]
         .filter(Boolean)
         .join(" ")}

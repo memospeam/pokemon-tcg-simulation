@@ -298,3 +298,48 @@
     opacity: 0;
   }
 }
+
+/* Evolve / KO card animations */
+.board-card--evolve {
+  animation: board-evolve-flash 0.65s ease-out;
+}
+
+.board-card--ko {
+  animation: board-ko-flash 0.85s ease-out forwards;
+}
+
+@keyframes board-evolve-flash {
+  0% {
+    filter: brightness(1);
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(167, 139, 250, 0);
+  }
+  35% {
+    filter: brightness(1.35);
+    transform: scale(1.08);
+    box-shadow: 0 0 24px rgba(167, 139, 250, 0.75);
+  }
+  100% {
+    filter: brightness(1);
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(167, 139, 250, 0);
+  }
+}
+
+@keyframes board-ko-flash {
+  0% {
+    filter: brightness(1);
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  40% {
+    filter: brightness(1.5) saturate(1.4);
+    transform: scale(1.05) rotate(-4deg);
+    box-shadow: 0 0 28px rgba(239, 68, 68, 0.8);
+  }
+  100% {
+    filter: brightness(0.4) grayscale(0.6);
+    transform: scale(0.88) rotate(8deg);
+    opacity: 0.35;
+  }
+}

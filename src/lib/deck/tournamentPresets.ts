@@ -47,3 +47,8 @@ export function getTournamentDeckById(id: string): TournamentDeckPreset | undefi
 export function getAllDecks(): TournamentDeckPreset[] {
   return ALL_TOURNAMENTS.flatMap((t) => t.decks);
 }
+
+/** All Top 8 decks from World Championships 2026 (Limitless #515). */
+export function getWorlds2026Decks(): TournamentDeckPreset[] {
+  return WORLDS_2026.decks;
+}
