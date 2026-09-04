@@ -11,7 +11,18 @@ import { canAffordAttack, canAffordRetreat } from "../engine/energy";
 import { applyWeaknessAndResistance, canRareCandyEvolveInto, checkMulliganNeeded, parseDamage } from "../engine/rules";
 import { beginGame, gameReducer, getLegalActions, startActiveGame } from "../engine/reducer";
 import { getDefinitionSafe } from "../engine/rules";
-import { getStadiumKind, canUseLumioseCity, getLumioseDeckOptions, canUseCommunityCenter } from "../engine/effects/stadiumEffects";
+import {
+  canUseCommunityCenter,
+  canUseLumioseCity,
+  getLumioseDeckOptions,
+  getStadiumKind,
+} from "../engine/effects/stadiumEffects";
+import {
+  canUseAcademyAtNight,
+  canUseLevincia,
+  canUseSpikemuthGym,
+  canUseSurfingBeach,
+} from "../engine/effects/stadiumOptionalEffects";
 import { canUseGrandTree } from "../engine/effects/grandTreeEffects";
 import { isBasicEnergy, isBasicPokemon, isStage2, isSupporter } from "../models/definition";
 import type { CardInstance } from "../models/instance";
@@ -642,6 +653,22 @@ export function pickAutoStadiumAction(state: EngineState, playerId: PlayerId): G
 
   if (canUseCommunityCenter(state, playerId)) {
     return { type: "USE_COMMUNITY_CENTER", playerId };
+  }
+
+  if (canUseLevincia(state, playerId)) {
+    return { type: "USE_LEVINCIA", playerId };
+  }
+
+  if (canUseSurfingBeach(state, playerId)) {
+    return { type: "USE_SURFING_BEACH", playerId };
+  }
+
+  if (canUseSpikemuthGym(state, playerId)) {
+    return { type: "USE_SPIKEMUTH_GYM", playerId };
+  }
+
+  if (canUseAcademyAtNight(state, playerId)) {
+    return { type: "USE_ACADEMY_AT_NIGHT", playerId };
   }
 
   if (canUseLumioseCity(state, playerId)) {
@@ -3207,6 +3234,30 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
         type: "SELECT_SURFER_BENCH",
         playerId,
         benchInstanceId: bestSurferBench?.instanceId ?? pending.options[0]!,
+      });
+    }
+    case "ACADEMY_AT_NIGHT": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "SELECT_ACADEMY_AT_NIGHT", playerId, instanceId: pending.options[0]! });
+    }
+    case "LEVINCIA": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "SELECT_LEVINCIA", playerId, instanceId: pending.options[0]! });
+    }
+    case "SPIKEMUTH_GYM": {
+      if (pending.options.length === 0) return null;
+      return gameReducer(state, { type: "SELECT_SPIKEMUTH_GYM", playerId, instanceId: pending.options[0]! });
+    }
+    case "SURFING_BEACH": {
+      if (pending.options.length === 0) return null;
+      const player = getPlayer(state, playerId);
+      const best = player.bench
+        .filter((p) => pending.options.includes(p.instanceId))
+        .sort((a, b) => b.attachedEnergy.length - a.attachedEnergy.length)[0];
+      return gameReducer(state, {
+        type: "SELECT_SURFING_BEACH",
+        playerId,
+        benchInstanceId: best?.instanceId ?? pending.options[0]!,
       });
     }
     case "GRAND_TREE": {

@@ -81,6 +81,21 @@ export function GameBoard() {
           event.preventDefault();
           dispatch({ type: "END_TURN" });
         }
+        return;
+      }
+
+      const handIndex = Number(event.key);
+      if (handIndex >= 1 && handIndex <= 9 && engineState.phase === GamePhase.Active) {
+        const myTurn = humanPlayerId !== null
+          ? engineState.currentPlayerId === humanPlayerId
+          : engineState.currentPlayerId === engineState.viewingPlayerId;
+        if (!myTurn) return;
+        const viewer = getPlayer(engineState, engineState.viewingPlayerId);
+        const card = viewer.hand[handIndex - 1];
+        if (card) {
+          event.preventDefault();
+          controller.handleHandSelect(card);
+        }
       }
     }
 
@@ -194,6 +209,9 @@ export function GameBoard() {
         onHandDragEnd={isMyTurn ? handDrag.onHandDragEnd : undefined}
         dropKindForTarget={isMyTurn ? handDrag.dropKindForTarget : undefined}
         onHandDrop={isMyTurn ? handDrag.onHandDrop : undefined}
+        onHandPointerDown={isMyTurn ? handDrag.onHandPointerDown : undefined}
+        onHandPointerUp={isMyTurn ? handDrag.onHandPointerUp : undefined}
+        touchDragCardId={isMyTurn ? handDrag.touchDragCardId : undefined}
       />
 
       {controller.selectedHandCard && selectedDef && (
@@ -319,6 +337,34 @@ export function GameBoard() {
           controller.runAction({
             type: "SKIP_GRAND_TREE_STAGE2",
             playerId: boardGame.pendingAction?.playerId ?? viewingId,
+          })
+        }
+        onSelectAcademyAtNight={(instanceId) =>
+          controller.runAction({
+            type: "SELECT_ACADEMY_AT_NIGHT",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+            instanceId,
+          })
+        }
+        onSelectLevincia={(instanceId) =>
+          controller.runAction({
+            type: "SELECT_LEVINCIA",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+            instanceId,
+          })
+        }
+        onSelectSpikemuthGym={(instanceId) =>
+          controller.runAction({
+            type: "SELECT_SPIKEMUTH_GYM",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+            instanceId,
+          })
+        }
+        onSelectSurfingBeach={(benchInstanceId) =>
+          controller.runAction({
+            type: "SELECT_SURFING_BEACH",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+            benchInstanceId,
           })
         }
       />

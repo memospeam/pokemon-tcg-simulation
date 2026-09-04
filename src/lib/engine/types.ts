@@ -141,6 +141,14 @@ export type GameAction =
   | { type: "USE_TR_FACTORY_DRAW"; playerId: PlayerId }
   | { type: "USE_COMMUNITY_CENTER"; playerId: PlayerId }
   | { type: "USE_GRAND_TREE"; playerId: PlayerId }
+  | { type: "USE_ACADEMY_AT_NIGHT"; playerId: PlayerId }
+  | { type: "SELECT_ACADEMY_AT_NIGHT"; playerId: PlayerId; instanceId: string }
+  | { type: "USE_LEVINCIA"; playerId: PlayerId }
+  | { type: "SELECT_LEVINCIA"; playerId: PlayerId; instanceId: string }
+  | { type: "USE_SPIKEMUTH_GYM"; playerId: PlayerId }
+  | { type: "SELECT_SPIKEMUTH_GYM"; playerId: PlayerId; instanceId: string }
+  | { type: "USE_SURFING_BEACH"; playerId: PlayerId }
+  | { type: "SELECT_SURFING_BEACH"; playerId: PlayerId; benchInstanceId: string }
   | { type: "SELECT_GRAND_TREE_BASIC"; playerId: PlayerId; targetId: string }
   | { type: "SELECT_GRAND_TREE_STAGE1"; playerId: PlayerId; instanceId: string }
   | { type: "SELECT_GRAND_TREE_STAGE2"; playerId: PlayerId; instanceId: string }
@@ -309,6 +317,16 @@ export type PendingAction =
       stage1TargetId?: string;
       options: string[];
     }
+  | { type: "ACADEMY_AT_NIGHT"; playerId: PlayerId; options: string[] }
+  | {
+      type: "LEVINCIA";
+      playerId: PlayerId;
+      options: string[];
+      pickedIds: string[];
+      slotsRemaining: number;
+    }
+  | { type: "SPIKEMUTH_GYM"; playerId: PlayerId; options: string[] }
+  | { type: "SURFING_BEACH"; playerId: PlayerId; options: string[] }
   | { type: "RECON_DIRECTIVE"; playerId: PlayerId; options: string[] }
   | { type: "RARE_CANDY"; playerId: PlayerId }
   | { type: "CRUSHING_HAMMER"; playerId: PlayerId; options: { pokemonId: string; energyId: string }[] }

@@ -47,6 +47,20 @@ import {
   skipGrandTreeStage2,
   startGrandTreeFlow,
 } from "./effects/grandTreeEffects";
+import {
+  canUseAcademyAtNight,
+  canUseLevincia,
+  canUseSpikemuthGym,
+  canUseSurfingBeach,
+  continueLevinciaPick,
+  resolveAcademyAtNight,
+  resolveSpikemuthGym,
+  resolveSurfingBeach,
+  startAcademyAtNight,
+  startLevincia,
+  startSpikemuthGym,
+  startSurfingBeach,
+} from "./effects/stadiumOptionalEffects";
 import { logStadiumOnPlay, getStadiumKind, getMaxBenchSize, canUseLumioseCity, getLumioseDeckOptions, canUseCommunityCenter, applyCommunityCenter } from "./effects/stadiumEffects";
 import { markMovedFromBenchToActive } from "./effects/pokemonZoneHelpers";
 import {
@@ -1729,6 +1743,58 @@ function handleUseCommunityCenter(state: EngineState, playerId: PlayerId): Engin
   return state;
 }
 
+function handleUseAcademyAtNight(state: EngineState, playerId: PlayerId): EngineState {
+  if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
+  if (state.pendingAction) return state;
+  if (!canUseAcademyAtNight(state, playerId)) return state;
+  startAcademyAtNight(state, playerId);
+  return state;
+}
+
+function handleSelectAcademyAtNight(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  resolveAcademyAtNight(state, playerId, instanceId);
+  return state;
+}
+
+function handleUseLevincia(state: EngineState, playerId: PlayerId): EngineState {
+  if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
+  if (state.pendingAction) return state;
+  if (!canUseLevincia(state, playerId)) return state;
+  startLevincia(state, playerId);
+  return state;
+}
+
+function handleSelectLevincia(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  continueLevinciaPick(state, playerId, instanceId);
+  return state;
+}
+
+function handleUseSpikemuthGym(state: EngineState, playerId: PlayerId): EngineState {
+  if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
+  if (state.pendingAction) return state;
+  if (!canUseSpikemuthGym(state, playerId)) return state;
+  startSpikemuthGym(state, playerId);
+  return state;
+}
+
+function handleSelectSpikemuthGym(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  resolveSpikemuthGym(state, playerId, instanceId);
+  return state;
+}
+
+function handleUseSurfingBeach(state: EngineState, playerId: PlayerId): EngineState {
+  if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
+  if (state.pendingAction) return state;
+  if (!canUseSurfingBeach(state, playerId)) return state;
+  startSurfingBeach(state, playerId);
+  return state;
+}
+
+function handleSelectSurfingBeach(state: EngineState, playerId: PlayerId, benchInstanceId: string): EngineState {
+  resolveSurfingBeach(state, playerId, benchInstanceId);
+  return state;
+}
+
 function handleUseLumioseCity(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
   if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
   if (state.pendingAction) return state;
@@ -1885,6 +1951,22 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleUseLumioseCity(nextState, action.playerId, action.instanceId);
     case "USE_COMMUNITY_CENTER":
       return handleUseCommunityCenter(nextState, action.playerId);
+    case "USE_ACADEMY_AT_NIGHT":
+      return handleUseAcademyAtNight(nextState, action.playerId);
+    case "SELECT_ACADEMY_AT_NIGHT":
+      return handleSelectAcademyAtNight(nextState, action.playerId, action.instanceId);
+    case "USE_LEVINCIA":
+      return handleUseLevincia(nextState, action.playerId);
+    case "SELECT_LEVINCIA":
+      return handleSelectLevincia(nextState, action.playerId, action.instanceId);
+    case "USE_SPIKEMUTH_GYM":
+      return handleUseSpikemuthGym(nextState, action.playerId);
+    case "SELECT_SPIKEMUTH_GYM":
+      return handleSelectSpikemuthGym(nextState, action.playerId, action.instanceId);
+    case "USE_SURFING_BEACH":
+      return handleUseSurfingBeach(nextState, action.playerId);
+    case "SELECT_SURFING_BEACH":
+      return handleSelectSurfingBeach(nextState, action.playerId, action.benchInstanceId);
     case "USE_TR_FACTORY_DRAW":
       return handleUseTrFactoryDraw(nextState, action.playerId);
     case "USE_GRAND_TREE":
@@ -2357,6 +2439,34 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
           actions.push({ type: "SELECT_GRAND_TREE_STAGE2", playerId: current, instanceId });
         }
         actions.push({ type: "SKIP_GRAND_TREE_STAGE2", playerId: current });
+      }
+      break;
+    }
+    case "ACADEMY_AT_NIGHT": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_ACADEMY_AT_NIGHT", playerId: current, instanceId });
+      }
+      break;
+    }
+    case "LEVINCIA": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_LEVINCIA", playerId: current, instanceId });
+      }
+      break;
+    }
+    case "SPIKEMUTH_GYM": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_SPIKEMUTH_GYM", playerId: current, instanceId });
+      }
+      break;
+    }
+    case "SURFING_BEACH": {
+      if (pending.playerId !== current) break;
+      for (const benchInstanceId of pending.options) {
+        actions.push({ type: "SELECT_SURFING_BEACH", playerId: current, benchInstanceId });
       }
       break;
     }
@@ -2837,6 +2947,22 @@ function appendActiveTurnActions(
 
   if (canUseCommunityCenter(state, current)) {
     actions.push({ type: "USE_COMMUNITY_CENTER", playerId: current });
+  }
+
+  if (canUseAcademyAtNight(state, current)) {
+    actions.push({ type: "USE_ACADEMY_AT_NIGHT", playerId: current });
+  }
+
+  if (canUseLevincia(state, current)) {
+    actions.push({ type: "USE_LEVINCIA", playerId: current });
+  }
+
+  if (canUseSpikemuthGym(state, current)) {
+    actions.push({ type: "USE_SPIKEMUTH_GYM", playerId: current });
+  }
+
+  if (canUseSurfingBeach(state, current)) {
+    actions.push({ type: "USE_SURFING_BEACH", playerId: current });
   }
 
   if (canUseGrandTree(state, current)) {

@@ -171,10 +171,35 @@
 /* Energy drag-and-drop */
 .hand-bar__slot--draggable {
   cursor: grab;
+  touch-action: none;
 }
 
 .hand-bar__slot--draggable:active {
   cursor: grabbing;
+}
+
+.hand-bar__slot--touch-drag {
+  opacity: 0.85;
+  transform: scale(1.04);
+  z-index: 2;
+}
+
+.hand-bar__index {
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  z-index: 1;
+  min-width: 1.1rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  color: #e2e8f0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  pointer-events: none;
 }
 
 .board-card-wrap {

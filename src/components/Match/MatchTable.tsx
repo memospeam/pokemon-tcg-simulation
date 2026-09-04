@@ -36,6 +36,9 @@ export interface MatchTableProps {
   canDragHandCard?: (instanceId: string) => boolean;
   onHandDragStart?: (card: CardInstance) => void;
   onHandDragEnd?: () => void;
+  onHandPointerDown?: (card: CardInstance, event: React.PointerEvent) => void;
+  onHandPointerUp?: (event: React.PointerEvent) => void;
+  touchDragCardId?: string | null;
   dropKindForTarget?: (instanceId: string) => HandDragKind | null;
   onHandDrop?: (card: CardInstance) => void;
   logTail?: number;
@@ -64,6 +67,9 @@ export function MatchTable({
   canDragHandCard,
   onHandDragStart,
   onHandDragEnd,
+  onHandPointerDown,
+  onHandPointerUp,
+  touchDragCardId,
   dropKindForTarget,
   onHandDrop,
   logTail = 8,
@@ -175,6 +181,10 @@ export function MatchTable({
         canDragHandCard={canDragHandCard}
         onHandDragStart={onHandDragStart}
         onHandDragEnd={onHandDragEnd}
+        onHandPointerDown={onHandPointerDown}
+        onHandPointerUp={onHandPointerUp}
+        touchDragCardId={touchDragCardId}
+        showKeyboardIndex={isMyTurn}
         playerName={self.name}
       />
 

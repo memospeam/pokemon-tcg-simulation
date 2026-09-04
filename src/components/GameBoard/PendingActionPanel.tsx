@@ -15,6 +15,10 @@ interface PendingActionPanelProps {
   onSelectGrandTreeBasic?: (targetId: string) => void;
   onSelectGrandTreeDeck?: (instanceId: string) => void;
   onSkipGrandTreeStage2?: () => void;
+  onSelectAcademyAtNight?: (instanceId: string) => void;
+  onSelectLevincia?: (instanceId: string) => void;
+  onSelectSpikemuthGym?: (instanceId: string) => void;
+  onSelectSurfingBeach?: (benchInstanceId: string) => void;
 }
 
 function deckSearchTitle(pending: Extract<EngineState["pendingAction"], { type: "SEARCH_DECK" }>): string {
@@ -59,6 +63,10 @@ export function PendingActionPanel({
   onSelectGrandTreeBasic,
   onSelectGrandTreeDeck,
   onSkipGrandTreeStage2,
+  onSelectAcademyAtNight,
+  onSelectLevincia,
+  onSelectSpikemuthGym,
+  onSelectSurfingBeach,
 }: PendingActionPanelProps) {
   const pending = game.pendingAction;
   if (!pending) return null;
@@ -303,6 +311,118 @@ export function PendingActionPanel({
                   {def?.name} — {option.attackName}
                   {attack?.damage ? ` (${attack.damage})` : ""}
                 </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (pending.type === "ACADEMY_AT_NIGHT") {
+    const player = getPlayer(game, pending.playerId);
+    const cards = pending.options
+      .map((id) => player.hand.find((entry) => entry.instanceId === id) ?? null)
+      .filter(Boolean) as CardInstance[];
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <h4>Academy at Night — put a card on top of your deck</h4>
+        <div className="pending-panel__cards pending-panel__cards--scroll">
+          {cards.map((card) => {
+            const def = getDefinition(game, card.definitionId);
+            return (
+              <button
+                key={card.instanceId}
+                type="button"
+                className="pending-panel__pick"
+                onClick={() => onSelectAcademyAtNight?.(card.instanceId)}
+              >
+                <BoardCard state={game} card={card} size="hand" showName={false} />
+                <span>{def?.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (pending.type === "LEVINCIA") {
+    const player = getPlayer(game, pending.playerId);
+    const cards = pending.options
+      .map((id) => player.discard.find((entry) => entry.instanceId === id) ?? null)
+      .filter(Boolean) as CardInstance[];
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <h4>Levincia — choose Basic Lightning Energy ({pending.slotsRemaining} remaining)</h4>
+        <div className="pending-panel__cards pending-panel__cards--scroll">
+          {cards.map((card) => {
+            const def = getDefinition(game, card.definitionId);
+            return (
+              <button
+                key={card.instanceId}
+                type="button"
+                className="pending-panel__pick"
+                onClick={() => onSelectLevincia?.(card.instanceId)}
+              >
+                <BoardCard state={game} card={card} size="hand" showName={false} />
+                <span>{def?.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (pending.type === "SPIKEMUTH_GYM") {
+    const player = getPlayer(game, pending.playerId);
+    const cards = pending.options
+      .map((id) => player.deck.find((entry) => entry.instanceId === id) ?? null)
+      .filter(Boolean) as CardInstance[];
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <h4>Spikemuth Gym — choose a Marnie's Pokémon</h4>
+        <div className="pending-panel__cards pending-panel__cards--scroll">
+          {cards.map((card) => {
+            const def = getDefinition(game, card.definitionId);
+            return (
+              <button
+                key={card.instanceId}
+                type="button"
+                className="pending-panel__pick"
+                onClick={() => onSelectSpikemuthGym?.(card.instanceId)}
+              >
+                <BoardCard state={game} card={card} size="hand" showName={false} />
+                <span>{def?.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (pending.type === "SURFING_BEACH") {
+    const player = getPlayer(game, pending.playerId);
+    const targets = pending.options
+      .map((id) => player.bench.find((entry) => entry.instanceId === id) ?? null)
+      .filter(Boolean) as CardInstance[];
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <h4>Surfing Beach — switch with a Benched Water Pokémon</h4>
+        <div className="pending-panel__cards pending-panel__cards--scroll">
+          {targets.map((card) => {
+            const def = getDefinition(game, card.definitionId);
+            return (
+              <button
+                key={card.instanceId}
+                type="button"
+                className="pending-panel__pick"
+                onClick={() => onSelectSurfingBeach?.(card.instanceId)}
+              >
+                <BoardCard state={game} card={card} size="bench" showName={false} />
+                <span>{def?.name}</span>
               </button>
             );
           })}

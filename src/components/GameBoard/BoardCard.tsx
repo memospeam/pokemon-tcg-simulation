@@ -104,6 +104,7 @@ export function BoardCard({
     >
     <button
       type="button"
+      data-hand-drop-target={isPokemonDrop ? card.instanceId : undefined}
       className={[
         "board-card",
         `board-card--${def.supertype.toLowerCase()}`,

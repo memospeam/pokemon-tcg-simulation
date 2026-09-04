@@ -7,6 +7,12 @@ import {
   getLumioseDeckOptions,
   getStadiumKind,
 } from "@/lib/engine/effects/stadiumEffects";
+import {
+  canUseAcademyAtNight,
+  canUseLevincia,
+  canUseSpikemuthGym,
+  canUseSurfingBeach,
+} from "@/lib/engine/effects/stadiumOptionalEffects";
 import { canUseGrandTree } from "@/lib/engine/effects/grandTreeEffects";
 
 interface StadiumAbilityPanelProps {
@@ -26,6 +32,14 @@ function stadiumLabel(kind: ReturnType<typeof getStadiumKind>): string {
       return "Community Center";
     case "team_rocket_factory":
       return "Team Rocket's Factory";
+    case "academy_at_night":
+      return "Academy at Night";
+    case "levincia":
+      return "Levincia";
+    case "spikemuth_gym":
+      return "Spikemuth Gym";
+    case "surfing_beach":
+      return "Surfing Beach";
     default:
       return "Stadium";
   }
@@ -39,8 +53,23 @@ export function StadiumAbilityPanel({ game, viewingId, isMyTurn, onRun }: Stadiu
   const showCommunity = canUseCommunityCenter(game, viewingId);
   const showLumiose = canUseLumioseCity(game, viewingId);
   const showGrandTree = canUseGrandTree(game, viewingId);
+  const showAcademy = canUseAcademyAtNight(game, viewingId);
+  const showLevincia = canUseLevincia(game, viewingId);
+  const showSpikemuth = canUseSpikemuthGym(game, viewingId);
+  const showSurfing = canUseSurfingBeach(game, viewingId);
 
-  if (!showFactory && !showCommunity && !showLumiose && !showGrandTree) return null;
+  if (
+    !showFactory &&
+    !showCommunity &&
+    !showLumiose &&
+    !showGrandTree &&
+    !showAcademy &&
+    !showLevincia &&
+    !showSpikemuth &&
+    !showSurfing
+  ) {
+    return null;
+  }
 
   const lumioseOptions = showLumiose ? getLumioseDeckOptions(game, viewingId) : [];
 
@@ -73,6 +102,42 @@ export function StadiumAbilityPanel({ game, viewingId, isMyTurn, onRun }: Stadiu
             onClick={() => onRun({ type: "USE_COMMUNITY_CENTER", playerId: viewingId })}
           >
             Heal 10 from each Pokémon
+          </button>
+        )}
+        {showAcademy && (
+          <button
+            type="button"
+            className="pending-panel__pick"
+            onClick={() => onRun({ type: "USE_ACADEMY_AT_NIGHT", playerId: viewingId })}
+          >
+            Put hand card on deck top
+          </button>
+        )}
+        {showLevincia && (
+          <button
+            type="button"
+            className="pending-panel__pick"
+            onClick={() => onRun({ type: "USE_LEVINCIA", playerId: viewingId })}
+          >
+            Recover Lightning Energy (≤2)
+          </button>
+        )}
+        {showSpikemuth && (
+          <button
+            type="button"
+            className="pending-panel__pick"
+            onClick={() => onRun({ type: "USE_SPIKEMUTH_GYM", playerId: viewingId })}
+          >
+            Search Marnie's Pokémon
+          </button>
+        )}
+        {showSurfing && (
+          <button
+            type="button"
+            className="pending-panel__pick"
+            onClick={() => onRun({ type: "USE_SURFING_BEACH", playerId: viewingId })}
+          >
+            Switch Water Active
           </button>
         )}
         {showGrandTree && (

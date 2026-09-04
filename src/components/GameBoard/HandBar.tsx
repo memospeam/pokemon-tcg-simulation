@@ -1,3 +1,4 @@
+import type { PointerEvent } from "react";
 import type { CardDefinition } from "@/lib/models/definition";
 import type { CardInstance } from "@/lib/models/instance";
 import type { EngineState } from "@/lib/engine";
@@ -12,6 +13,10 @@ interface HandBarProps {
   canDragHandCard?: (instanceId: string) => boolean;
   onHandDragStart?: (card: CardInstance) => void;
   onHandDragEnd?: () => void;
+  onHandPointerDown?: (card: CardInstance, event: PointerEvent) => void;
+  onHandPointerUp?: (event: PointerEvent) => void;
+  touchDragCardId?: string | null;
+  showKeyboardIndex?: boolean;
   /** Player name shown as prefix in the label */
   playerName?: string;
   /** Flips border/gradient direction (for the opponent row at the top) */
@@ -27,6 +32,10 @@ export function HandBar({
   canDragHandCard,
   onHandDragStart,
   onHandDragEnd,
+  onHandPointerDown,
+  onHandPointerUp,
+  touchDragCardId,
+  showKeyboardIndex = false,
   playerName,
   isOpponent,
 }: HandBarProps) {
@@ -42,14 +51,22 @@ export function HandBar({
         Hand · {hand.length} cards
       </div>
       <div className="hand-bar__cards">
-        {hand.map((card) => {
+        {hand.map((card, index) => {
           const def = game.definitions[card.definitionId];
           const quick = def && getQuickLabel ? getQuickLabel(def) : null;
           const draggable = canDragHandCard?.(card.instanceId) ?? false;
+          const touchDragging = touchDragCardId === card.instanceId;
+          const keyboardIndex = showKeyboardIndex && index < 9 ? index + 1 : null;
           return (
             <div
               key={card.instanceId}
-              className={`hand-bar__slot${draggable ? " hand-bar__slot--draggable" : ""}`}
+              className={[
+                "hand-bar__slot",
+                draggable ? "hand-bar__slot--draggable" : "",
+                touchDragging ? "hand-bar__slot--touch-drag" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               draggable={draggable}
               onDragStart={
                 draggable
@@ -61,7 +78,17 @@ export function HandBar({
                   : undefined
               }
               onDragEnd={draggable ? () => onHandDragEnd?.() : undefined}
+              onPointerDown={
+                draggable ? (event) => onHandPointerDown?.(card, event) : undefined
+              }
+              onPointerUp={draggable ? (event) => onHandPointerUp?.(event) : undefined}
+              onPointerCancel={draggable ? (event) => onHandPointerUp?.(event) : undefined}
             >
+              {keyboardIndex !== null && (
+                <span className="hand-bar__index" aria-hidden="true">
+                  {keyboardIndex}
+                </span>
+              )}
               <BoardCard
                 state={game}
                 card={card}

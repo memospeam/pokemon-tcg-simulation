@@ -63,7 +63,7 @@ export function ActionDock({
       </div>
 
       <div className="action-dock__group action-dock__hints" aria-hidden="true">
-        <span className="action-dock__hint">E · Esc</span>
+        <span className="action-dock__hint">E · Esc · 1–9</span>
       </div>
 
       <div className="action-dock__group">
