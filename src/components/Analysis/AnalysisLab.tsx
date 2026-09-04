@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import {
   ALL_TOURNAMENTS,
   type TournamentDeckPreset,
+  type TournamentPresetBundle,
 } from "@/lib/deck/tournamentPresets";
 import {
   DEFAULT_PLAYTEST_RUN,
@@ -13,28 +14,41 @@ import {
 import { SimPlayback } from "@/components/SimPlayback/SimPlayback";
 
 type AnalysisTab = "watch" | "matrix";
+type DeckCountOption = "4" | "8" | "all";
+
+function decksForRun(tournament: TournamentPresetBundle, count: DeckCountOption): TournamentDeckPreset[] {
+  if (count === "all") return tournament.decks;
+  const n = count === "4" ? 4 : 8;
+  return tournament.decks.slice(0, Math.min(n, tournament.decks.length));
+}
 
 export function AnalysisLab() {
   const [tab, setTab] = useState<AnalysisTab>("watch");
+  const [tournamentId, setTournamentId] = useState(String(ALL_TOURNAMENTS[0]!.tournamentId));
+  const [deckCount, setDeckCount] = useState<DeckCountOption>("4");
+  const [seedCount, setSeedCount] = useState(3);
   const [matrixRunning, setMatrixRunning] = useState(false);
   const [matrixReport, setMatrixReport] = useState<string | null>(null);
+
+  const selectedTournament =
+    ALL_TOURNAMENTS.find((t) => String(t.tournamentId) === tournamentId) ?? ALL_TOURNAMENTS[0]!;
 
   const runMatrix = useCallback(async () => {
     setMatrixRunning(true);
     setMatrixReport(null);
     await new Promise((resolve) => setTimeout(resolve, 0));
     try {
-      const tournament = ALL_TOURNAMENTS[0]!;
-      const presets = tournament.decks.slice(0, 4) as TournamentDeckPreset[];
+      const presets = decksForRun(selectedTournament, deckCount);
+      const seeds = Array.from({ length: seedCount }, (_, i) => i + 1);
       const matchups = runPresetMatrix(presets, {
-        seeds: [1, 2, 3],
+        seeds,
         setup: DEFAULT_PLAYTEST_SETUP,
         run: { ...DEFAULT_PLAYTEST_RUN, maxTurns: 30, maxActions: 240 },
       });
       const health = summarizeSimHealth(matchups);
       const tiers = computeDeckTierList(presets, health.matchups);
       const lines = [
-        `# ${tournament.name} — mini matrix (top 4 decks × 3 seeds)`,
+        `# ${selectedTournament.name} — ${presets.length}-deck matrix (${seedCount} seeds)`,
         "",
         `Games: ${health.totalGames} · Completion: ${Math.round(health.completionRate * 100)}% · Stalls: ${Math.round(health.stallRate * 100)}%`,
         "",
@@ -54,7 +68,7 @@ export function AnalysisLab() {
     } finally {
       setMatrixRunning(false);
     }
-  }, []);
+  }, [deckCount, seedCount, selectedTournament]);
 
   return (
     <div className="analysis-lab">
@@ -86,11 +100,41 @@ export function AnalysisLab() {
       {tab === "matrix" && (
         <section className="panel matrix-runner">
           <p>
-            Runs a quick 4-deck cross matrix from the latest tournament preset (3 seeds each).
-            For full meta reports use <code>npm run report:cri-meta</code> in CI.
+            Cross-play tournament decks with configurable deck count and seeds. For full CI meta reports
+            use <code>npm run report:cri-meta</code>.
           </p>
+          <div className="matrix-runner__controls">
+            <label className="matrix-runner__field">
+              Tournament
+              <select value={tournamentId} onChange={(e) => setTournamentId(e.target.value)}>
+                {ALL_TOURNAMENTS.map((t) => (
+                  <option key={t.tournamentId} value={String(t.tournamentId)}>
+                    {t.name} ({t.decks.length} decks)
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="matrix-runner__field">
+              Decks
+              <select value={deckCount} onChange={(e) => setDeckCount(e.target.value as DeckCountOption)}>
+                <option value="4">Top 4</option>
+                <option value="8">Top 8</option>
+                <option value="all">All ({selectedTournament.decks.length})</option>
+              </select>
+            </label>
+            <label className="matrix-runner__field">
+              Seeds
+              <select value={seedCount} onChange={(e) => setSeedCount(Number(e.target.value))}>
+                {[1, 3, 5, 10].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <button type="button" disabled={matrixRunning} onClick={() => void runMatrix()}>
-            {matrixRunning ? "Running…" : "Run mini matrix"}
+            {matrixRunning ? "Running…" : "Run matrix"}
           </button>
           {matrixReport && <pre className="matrix-runner__report">{matrixReport}</pre>}
         </section>

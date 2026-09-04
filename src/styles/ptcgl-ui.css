@@ -242,6 +242,30 @@
   white-space: pre-wrap;
 }
 
+.matrix-runner__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.matrix-runner__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.matrix-runner__field select {
+  min-width: 12rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+}
+
 /* Match event flash (Phase 4 hook) */
 .match-table--event-damage .match-table__felt {
   animation: match-damage-flash 0.35s ease-out;

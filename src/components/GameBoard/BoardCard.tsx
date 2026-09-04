@@ -40,6 +40,8 @@ interface BoardCardProps {
   onSelect?: (card: CardInstance) => void;
   selected?: boolean;
   highlight?: boolean;
+  dropHighlight?: boolean;
+  onEnergyDrop?: () => void;
   size?: BoardCardSize;
   showName?: boolean;
 }
@@ -50,13 +52,43 @@ export function BoardCard({
   onSelect,
   selected,
   highlight,
+  dropHighlight,
+  onEnergyDrop,
   size = "bench",
   showName = true,
 }: BoardCardProps) {
   const def = getDefinition(state, card.definitionId);
   if (!def) return null;
 
+  const isPokemonDrop = def.supertype === "Pokémon" && Boolean(onEnergyDrop);
+
   return (
+    <div
+      className={[
+        "board-card-wrap",
+        dropHighlight ? "board-card-wrap--drop" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      onDragOver={
+        isPokemonDrop
+          ? (event) => {
+              if (!dropHighlight) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+            }
+          : undefined
+      }
+      onDrop={
+        isPokemonDrop
+          ? (event) => {
+              if (!dropHighlight) return;
+              event.preventDefault();
+              onEnergyDrop?.();
+            }
+          : undefined
+      }
+    >
     <button
       type="button"
       className={[
@@ -93,6 +125,7 @@ export function BoardCard({
         </div>
       )}
     </button>
+    </div>
   );
 }
 

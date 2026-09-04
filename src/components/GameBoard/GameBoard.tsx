@@ -7,6 +7,8 @@ import { getTrainerCategory } from "@/lib/ui/trainerHints";
 import { useGameStore } from "@/stores/gameStore";
 import { MatchTable } from "@/components/Match/MatchTable";
 import { useMatchEventClass } from "@/components/Match/useMatchAnimations";
+import { CoinFlipOverlay } from "@/components/Match/CoinFlipOverlay";
+import { useEnergyDragDrop } from "@/components/Match/useEnergyDragDrop";
 import { ActionDock } from "./ActionDock";
 import { buildAttackActions, CardPreviewPanel } from "./CardPreviewPanel";
 import { buildHandActions, buildPokemonActions } from "./CardActionMenu";
@@ -20,6 +22,19 @@ export function GameBoard() {
   const controller = useGameBoardController(engineState, dispatch);
   const [discardViewPlayerId, setDiscardViewPlayerId] = useState<PlayerId | null>(null);
   const eventClass = useMatchEventClass(engineState);
+
+  const energyDrag = useEnergyDragDrop(
+    controller.legalActions,
+    (energyId, targetId) => {
+      const attachAction = controller.legalActions.find(
+        (entry) =>
+          entry.type === "ATTACH_ENERGY" &&
+          entry.energyId === energyId &&
+          entry.targetId === targetId,
+      );
+      if (attachAction) controller.runAction(attachAction);
+    },
+  );
 
   useEffect(() => {
     if (engineState?.pendingAction?.type === "PICK_DISCARD") {
@@ -108,6 +123,7 @@ export function GameBoard() {
 
   return (
     <>
+      <CoinFlipOverlay game={boardGame} />
       <MatchTable
         className={eventClass}
         game={boardGame}
@@ -127,6 +143,11 @@ export function GameBoard() {
         onDiscardClick={setDiscardViewPlayerId}
         onHandSelect={controller.handleHandSelect}
         getHandQuickLabel={(def) => getHandQuickLabel(def)}
+        canDragEnergy={isMyTurn ? energyDrag.canDragEnergy : undefined}
+        onEnergyDragStart={isMyTurn ? energyDrag.onEnergyDragStart : undefined}
+        onEnergyDragEnd={isMyTurn ? energyDrag.onEnergyDragEnd : undefined}
+        isDropTarget={isMyTurn ? energyDrag.isDropTarget : undefined}
+        onEnergyDrop={isMyTurn ? energyDrag.onEnergyDrop : undefined}
       />
 
       {controller.selectedHandCard && selectedDef && (

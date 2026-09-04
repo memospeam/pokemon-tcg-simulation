@@ -35,13 +35,13 @@ Energy: 10
 
 interface DeckBuilderProps {
   onDeckBuilt?: (deck: BuiltDeck) => void;
-  /** Called after the built deck is set as Player 1's deck (e.g. navigate to the Lobby). */
+  /** Called after the built deck is set as Player 1's deck (e.g. navigate to Battle). */
   onUseDeck?: () => void;
 }
 
 export function DeckBuilder({ onDeckBuilt, onUseDeck }: DeckBuilderProps) {
   // Saved decks live in the shared store so that saving here is immediately
-  // reflected in the Lobby's "Load deck" dropdown (no manual refresh needed).
+  // reflected in Battle setup's deck picker (no manual refresh needed).
   const { savedDecks, saveDeck, removeDeck, setPlayer1Deck } = useDeckStore();
   const [name, setName] = useState("My Deck");
   const [text, setText] = useState(SAMPLE_DECK);
@@ -96,7 +96,7 @@ export function DeckBuilder({ onDeckBuilt, onUseDeck }: DeckBuilderProps) {
 
   function handleUseToPlay() {
     if (!deck) return;
-    // Make this the Player 1 deck and (optionally) jump to the Lobby to pick an
+    // Make this the Player 1 deck and (optionally) jump to Battle to pick an
     // opponent and start the match.
     if (!savedDecks.some((d) => d.name === deck.name)) saveDeck(deck);
     setPlayer1Deck(deck);
@@ -165,7 +165,7 @@ export function DeckBuilder({ onDeckBuilt, onUseDeck }: DeckBuilderProps) {
               className="action-dock__primary"
               onClick={handleUseToPlay}
               disabled={!deck.validation.valid}
-              title={deck.validation.valid ? "Save & use as Player 1, then go to the Lobby" : "Deck must be valid to play"}
+              title={deck.validation.valid ? "Save & use as Player 1, then go to Battle" : "Deck must be valid to play"}
             >
               ▶ Use to play
             </button>

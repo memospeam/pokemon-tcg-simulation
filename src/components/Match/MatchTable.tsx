@@ -29,6 +29,11 @@ export interface MatchTableProps {
   onDiscardClick?: (playerId: PlayerId) => void;
   onHandSelect?: (card: CardInstance) => void;
   getHandQuickLabel?: (def: CardDefinition) => string | null;
+  canDragEnergy?: (instanceId: string) => boolean;
+  onEnergyDragStart?: (card: CardInstance) => void;
+  onEnergyDragEnd?: () => void;
+  isDropTarget?: (instanceId: string) => boolean;
+  onEnergyDrop?: (card: CardInstance) => void;
   logTail?: number;
   showPhaseBar?: boolean;
   footer?: ReactNode;
@@ -42,7 +47,7 @@ export function MatchTable({
   viewingPlayerId,
   visibility,
   prompt,
-  interactive = false,
+  interactive: _interactive = false,
   highlightOpponentTargets = false,
   highlightSelfTargets = false,
   selectedPokemonId,
@@ -52,6 +57,11 @@ export function MatchTable({
   onDiscardClick,
   onHandSelect,
   getHandQuickLabel,
+  canDragEnergy,
+  onEnergyDragStart,
+  onEnergyDragEnd,
+  isDropTarget,
+  onEnergyDrop,
   logTail = 8,
   showPhaseBar = true,
   footer,
@@ -131,6 +141,8 @@ export function MatchTable({
           }
           onDiscardClick={onDiscardClick ? () => onDiscardClick(viewingPlayerId) : undefined}
           selectedPokemonId={selectedPokemonId}
+          isDropTarget={isDropTarget}
+          onEnergyDrop={onEnergyDrop}
         />
       </div>
 
@@ -140,6 +152,9 @@ export function MatchTable({
         selectedId={selectedHandId}
         onSelect={onHand}
         getQuickLabel={getHandQuickLabel}
+        canDragEnergy={canDragEnergy}
+        onEnergyDragStart={onEnergyDragStart}
+        onEnergyDragEnd={onEnergyDragEnd}
         playerName={self.name}
       />
 

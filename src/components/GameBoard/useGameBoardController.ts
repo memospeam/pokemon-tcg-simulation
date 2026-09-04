@@ -53,7 +53,7 @@ export function useGameBoardController(
       case GamePhase.Mulligan:
         return `${getPlayer(game, game.pendingMulliganPlayerId!).name} may mulligan if no Basic Pokémon in hand.`;
       case GamePhase.PlaceActive:
-        return "Click a Basic Pokémon in your hand → Place as Active. Do this for both players (use Switch side).";
+        return "Click a Basic Pokémon in your hand → Place as Active.";
       case GamePhase.PlaceBench:
         return "Optionally place Basics on Bench, then press Start Game.";
       case GamePhase.Active:

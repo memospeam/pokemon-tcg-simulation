@@ -39,6 +39,8 @@ interface PlayerMatProps {
   onActiveSelect?: (card: CardInstance) => void;
   onDiscardClick?: () => void;
   selectedPokemonId?: string;
+  isDropTarget?: (instanceId: string) => boolean;
+  onEnergyDrop?: (card: CardInstance) => void;
 }
 
 export function PlayerMat({
@@ -52,6 +54,8 @@ export function PlayerMat({
   onActiveSelect,
   onDiscardClick,
   selectedPokemonId,
+  isDropTarget,
+  onEnergyDrop,
 }: PlayerMatProps) {
   const benchSlots = Array.from({ length: 5 }, (_, i) => player.bench[i] ?? null);
 
@@ -79,6 +83,8 @@ export function PlayerMat({
                     size="bench"
                     highlight={highlightTargets}
                     selected={selectedPokemonId === card.instanceId}
+                    dropHighlight={isDropTarget?.(card.instanceId)}
+                    onEnergyDrop={onEnergyDrop ? () => onEnergyDrop(card) : undefined}
                     onSelect={() => onPokemonSelect(card)}
                   />
                 ) : (
@@ -96,6 +102,8 @@ export function PlayerMat({
                 size="active"
                 highlight={highlightTargets}
                 selected={selectedPokemonId === player.active.instanceId}
+                dropHighlight={isDropTarget?.(player.active.instanceId)}
+                onEnergyDrop={onEnergyDrop ? () => onEnergyDrop(player.active!) : undefined}
                 onSelect={() => (onActiveSelect ?? onPokemonSelect)(player.active!)}
               />
             ) : (

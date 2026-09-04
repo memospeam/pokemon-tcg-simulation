@@ -166,3 +166,84 @@
 .match-table .player-mat--opponent .player-mat__active .board-card--active {
   transform: scale(1.02);
 }
+
+/* Energy drag-and-drop */
+.hand-bar__slot--draggable {
+  cursor: grab;
+}
+
+.hand-bar__slot--draggable:active {
+  cursor: grabbing;
+}
+
+.board-card-wrap {
+  display: contents;
+}
+
+.board-card-wrap--drop .board-card {
+  outline: 2px dashed rgba(74, 222, 128, 0.85);
+  outline-offset: 2px;
+  box-shadow: 0 0 12px rgba(74, 222, 128, 0.35);
+}
+
+/* Coin flip overlay */
+.coin-flip-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.coin-flip-overlay__coin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  animation: coin-pop 0.85s ease-out forwards;
+}
+
+.coin-flip-overlay__face {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1.75rem;
+  font-weight: 700;
+  border: 3px solid rgba(251, 191, 36, 0.6);
+  background: radial-gradient(circle at 35% 30%, #fde68a, #d97706);
+  color: #451a03;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.coin-flip-overlay__coin--tails .coin-flip-overlay__face {
+  background: radial-gradient(circle at 35% 30%, #cbd5e1, #475569);
+  color: #0f172a;
+  border-color: rgba(148, 163, 184, 0.6);
+}
+
+.coin-flip-overlay__label {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #f8fafc;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes coin-pop {
+  0% {
+    transform: scale(0.3) rotateY(0deg);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(1.1) rotateY(180deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotateY(360deg);
+    opacity: 0;
+  }
+}
