@@ -30,6 +30,7 @@ import {
   switchActiveWithBench,
 } from "./trainerDeckHelpers";
 import type { TrainerPlayCheck } from "./trainerPlayCheck";
+import { listDevolveEligibleTyped, startDevolveOwnTypedFlow } from "./devolutionEffects";
 
 export type { TrainerPlayCheck } from "./trainerPlayCheck";
 
@@ -488,6 +489,11 @@ export function canPlayTrainerBatch3Kind(
         return { ok: false, reason: "Transceiver: no Team Rocket Supporter in deck." };
       }
       return { ok: true };
+    case "trainer_devolve_own_typed":
+      if (listDevolveEligibleTyped(state, playerId, "Psychic").length === 0) {
+        return { ok: false, reason: "Strange Timepiece: no evolved Psychic Pokémon in play." };
+      }
+      return { ok: true };
     default:
       return { ok: true };
   }
@@ -631,8 +637,6 @@ function applyDiscardHandSearchThree(state: EngineState, playerId: PlayerId): vo
   logMessage(state, "Larry's Skill: discarded hand; searched a Pokémon, Supporter, and Basic Energy.");
 }
 
-import { devolveOwnTypedPokemon } from "./devolutionEffects";
-
 /** Anthea & Concordia: only usable with the six named N's Pokémon in play.
  *  ponytail: that gate is essentially never met in Standard; honour the
  *  condition and log the (deferred) +N-prizes buff. */
@@ -677,7 +681,7 @@ export function applyTrainerBatch3Kind(state: EngineState, playerId: PlayerId, e
       applyDiscardHandSearchThree(state, playerId);
       return;
     case "trainer_devolve_own_typed":
-      devolveOwnTypedPokemon(state, playerId, effect.pokemonType);
+      startDevolveOwnTypedFlow(state, playerId, effect.pokemonType);
       return;
     case "trainer_extra_prizes_if_team":
       applyExtraPrizesIfTeam(state, playerId, effect.names, effect.prizes);

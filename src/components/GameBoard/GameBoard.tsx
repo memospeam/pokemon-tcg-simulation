@@ -381,6 +381,13 @@ export function GameBoard() {
             instanceId,
           })
         }
+        onSelectStrangeTimepiece={(instanceId) =>
+          controller.runAction({
+            type: "SELECT_STRANGE_TIMEPIECE",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+            instanceId,
+          })
+        }
       />
 
       <StadiumAbilityPanel

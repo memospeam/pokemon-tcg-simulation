@@ -67,6 +67,7 @@ import {
   startPrismTower,
   continuePrismTowerPick,
 } from "./effects/stadiumOptionalEffects";
+import { resolveDevolveOwnTypedById } from "./effects/devolutionEffects";
 import { logStadiumOnPlay, getStadiumKind, getMaxBenchSize, canUseLumioseCity, getLumioseDeckOptions, canUseCommunityCenter, applyCommunityCenter } from "./effects/stadiumEffects";
 import { markMovedFromBenchToActive } from "./effects/pokemonZoneHelpers";
 import {
@@ -1827,6 +1828,11 @@ function handleSelectPrismTower(state: EngineState, playerId: PlayerId, instance
   return state;
 }
 
+function handleSelectStrangeTimepiece(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  resolveDevolveOwnTypedById(state, playerId, instanceId);
+  return state;
+}
+
 function handleUseLumioseCity(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
   if (state.phase !== GamePhase.Active || state.currentPlayerId !== playerId) return state;
   if (state.pendingAction) return state;
@@ -2007,6 +2013,8 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleUsePrismTower(nextState, action.playerId);
     case "SELECT_PRISM_TOWER":
       return handleSelectPrismTower(nextState, action.playerId, action.instanceId);
+    case "SELECT_STRANGE_TIMEPIECE":
+      return handleSelectStrangeTimepiece(nextState, action.playerId, action.instanceId);
     case "USE_TR_FACTORY_DRAW":
       return handleUseTrFactoryDraw(nextState, action.playerId);
     case "USE_GRAND_TREE":
@@ -2521,6 +2529,13 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       if (pending.playerId !== current) break;
       for (const instanceId of pending.options) {
         actions.push({ type: "SELECT_PRISM_TOWER", playerId: current, instanceId });
+      }
+      break;
+    }
+    case "STRANGE_TIMEPIECE": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_STRANGE_TIMEPIECE", playerId: current, instanceId });
       }
       break;
     }

@@ -159,25 +159,29 @@ export function devolveEachOpponentEvolved(state: EngineState, playerId: PlayerI
   }
 }
 
-export function devolveOwnTypedPokemon(
+export function listDevolveEligibleTyped(
   state: EngineState,
   playerId: PlayerId,
   pokemonType: string,
+): CardInstance[] {
+  const player = getPlayer(state, playerId);
+  const type = pokemonType.toLowerCase();
+  return allPokemonInPlay(player).filter((pokemon) => {
+    const def = getDefinitionSafe(state, pokemon.definitionId);
+    if (isBasicPokemon(def)) return false;
+    return (def.types ?? []).some((entry) => entry.toLowerCase() === type);
+  });
+}
+
+function devolveAtSlot(
+  state: EngineState,
+  playerId: PlayerId,
+  slot: PlaySlot,
   options?: { untilBasic?: boolean; blockEvolveThisTurn?: boolean },
 ): boolean {
   const untilBasic = options?.untilBasic ?? true;
   const blockEvolveThisTurn = options?.blockEvolveThisTurn ?? true;
   const player = getPlayer(state, playerId);
-  const type = pokemonType.toLowerCase();
-  const target = findEvolvedPokemon(state, player, (def) =>
-    (def.types ?? []).some((entry) => entry.toLowerCase() === type),
-  );
-  if (!target) {
-    logMessage(state, `No evolved ${pokemonType} Pokémon to devolve.`);
-    return false;
-  }
-  const slot = playSlotForPokemon(player, target);
-  if (!slot) return false;
 
   let devolvedAny = false;
   while (true) {
@@ -195,4 +199,71 @@ export function devolveOwnTypedPokemon(
     if (finalMon) finalMon.enteredPlayTurn = state.turnNumber;
   }
   return devolvedAny;
+}
+
+export function devolveOwnTypedPokemonById(
+  state: EngineState,
+  playerId: PlayerId,
+  instanceId: string,
+  pokemonType: string,
+  options?: { untilBasic?: boolean; blockEvolveThisTurn?: boolean },
+): boolean {
+  const player = getPlayer(state, playerId);
+  const type = pokemonType.toLowerCase();
+  const target = allPokemonInPlay(player).find((pokemon) => pokemon.instanceId === instanceId);
+  if (!target) return false;
+  const def = getDefinitionSafe(state, target.definitionId);
+  if (isBasicPokemon(def) || !(def.types ?? []).some((entry) => entry.toLowerCase() === type)) {
+    return false;
+  }
+  const slot = playSlotForPokemon(player, target);
+  if (!slot) return false;
+  return devolveAtSlot(state, playerId, slot, options);
+}
+
+export function startDevolveOwnTypedFlow(state: EngineState, playerId: PlayerId, pokemonType: string): void {
+  const options = listDevolveEligibleTyped(state, playerId, pokemonType);
+  if (options.length === 0) {
+    logMessage(state, `No evolved ${pokemonType} Pokémon to devolve.`);
+    return;
+  }
+  if (options.length === 1) {
+    devolveOwnTypedPokemonById(state, playerId, options[0]!.instanceId, pokemonType);
+    return;
+  }
+  state.pendingAction = {
+    type: "STRANGE_TIMEPIECE",
+    playerId,
+    pokemonType,
+    options: options.map((pokemon) => pokemon.instanceId),
+  };
+  logMessage(state, `Strange Timepiece: choose an evolved ${pokemonType} Pokémon to devolve.`);
+}
+
+export function resolveDevolveOwnTypedById(
+  state: EngineState,
+  playerId: PlayerId,
+  instanceId: string,
+): void {
+  const pending = state.pendingAction;
+  if (pending?.type !== "STRANGE_TIMEPIECE" || pending.playerId !== playerId) return;
+  if (!pending.options.includes(instanceId)) return;
+  devolveOwnTypedPokemonById(state, playerId, instanceId, pending.pokemonType);
+  state.pendingAction = null;
+}
+
+export function devolveOwnTypedPokemon(
+  state: EngineState,
+  playerId: PlayerId,
+  pokemonType: string,
+  options?: { untilBasic?: boolean; blockEvolveThisTurn?: boolean },
+): boolean {
+  const target = findEvolvedPokemon(state, getPlayer(state, playerId), (def) =>
+    (def.types ?? []).some((entry) => entry.toLowerCase() === pokemonType.toLowerCase()),
+  );
+  if (!target) {
+    logMessage(state, `No evolved ${pokemonType} Pokémon to devolve.`);
+    return false;
+  }
+  return devolveOwnTypedPokemonById(state, playerId, target.instanceId, pokemonType, options);
 }

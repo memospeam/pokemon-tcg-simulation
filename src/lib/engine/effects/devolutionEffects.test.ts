@@ -7,7 +7,11 @@ import { emptyTurnFlags } from "../types";
 import { getPlayer } from "../types";
 import {
   devolveOwnTypedPokemon,
+  devolveOwnTypedPokemonById,
   devolvePokemonOneStage,
+  listDevolveEligibleTyped,
+  resolveDevolveOwnTypedById,
+  startDevolveOwnTypedFlow,
 } from "./devolutionEffects";
 import { getStadiumKind } from "./stadiumEffects";
 
@@ -164,5 +168,31 @@ describe("devolutionEffects", () => {
       "alakazam",
       "kadabra",
     ]);
+  });
+
+  it("opens pending when multiple evolved Psychic Pokémon are eligible", () => {
+    const abra = mockPokemon("Abra", { types: ["Psychic"] });
+    const kadabra = mockPokemon("Kadabra", {
+      subtypes: ["Stage 1"],
+      evolvesFrom: "Abra",
+      types: ["Psychic"],
+    });
+    const drowzee = mockPokemon("Drowzee", { types: ["Psychic"] });
+    const hypno = mockPokemon("Hypno", {
+      subtypes: ["Stage 1"],
+      evolvesFrom: "Drowzee",
+      types: ["Psychic"],
+    });
+    const state = stateWithStadium("Lively Stadium", { abra, kadabra, drowzee, hypno });
+    getPlayer(state, PlayerId.P1).active = createCardInstance("kadabra", PlayerId.P1, Zone.Active);
+    getPlayer(state, PlayerId.P1).bench = [createCardInstance("hypno", PlayerId.P1, Zone.Bench)];
+
+    expect(listDevolveEligibleTyped(state, PlayerId.P1, "Psychic")).toHaveLength(2);
+    startDevolveOwnTypedFlow(state, PlayerId.P1, "Psychic");
+    expect(state.pendingAction?.type).toBe("STRANGE_TIMEPIECE");
+
+    resolveDevolveOwnTypedById(state, PlayerId.P1, getPlayer(state, PlayerId.P1).bench[0]!.instanceId);
+    expect(state.pendingAction).toBeNull();
+    expect(getPlayer(state, PlayerId.P1).bench[0]?.definitionId).toBe("drowzee");
   });
 });

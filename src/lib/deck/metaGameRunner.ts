@@ -26,6 +26,7 @@ import {
   canUseSurfingBeach,
 } from "../engine/effects/stadiumOptionalEffects";
 import { canUseGrandTree } from "../engine/effects/grandTreeEffects";
+import { listDevolveEligibleTyped } from "../engine/effects/devolutionEffects";
 import { isBasicEnergy, isBasicPokemon, isStage2, isSupporter } from "../models/definition";
 import type { CardInstance } from "../models/instance";
 import { GamePhase, PlayerId } from "../models/enums";
@@ -3277,6 +3278,26 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     case "PRISM_TOWER": {
       if (pending.options.length === 0) return null;
       return gameReducer(state, { type: "SELECT_PRISM_TOWER", playerId, instanceId: pending.options[0]! });
+    }
+    case "STRANGE_TIMEPIECE": {
+      if (pending.options.length === 0) return null;
+      const eligible = listDevolveEligibleTyped(state, playerId, pending.pokemonType).filter((pokemon) =>
+        pending.options.includes(pokemon.instanceId),
+      );
+      const best = eligible.sort((a, b) => {
+        const rank = (pokemon: CardInstance) => {
+          const def = getDefinitionSafe(state, pokemon.definitionId);
+          if (def.subtypes.includes("Stage 2")) return 2;
+          if (def.subtypes.includes("Stage 1")) return 1;
+          return 0;
+        };
+        return rank(b) - rank(a);
+      })[0];
+      return gameReducer(state, {
+        type: "SELECT_STRANGE_TIMEPIECE",
+        playerId,
+        instanceId: best?.instanceId ?? pending.options[0]!,
+      });
     }
     case "GRAND_TREE": {
       if (pending.step === "BASIC") {

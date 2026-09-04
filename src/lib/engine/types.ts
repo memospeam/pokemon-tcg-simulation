@@ -153,6 +153,7 @@ export type GameAction =
   | { type: "SELECT_MYSTERY_GARDEN"; playerId: PlayerId; instanceId: string }
   | { type: "USE_PRISM_TOWER"; playerId: PlayerId }
   | { type: "SELECT_PRISM_TOWER"; playerId: PlayerId; instanceId: string }
+  | { type: "SELECT_STRANGE_TIMEPIECE"; playerId: PlayerId; instanceId: string }
   | { type: "SELECT_GRAND_TREE_BASIC"; playerId: PlayerId; targetId: string }
   | { type: "SELECT_GRAND_TREE_STAGE1"; playerId: PlayerId; instanceId: string }
   | { type: "SELECT_GRAND_TREE_STAGE2"; playerId: PlayerId; instanceId: string }
@@ -339,6 +340,7 @@ export type PendingAction =
       pickedIds: string[];
       slotsRemaining: number;
     }
+  | { type: "STRANGE_TIMEPIECE"; playerId: PlayerId; pokemonType: string; options: string[] }
   | { type: "RECON_DIRECTIVE"; playerId: PlayerId; options: string[] }
   | { type: "RARE_CANDY"; playerId: PlayerId }
   | { type: "CRUSHING_HAMMER"; playerId: PlayerId; options: { pokemonId: string; energyId: string }[] }
