@@ -345,6 +345,10 @@
   }
 }
 
+.board-card--promote {
+  animation: board-promote-flash 0.7s ease-out;
+}
+
 .board-card--switch {
   animation: board-switch-flash 0.65s ease-out;
 }
