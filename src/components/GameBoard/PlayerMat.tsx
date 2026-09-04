@@ -49,6 +49,7 @@ interface PlayerMatProps {
   evolvingSlots?: Set<string>;
   koSlots?: Set<string>;
   promoteSlots?: Set<string>;
+  switchSlots?: Set<string>;
   prizeFlies?: PrizeFly[];
 }
 
@@ -69,6 +70,7 @@ export function PlayerMat({
   evolvingSlots = new Set<string>(),
   koSlots = new Set<string>(),
   promoteSlots = new Set<string>(),
+  switchSlots = new Set<string>(),
   prizeFlies = [],
 }: PlayerMatProps) {
   const matSide = isOpponent ? "opponent" : "self";
@@ -108,6 +110,7 @@ export function PlayerMat({
                       animateEvolve={isSlotAnimating(evolvingSlots, matSide, "bench", index)}
                       animateKo={isSlotAnimating(koSlots, matSide, "bench", index)}
                       animatePromote={isSlotAnimating(promoteSlots, matSide, "bench", index)}
+                      animateSwitch={isSlotAnimating(switchSlots, matSide, "bench", index)}
                       onSelect={() => onPokemonSelect(card)}
                     />
                     <DamageFloatLayer
@@ -139,6 +142,7 @@ export function PlayerMat({
                   animateEvolve={isSlotAnimating(evolvingSlots, matSide, "active")}
                   animateKo={isSlotAnimating(koSlots, matSide, "active")}
                   animatePromote={isSlotAnimating(promoteSlots, matSide, "active")}
+                  animateSwitch={isSlotAnimating(switchSlots, matSide, "active")}
                   onSelect={() => (onActiveSelect ?? onPokemonSelect)(player.active!)}
                 />
                 <DamageFloatLayer floats={damageFloats} mat={matSide} slot="active" />

@@ -18,6 +18,7 @@ import {
 } from "@/lib/deck/playtestRunner";
 import { SimPlayback } from "@/components/SimPlayback/SimPlayback";
 import { MatrixGrid } from "./MatrixGrid";
+import { buildMatrixCsv, downloadTextFile } from "@/lib/deck/matrixCsv";
 
 type AnalysisTab = "watch" | "matrix";
 type MatrixSource = "meta11" | "worlds26" | "tournament";
@@ -52,6 +53,7 @@ export function AnalysisLab() {
   const [matrixReport, setMatrixReport] = useState<string | null>(null);
   const [matrixMatchups, setMatrixMatchups] = useState<MatchupStats[] | null>(null);
   const [matrixPresets, setMatrixPresets] = useState<TournamentDeckPreset[] | null>(null);
+  const [matrixTiers, setMatrixTiers] = useState<ReturnType<typeof computeDeckTierList> | null>(null);
 
   const selectedTournament =
     ALL_TOURNAMENTS.find((t) => String(t.tournamentId) === tournamentId) ?? ALL_TOURNAMENTS[0]!;
@@ -64,6 +66,7 @@ export function AnalysisLab() {
     setMatrixReport(null);
     setMatrixMatchups(null);
     setMatrixPresets(null);
+    setMatrixTiers(null);
     await new Promise((resolve) => setTimeout(resolve, 0));
     try {
       const presets =
@@ -109,6 +112,7 @@ export function AnalysisLab() {
       setMatrixReport(lines.join("\n"));
       setMatrixMatchups(health.matchups);
       setMatrixPresets(presets);
+      setMatrixTiers(tiers);
     } finally {
       setMatrixRunning(false);
     }
@@ -120,6 +124,18 @@ export function AnalysisLab() {
       : matrixSource === "worlds26"
         ? worldsDecks.length
         : decksForRun(selectedTournament, deckCount).length;
+
+  function exportMatrixCsv() {
+    if (!matrixPresets || !matrixMatchups || !matrixTiers) return;
+    const slug =
+      matrixSource === "meta11"
+        ? "meta11"
+        : matrixSource === "worlds26"
+          ? "worlds-2026"
+          : `tournament-${tournamentId}`;
+    const csv = buildMatrixCsv(matrixPresets, matrixMatchups, matrixTiers);
+    downloadTextFile(`matrix-${slug}.csv`, csv);
+  }
 
   return (
     <div className="analysis-lab">
@@ -219,13 +235,20 @@ export function AnalysisLab() {
               </>
             )}
           </div>
-          <button type="button" disabled={matrixRunning} onClick={() => void runMatrix()}>
-            {matrixRunning
-              ? "Running…"
-              : matrixSource === "tournament"
-                ? "Run matrix"
-                : `Run ${matrixSizeLabel(matrixSource, presetCount)} matrix`}
-          </button>
+          <div className="matrix-runner__actions">
+            <button type="button" disabled={matrixRunning} onClick={() => void runMatrix()}>
+              {matrixRunning
+                ? "Running…"
+                : matrixSource === "tournament"
+                  ? "Run matrix"
+                  : `Run ${matrixSizeLabel(matrixSource, presetCount)} matrix`}
+            </button>
+            {matrixMatchups && matrixPresets && matrixTiers && (
+              <button type="button" className="matrix-runner__export" onClick={exportMatrixCsv}>
+                Export CSV
+              </button>
+            )}
+          </div>
           {matrixMatchups && matrixPresets && (
             <MatrixGrid presets={matrixPresets} matchups={matrixMatchups} />
           )}

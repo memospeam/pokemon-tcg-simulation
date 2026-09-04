@@ -46,6 +46,7 @@ interface BoardCardProps {
   animateEvolve?: boolean;
   animateKo?: boolean;
   animatePromote?: boolean;
+  animateSwitch?: boolean;
   size?: BoardCardSize;
   showName?: boolean;
 }
@@ -62,6 +63,7 @@ export function BoardCard({
   animateEvolve = false,
   animateKo = false,
   animatePromote = false,
+  animateSwitch = false,
   size = "bench",
   showName = true,
 }: BoardCardProps) {
@@ -111,6 +113,7 @@ export function BoardCard({
         animateEvolve ? "board-card--evolve" : "",
         animateKo ? "board-card--ko" : "",
         animatePromote ? "board-card--promote" : "",
+        animateSwitch ? "board-card--switch" : "",
       ]
         .filter(Boolean)
         .join(" ")}

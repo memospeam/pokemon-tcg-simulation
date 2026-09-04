@@ -13,6 +13,8 @@ import { TurnPhaseBar } from "@/components/Battle/TurnPhaseBar";
 import { HiddenHandBar } from "./HiddenHandBar";
 import { useMatchView } from "./useMatchView";
 import { useBoardSlotVfx } from "./useBoardSlotVfx";
+import { useAttackBeam } from "./useAttackBeam";
+import { AttackBeamOverlay } from "./AttackBeamOverlay";
 import type { MatchVisibility } from "./types";
 import type { HandDragKind } from "./useHandDragDrop";
 
@@ -70,8 +72,9 @@ export function MatchTable({
   className = "",
 }: MatchTableProps) {
   const view = useMatchView(game, viewingPlayerId, visibility);
-  const { damageFloats, evolvingSlots, koSlots, promoteSlots, prizeFlies } =
+  const { damageFloats, evolvingSlots, koSlots, promoteSlots, switchSlots, prizeFlies } =
     useBoardSlotVfx(game, viewingPlayerId);
+  const attackBeam = useAttackBeam(game, viewingPlayerId);
   if (!view) return null;
 
   const { self, opponent, opponentPlayerId, isMyTurn, hideOpponentHand, opponentHandCount } = view;
@@ -97,6 +100,7 @@ export function MatchTable({
       )}
 
       <div className="match-table__felt">
+        <AttackBeamOverlay beam={attackBeam} />
         <PlayerMat
           game={game}
           player={opponent}
@@ -111,6 +115,7 @@ export function MatchTable({
           evolvingSlots={evolvingSlots}
           koSlots={koSlots}
           promoteSlots={promoteSlots}
+          switchSlots={switchSlots}
           prizeFlies={prizeFlies}
         />
 
@@ -156,6 +161,7 @@ export function MatchTable({
           evolvingSlots={evolvingSlots}
           koSlots={koSlots}
           promoteSlots={promoteSlots}
+          switchSlots={switchSlots}
           prizeFlies={prizeFlies}
         />
       </div>

@@ -74,6 +74,7 @@ export interface BoardSlotVfx {
   evolvingSlots: Set<string>;
   koSlots: Set<string>;
   promoteSlots: Set<string>;
+  switchSlots: Set<string>;
   prizeFlies: PrizeFly[];
 }
 
@@ -91,6 +92,7 @@ export function useBoardSlotVfx(
   const [evolvingSlots, setEvolvingSlots] = useState<Set<string>>(EMPTY_SET);
   const [koSlots, setKoSlots] = useState<Set<string>>(EMPTY_SET);
   const [promoteSlots, setPromoteSlots] = useState<Set<string>>(EMPTY_SET);
+  const [switchSlots, setSwitchSlots] = useState<Set<string>>(EMPTY_SET);
   const [prizeFlies, setPrizeFlies] = useState<PrizeFly[]>([]);
 
   useEffect(() => {
@@ -103,6 +105,7 @@ export function useBoardSlotVfx(
     const evolveKeys: string[] = [];
     const koKeys: string[] = [];
     const promoteKeys: string[] = [];
+    const switchKeys: string[] = [];
     const nextFloats: DamageFloat[] = [];
     const nextPrizeFlies: PrizeFly[] = [];
 
@@ -124,6 +127,19 @@ export function useBoardSlotVfx(
     const nextActiveSelf = layout.get(slotKey({ mat: "self", slot: "active" })) ?? null;
     const nextActiveOpp = layout.get(slotKey({ mat: "opponent", slot: "active" })) ?? null;
 
+    const matIsSwitching = (mat: BoardSlot["mat"]) =>
+      /retreated|switched .+ with/i.test(lastLog) &&
+      ((mat === "self" &&
+        prevActiveSelf &&
+        nextActiveSelf &&
+        prevActiveSelf.instanceId !== nextActiveSelf.instanceId) ||
+        (mat === "opponent" &&
+          prevActiveOpp &&
+          nextActiveOpp &&
+          prevActiveOpp.instanceId !== nextActiveOpp.instanceId));
+
+    const prevSnapshot = new Map(prevLayoutRef.current);
+
     for (const [key, entry] of layout) {
       const prev = prevLayoutRef.current.get(key) ?? null;
       const slot = parseSlotFromKey(key);
@@ -131,11 +147,9 @@ export function useBoardSlotVfx(
       if (prev && !entry) {
         const wasPromoteSource =
           /promoted/i.test(lastLog) &&
-          ((slot.mat === "self" &&
-            nextActiveSelf?.instanceId === prev.instanceId) ||
-            (slot.mat === "opponent" &&
-              nextActiveOpp?.instanceId === prev.instanceId));
-        if (!wasPromoteSource) {
+          ((slot.mat === "self" && nextActiveSelf?.instanceId === prev.instanceId) ||
+            (slot.mat === "opponent" && nextActiveOpp?.instanceId === prev.instanceId));
+        if (!wasPromoteSource && !matIsSwitching(slot.mat)) {
           koKeys.push(key);
         }
       } else if (
@@ -196,6 +210,29 @@ export function useBoardSlotVfx(
       }
     }
 
+    if (/retreated|switched .+ with/i.test(lastLog)) {
+      for (const mat of ["self", "opponent"] as const) {
+        const prevActive = mat === "self" ? prevActiveSelf : prevActiveOpp;
+        const nextActive = mat === "self" ? nextActiveSelf : nextActiveOpp;
+        if (
+          !prevActive ||
+          !nextActive ||
+          prevActive.instanceId === nextActive.instanceId
+        ) {
+          continue;
+        }
+        switchKeys.push(slotKey({ mat, slot: "active" }));
+        for (let i = 0; i < 5; i += 1) {
+          const benchKey = slotKey({ mat, slot: "bench", benchIndex: i });
+          const prevBench = prevSnapshot.get(benchKey) ?? null;
+          const nextBench = layout.get(benchKey) ?? null;
+          if ((prevBench?.instanceId ?? null) !== (nextBench?.instanceId ?? null)) {
+            switchKeys.push(benchKey);
+          }
+        }
+      }
+    }
+
     for (const key of prevLayoutRef.current.keys()) {
       if (!layout.has(key)) prevLayoutRef.current.delete(key);
     }
@@ -250,6 +287,11 @@ export function useBoardSlotVfx(
       timers.push(setTimeout(() => setPromoteSlots(EMPTY_SET), 750));
     }
 
+    if (switchKeys.length > 0) {
+      setSwitchSlots(new Set(switchKeys));
+      timers.push(setTimeout(() => setSwitchSlots(EMPTY_SET), 700));
+    }
+
     if (nextPrizeFlies.length > 0) {
       setPrizeFlies((current) => [...current, ...nextPrizeFlies]);
       timers.push(
@@ -266,7 +308,7 @@ export function useBoardSlotVfx(
     };
   }, [game, viewingPlayerId]);
 
-  return { damageFloats, evolvingSlots, koSlots, promoteSlots, prizeFlies };
+  return { damageFloats, evolvingSlots, koSlots, promoteSlots, switchSlots, prizeFlies };
 }
 
 function findCardAtSlot(

@@ -12,6 +12,7 @@
 }
 
 .match-table__felt {
+  position: relative;
   display: grid;
   grid-template-rows: 1fr auto 1fr;
   gap: 0;
@@ -344,8 +345,98 @@
   }
 }
 
-.board-card--promote {
-  animation: board-promote-flash 0.7s ease-out;
+.board-card--switch {
+  animation: board-switch-flash 0.65s ease-out;
+}
+
+@keyframes board-switch-flash {
+  0% {
+    transform: translateX(0) scale(1);
+    box-shadow: 0 0 0 rgba(148, 163, 184, 0);
+  }
+  35% {
+    transform: translateX(var(--switch-shift, 6px)) scale(1.04);
+    box-shadow: 0 0 18px rgba(148, 163, 184, 0.55);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    box-shadow: 0 0 0 rgba(148, 163, 184, 0);
+  }
+}
+
+.player-mat--self .board-card--switch {
+  --switch-shift: -8px;
+}
+
+.player-mat--opponent .board-card--switch {
+  --switch-shift: 8px;
+}
+
+.attack-beam {
+  position: absolute;
+  left: 50%;
+  width: 5px;
+  margin-left: -2px;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  animation: attack-beam-strike 0.42s ease-out forwards;
+  background: linear-gradient(
+    180deg,
+    rgba(251, 191, 36, 0.1) 0%,
+    rgba(251, 191, 36, 0.95) 35%,
+    rgba(239, 68, 68, 0.95) 65%,
+    rgba(239, 68, 68, 0.15) 100%
+  );
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.65);
+}
+
+.attack-beam--self-to-opp {
+  bottom: 32%;
+  height: 36%;
+  transform-origin: center bottom;
+}
+
+.attack-beam--opp-to-self {
+  top: 32%;
+  height: 36%;
+  transform-origin: center top;
+  transform: rotate(180deg);
+}
+
+@keyframes attack-beam-strike {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+  30% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(1);
+  }
+}
+
+.attack-beam--opp-to-self {
+  animation-name: attack-beam-strike-opp;
+}
+
+@keyframes attack-beam-strike-opp {
+  0% {
+    opacity: 0;
+    transform: rotate(180deg) scaleY(0.2);
+  }
+  30% {
+    opacity: 1;
+    transform: rotate(180deg) scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(180deg) scaleY(1);
+  }
 }
 
 @keyframes board-promote-flash {

@@ -1,21 +1,10 @@
 import type { MatchupStats } from "@/lib/deck/playtestRunner";
 import type { TournamentDeckPreset } from "@/lib/deck/tournamentPresets";
+import { winRateForRow } from "@/lib/deck/matrixCsv";
 
 function shortDeckName(name: string): string {
   const trimmed = name.replace(/\s*\(.*\)$/, "").trim();
   return trimmed.length > 18 ? `${trimmed.slice(0, 16)}…` : trimmed;
-}
-
-function winRateForRow(
-  rowId: string,
-  colId: string,
-  matchups: MatchupStats[],
-): number | null {
-  const direct = matchups.find((m) => m.p1PresetId === rowId && m.p2PresetId === colId);
-  if (direct) return direct.p1WinRate;
-  const reverse = matchups.find((m) => m.p1PresetId === colId && m.p2PresetId === rowId);
-  if (reverse) return reverse.p2WinRate;
-  return null;
 }
 
 function cellClass(rate: number | null, mirror: boolean): string {
