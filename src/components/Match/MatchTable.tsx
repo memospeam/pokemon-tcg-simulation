@@ -70,7 +70,8 @@ export function MatchTable({
   className = "",
 }: MatchTableProps) {
   const view = useMatchView(game, viewingPlayerId, visibility);
-  const { damageFloats, evolvingSlots, koSlots } = useBoardSlotVfx(game, viewingPlayerId);
+  const { damageFloats, evolvingSlots, koSlots, promoteSlots, prizeFlies } =
+    useBoardSlotVfx(game, viewingPlayerId);
   if (!view) return null;
 
   const { self, opponent, opponentPlayerId, isMyTurn, hideOpponentHand, opponentHandCount } = view;
@@ -109,6 +110,8 @@ export function MatchTable({
           damageFloats={damageFloats}
           evolvingSlots={evolvingSlots}
           koSlots={koSlots}
+          promoteSlots={promoteSlots}
+          prizeFlies={prizeFlies}
         />
 
         <div className="match-table__center">
@@ -152,6 +155,8 @@ export function MatchTable({
           damageFloats={damageFloats}
           evolvingSlots={evolvingSlots}
           koSlots={koSlots}
+          promoteSlots={promoteSlots}
+          prizeFlies={prizeFlies}
         />
       </div>
 

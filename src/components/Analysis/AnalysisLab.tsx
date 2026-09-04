@@ -10,6 +10,7 @@ import {
   CI_BATCH_SEEDS,
   DEFAULT_PLAYTEST_RUN,
   DEFAULT_PLAYTEST_SETUP,
+  defaultBatchSeeds,
   runPresetMatrix,
   summarizeSimHealth,
   computeDeckTierList,
@@ -21,6 +22,13 @@ import { MatrixGrid } from "./MatrixGrid";
 type AnalysisTab = "watch" | "matrix";
 type MatrixSource = "meta11" | "worlds26" | "tournament";
 type DeckCountOption = "4" | "8" | "all";
+type PresetSeedMode = "ci" | "quick" | "extended";
+
+function seedsForPreset(mode: PresetSeedMode): number[] {
+  if (mode === "ci") return [...CI_BATCH_SEEDS];
+  if (mode === "quick") return [1, 2, 3, 4, 5];
+  return defaultBatchSeeds(10);
+}
 
 function decksForRun(tournament: TournamentPresetBundle, count: DeckCountOption): TournamentDeckPreset[] {
   if (count === "all") return tournament.decks;
@@ -39,6 +47,7 @@ export function AnalysisLab() {
   const [tournamentId, setTournamentId] = useState(String(ALL_TOURNAMENTS[0]!.tournamentId));
   const [deckCount, setDeckCount] = useState<DeckCountOption>("4");
   const [seedCount, setSeedCount] = useState(3);
+  const [presetSeedMode, setPresetSeedMode] = useState<PresetSeedMode>("ci");
   const [matrixRunning, setMatrixRunning] = useState(false);
   const [matrixReport, setMatrixReport] = useState<string | null>(null);
   const [matrixMatchups, setMatrixMatchups] = useState<MatchupStats[] | null>(null);
@@ -65,7 +74,7 @@ export function AnalysisLab() {
             : decksForRun(selectedTournament, deckCount);
       const seeds =
         matrixSource === "meta11" || matrixSource === "worlds26"
-          ? CI_BATCH_SEEDS
+          ? seedsForPreset(presetSeedMode)
           : Array.from({ length: seedCount }, (_, i) => i + 1);
       const matchups = runPresetMatrix(presets, {
         seeds,
@@ -103,7 +112,7 @@ export function AnalysisLab() {
     } finally {
       setMatrixRunning(false);
     }
-  }, [deckCount, matrixSource, metaDecks, seedCount, selectedTournament, worldsDecks]);
+  }, [deckCount, matrixSource, metaDecks, presetSeedMode, seedCount, selectedTournament, worldsDecks]);
 
   const presetCount =
     matrixSource === "meta11"
@@ -189,15 +198,25 @@ export function AnalysisLab() {
                 </label>
               </>
             )}
-            {matrixSource === "meta11" && (
-              <p className="matrix-runner__hint">
-                {metaDecks.length} Utrecht Regional archetype reps · seeds {CI_BATCH_SEEDS.join(", ")}
-              </p>
-            )}
-            {matrixSource === "worlds26" && (
-              <p className="matrix-runner__hint">
-                {worldsDecks.length} Worlds 2026 Top 8 lists · seeds {CI_BATCH_SEEDS.join(", ")}
-              </p>
+            {(matrixSource === "meta11" || matrixSource === "worlds26") && (
+              <>
+                <label className="matrix-runner__field">
+                  Seeds
+                  <select
+                    value={presetSeedMode}
+                    onChange={(e) => setPresetSeedMode(e.target.value as PresetSeedMode)}
+                  >
+                    <option value="ci">CI ({CI_BATCH_SEEDS.join(", ")})</option>
+                    <option value="quick">Quick (5 seeds)</option>
+                    <option value="extended">Extended (10 seeds)</option>
+                  </select>
+                </label>
+                <p className="matrix-runner__hint">
+                  {matrixSource === "meta11"
+                    ? `${metaDecks.length} Utrecht archetype reps`
+                    : `${worldsDecks.length} Worlds 2026 Top 8 lists`}
+                </p>
+              </>
             )}
           </div>
           <button type="button" disabled={matrixRunning} onClick={() => void runMatrix()}>

@@ -3,7 +3,8 @@ import type { EngineState } from "@/lib/engine";
 import type { PlayerState } from "@/lib/engine";
 import { BoardCard } from "./BoardCard";
 import { DamageFloatLayer } from "@/components/Match/DamageFloatLayer";
-import { isSlotAnimating, type DamageFloat } from "@/components/Match/useBoardSlotVfx";
+import { PrizeFlyLayer } from "@/components/Match/PrizeFlyLayer";
+import { isSlotAnimating, type DamageFloat, type PrizeFly } from "@/components/Match/useBoardSlotVfx";
 import type { HandDragKind } from "@/components/Match/useHandDragDrop";
 
 interface PileZoneProps {
@@ -47,6 +48,8 @@ interface PlayerMatProps {
   damageFloats?: DamageFloat[];
   evolvingSlots?: Set<string>;
   koSlots?: Set<string>;
+  promoteSlots?: Set<string>;
+  prizeFlies?: PrizeFly[];
 }
 
 export function PlayerMat({
@@ -65,6 +68,8 @@ export function PlayerMat({
   damageFloats = [],
   evolvingSlots = new Set<string>(),
   koSlots = new Set<string>(),
+  promoteSlots = new Set<string>(),
+  prizeFlies = [],
 }: PlayerMatProps) {
   const matSide = isOpponent ? "opponent" : "self";
   const benchSlots = Array.from({ length: 5 }, (_, i) => player.bench[i] ?? null);
@@ -79,7 +84,10 @@ export function PlayerMat({
 
       <div className="player-mat__layout">
         <div className="player-mat__left">
-          <PileZone label="Prizes" count={player.prizes.length} variant="prize" />
+          <div className="player-mat__prize-wrap">
+            <PileZone label="Prizes" count={player.prizes.length} variant="prize" />
+            <PrizeFlyLayer flies={prizeFlies} mat={matSide} />
+          </div>
         </div>
 
         <div className="player-mat__center">
@@ -99,6 +107,7 @@ export function PlayerMat({
                       onHandDrop={onHandDrop ? () => onHandDrop(card) : undefined}
                       animateEvolve={isSlotAnimating(evolvingSlots, matSide, "bench", index)}
                       animateKo={isSlotAnimating(koSlots, matSide, "bench", index)}
+                      animatePromote={isSlotAnimating(promoteSlots, matSide, "bench", index)}
                       onSelect={() => onPokemonSelect(card)}
                     />
                     <DamageFloatLayer
@@ -129,6 +138,7 @@ export function PlayerMat({
                   onHandDrop={onHandDrop ? () => onHandDrop(player.active!) : undefined}
                   animateEvolve={isSlotAnimating(evolvingSlots, matSide, "active")}
                   animateKo={isSlotAnimating(koSlots, matSide, "active")}
+                  animatePromote={isSlotAnimating(promoteSlots, matSide, "active")}
                   onSelect={() => (onActiveSelect ?? onPokemonSelect)(player.active!)}
                 />
                 <DamageFloatLayer floats={damageFloats} mat={matSide} slot="active" />

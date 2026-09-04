@@ -343,3 +343,89 @@
     opacity: 0.35;
   }
 }
+
+.board-card--promote {
+  animation: board-promote-flash 0.7s ease-out;
+}
+
+@keyframes board-promote-flash {
+  0% {
+    transform: translateY(18px) scale(0.92);
+    opacity: 0.5;
+    box-shadow: 0 0 0 rgba(56, 189, 248, 0);
+  }
+  45% {
+    transform: translateY(-4px) scale(1.06);
+    opacity: 1;
+    box-shadow: 0 0 22px rgba(56, 189, 248, 0.65);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 rgba(56, 189, 248, 0);
+  }
+}
+
+.player-mat__prize-wrap {
+  position: relative;
+}
+
+.prize-fly-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 6;
+}
+
+.prize-fly-layer__card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 38px;
+  margin-left: -14px;
+  margin-top: -19px;
+  border-radius: 0.3rem;
+  background: linear-gradient(145deg, #fde68a 0%, #d97706 55%, #92400e 100%);
+  border: 1px solid rgba(251, 191, 36, 0.7);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  animation: prize-fly-out 1.1s ease-out forwards;
+}
+
+.prize-fly-layer--self .prize-fly-layer__card {
+  animation-name: prize-fly-self;
+}
+
+.prize-fly-layer--opponent .prize-fly-layer__card {
+  animation-name: prize-fly-opponent;
+}
+
+@keyframes prize-fly-self {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(120px, 180px) scale(0.85) rotate(12deg);
+  }
+}
+
+@keyframes prize-fly-opponent {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(100px, -160px) scale(0.85) rotate(-10deg);
+  }
+}

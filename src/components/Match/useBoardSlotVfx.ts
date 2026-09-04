@@ -11,6 +11,12 @@ export interface DamageFloat {
   amount: number;
 }
 
+export interface PrizeFly {
+  id: string;
+  mat: "self" | "opponent";
+  count: number;
+}
+
 export interface BoardSlot {
   mat: "self" | "opponent";
   slot: "active" | "bench";
@@ -67,29 +73,38 @@ export interface BoardSlotVfx {
   damageFloats: DamageFloat[];
   evolvingSlots: Set<string>;
   koSlots: Set<string>;
+  promoteSlots: Set<string>;
+  prizeFlies: PrizeFly[];
 }
 
 const EMPTY_SET = new Set<string>();
 
-/** Track damage floats, evolve flashes, and KO animations per board slot. */
+/** Track damage floats, evolve/KO/promote flashes, and prize fly-ins. */
 export function useBoardSlotVfx(
   game: EngineState | null,
   viewingPlayerId: PlayerId,
 ): BoardSlotVfx {
   const prevLayoutRef = useRef<Map<string, SlotSnapshot | null>>(new Map());
   const prevCountersRef = useRef<Map<string, number>>(new Map());
+  const prevPrizesRef = useRef<{ self: number; opponent: number } | null>(null);
   const [damageFloats, setDamageFloats] = useState<DamageFloat[]>([]);
   const [evolvingSlots, setEvolvingSlots] = useState<Set<string>>(EMPTY_SET);
   const [koSlots, setKoSlots] = useState<Set<string>>(EMPTY_SET);
+  const [promoteSlots, setPromoteSlots] = useState<Set<string>>(EMPTY_SET);
+  const [prizeFlies, setPrizeFlies] = useState<PrizeFly[]>([]);
 
   useEffect(() => {
     if (!game) return;
 
     const layout = snapshotBoard(game, viewingPlayerId);
+    const self = getPlayer(game, viewingPlayerId);
+    const opponent = getPlayer(game, getOpponentId(viewingPlayerId));
     const lastLog = game.log[game.log.length - 1] ?? "";
     const evolveKeys: string[] = [];
     const koKeys: string[] = [];
+    const promoteKeys: string[] = [];
     const nextFloats: DamageFloat[] = [];
+    const nextPrizeFlies: PrizeFly[] = [];
 
     if (prevLayoutRef.current.size === 0) {
       for (const [key, entry] of layout) {
@@ -99,14 +114,30 @@ export function useBoardSlotVfx(
           if (card) prevCountersRef.current.set(entry.instanceId, card.damageCounters);
         }
       }
+      prevPrizesRef.current = { self: self.prizes.length, opponent: opponent.prizes.length };
       return;
     }
 
+    const prevActiveSelf = prevLayoutRef.current.get(slotKey({ mat: "self", slot: "active" })) ?? null;
+    const prevActiveOpp =
+      prevLayoutRef.current.get(slotKey({ mat: "opponent", slot: "active" })) ?? null;
+    const nextActiveSelf = layout.get(slotKey({ mat: "self", slot: "active" })) ?? null;
+    const nextActiveOpp = layout.get(slotKey({ mat: "opponent", slot: "active" })) ?? null;
+
     for (const [key, entry] of layout) {
       const prev = prevLayoutRef.current.get(key) ?? null;
+      const slot = parseSlotFromKey(key);
 
       if (prev && !entry) {
-        koKeys.push(key);
+        const wasPromoteSource =
+          /promoted/i.test(lastLog) &&
+          ((slot.mat === "self" &&
+            nextActiveSelf?.instanceId === prev.instanceId) ||
+            (slot.mat === "opponent" &&
+              nextActiveOpp?.instanceId === prev.instanceId));
+        if (!wasPromoteSource) {
+          koKeys.push(key);
+        }
       } else if (
         prev &&
         entry &&
@@ -121,15 +152,21 @@ export function useBoardSlotVfx(
         prev.definitionId !== entry.definitionId
       ) {
         evolveKeys.push(key);
+      } else if (
+        !prev &&
+        entry &&
+        slot.slot === "active" &&
+        /promoted/i.test(lastLog)
+      ) {
+        promoteKeys.push(key);
       }
 
       if (entry) {
-        const card = findCardAtSlot(game, viewingPlayerId, parseSlotFromKey(key));
+        const card = findCardAtSlot(game, viewingPlayerId, slot);
         if (card) {
           const prevCounters = prevCountersRef.current.get(entry.instanceId) ?? card.damageCounters;
           const delta = card.damageCounters - prevCounters;
           if (delta > 0) {
-            const slot = parseSlotFromKey(key);
             nextFloats.push({
               id: `${entry.instanceId}-${game.log.length}-${delta}`,
               mat: slot.mat,
@@ -145,9 +182,45 @@ export function useBoardSlotVfx(
       prevLayoutRef.current.set(key, entry);
     }
 
+    // Promote: active gained a bench Pokémon (bench slot may have shifted indices).
+    if (/promoted/i.test(lastLog)) {
+      for (const mat of ["self", "opponent"] as const) {
+        const prevActive = mat === "self" ? prevActiveSelf : prevActiveOpp;
+        const nextActive = mat === "self" ? nextActiveSelf : nextActiveOpp;
+        if (
+          nextActive &&
+          (!prevActive || prevActive.instanceId !== nextActive.instanceId)
+        ) {
+          promoteKeys.push(slotKey({ mat, slot: "active" }));
+        }
+      }
+    }
+
     for (const key of prevLayoutRef.current.keys()) {
       if (!layout.has(key)) prevLayoutRef.current.delete(key);
     }
+
+    const prevPrizes = prevPrizesRef.current ?? {
+      self: self.prizes.length,
+      opponent: opponent.prizes.length,
+    };
+    const selfPrizeDelta = prevPrizes.self - self.prizes.length;
+    const oppPrizeDelta = prevPrizes.opponent - opponent.prizes.length;
+    if (selfPrizeDelta > 0 && /prize card/i.test(lastLog)) {
+      nextPrizeFlies.push({
+        id: `self-prize-${game.log.length}`,
+        mat: "self",
+        count: selfPrizeDelta,
+      });
+    }
+    if (oppPrizeDelta > 0 && /prize card/i.test(lastLog)) {
+      nextPrizeFlies.push({
+        id: `opp-prize-${game.log.length}`,
+        mat: "opponent",
+        count: oppPrizeDelta,
+      });
+    }
+    prevPrizesRef.current = { self: self.prizes.length, opponent: opponent.prizes.length };
 
     const timers: ReturnType<typeof setTimeout>[] = [];
 
@@ -172,12 +245,28 @@ export function useBoardSlotVfx(
       timers.push(setTimeout(() => setKoSlots(EMPTY_SET), 900));
     }
 
+    if (promoteKeys.length > 0) {
+      setPromoteSlots(new Set(promoteKeys));
+      timers.push(setTimeout(() => setPromoteSlots(EMPTY_SET), 750));
+    }
+
+    if (nextPrizeFlies.length > 0) {
+      setPrizeFlies((current) => [...current, ...nextPrizeFlies]);
+      timers.push(
+        setTimeout(() => {
+          setPrizeFlies((current) =>
+            current.filter((item) => !nextPrizeFlies.some((added) => added.id === item.id)),
+          );
+        }, 1200),
+      );
+    }
+
     return () => {
       for (const timer of timers) clearTimeout(timer);
     };
   }, [game, viewingPlayerId]);
 
-  return { damageFloats, evolvingSlots, koSlots };
+  return { damageFloats, evolvingSlots, koSlots, promoteSlots, prizeFlies };
 }
 
 function findCardAtSlot(
