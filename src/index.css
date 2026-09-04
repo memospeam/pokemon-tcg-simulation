@@ -2078,6 +2078,13 @@ button {
   text-overflow: ellipsis;
 }
 
+.sim-controls__shortcuts {
+  flex: 1 1 100%;
+  font-size: 0.68rem;
+  color: #64748b;
+  letter-spacing: 0.04em;
+}
+
 .sim-empty {
   display: flex;
   align-items: center;
@@ -2141,3 +2148,83 @@ button {
   cursor: pointer;
 }
 
+@media (max-width: 768px) {
+  .app {
+    width: calc(100% - 1rem);
+    padding: 1rem 0 2rem;
+  }
+
+  .hero__subtitle {
+    display: none;
+  }
+
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .app--play {
+    padding: 0.35rem 0 0;
+  }
+
+  .sim-screen {
+    height: calc(100vh - 3.5rem);
+  }
+
+  .sim-screen--embedded {
+    height: auto;
+    min-height: 28rem;
+  }
+
+  .sim-setup {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .sim-setup__tournament,
+  .sim-setup__run,
+  .sim-setup__vs {
+    grid-column: 1 / -1;
+  }
+
+  .sim-setup__select {
+    min-width: 0;
+  }
+
+  .sim-body {
+    flex-direction: column;
+  }
+
+  .sim-analysis {
+    width: 100%;
+    flex: 0 0 auto;
+    max-height: 38vh;
+    border-left: 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+  }
+
+  .sim-controls {
+    gap: 0.4rem;
+  }
+
+  .sim-controls__scrubber {
+    flex: 1 1 100%;
+    order: 10;
+  }
+
+  .sim-controls__label {
+    display: none;
+  }
+
+  .sim-controls__shortcuts {
+    display: none;
+  }
+
+  .match-table {
+    min-height: auto;
+    padding-bottom: 4.5rem;
+  }
+}

@@ -524,3 +524,32 @@
     transform: translate(100px, -160px) scale(0.85) rotate(-10deg);
   }
 }
+
+@media (max-width: 768px) {
+  .match-table {
+    margin: 0;
+  }
+
+  .match-table__felt {
+    margin: 0 0.35rem;
+  }
+
+  .match-table .board-card[data-size="bench"],
+  .match-table .player-mat__bench-slot .board-card {
+    transform: scale(0.88);
+    transform-origin: center bottom;
+  }
+
+  .match-table .board-card[data-size="active"],
+  .match-table .player-mat__active .board-card {
+    transform: scale(0.92);
+    transform-origin: center;
+  }
+
+  .turn-phase-bar {
+    overflow-x: auto;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    padding-bottom: 0.25rem;
+  }
+}

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ALL_TOURNAMENTS,
+  dedupeDecksByName,
   getWorlds2026Decks,
   type TournamentDeckPreset,
   type TournamentPresetBundle,
@@ -14,10 +15,13 @@ import {
   runPresetMatrixAsync,
   summarizeSimHealth,
   computeDeckTierList,
+  type DeckTierEntry,
   type MatchupStats,
+  type SimHealthSummary,
 } from "@/lib/deck/playtestRunner";
 import { SimPlayback } from "@/components/SimPlayback/SimPlayback";
 import { MatrixGrid } from "./MatrixGrid";
+import { MatrixReport } from "./MatrixReport";
 import { buildMatrixCsv, downloadTextFile } from "@/lib/deck/matrixCsv";
 
 type AnalysisTab = "watch" | "matrix";
@@ -42,6 +46,25 @@ function matrixSizeLabel(source: MatrixSource, presetCount: number): string {
   return `${presetCount}×${presetCount}`;
 }
 
+function resolveMatrixPresets(
+  source: MatrixSource,
+  options: {
+    metaDecks: TournamentDeckPreset[];
+    worldsDecks: TournamentDeckPreset[];
+    tournament: TournamentPresetBundle;
+    deckCount: DeckCountOption;
+    dedupeArchetypes: boolean;
+  },
+): TournamentDeckPreset[] {
+  const raw =
+    source === "meta11"
+      ? options.metaDecks
+      : source === "worlds26"
+        ? options.worldsDecks
+        : decksForRun(options.tournament, options.deckCount);
+  return options.dedupeArchetypes ? dedupeDecksByName(raw) : raw;
+}
+
 export function AnalysisLab() {
   const [tab, setTab] = useState<AnalysisTab>("watch");
   const [matrixSource, setMatrixSource] = useState<MatrixSource>("meta11");
@@ -49,10 +72,17 @@ export function AnalysisLab() {
   const [deckCount, setDeckCount] = useState<DeckCountOption>("4");
   const [seedCount, setSeedCount] = useState(3);
   const [presetSeedMode, setPresetSeedMode] = useState<PresetSeedMode>("ci");
+  const [dedupeArchetypes, setDedupeArchetypes] = useState(true);
   const [matrixRunning, setMatrixRunning] = useState(false);
   const [matrixProgress, setMatrixProgress] = useState<{ done: number; total: number; currentLabel: string } | null>(null);
   const matrixAbortRef = useRef<AbortController | null>(null);
-  const [matrixReport, setMatrixReport] = useState<string | null>(null);
+  const [matrixSummary, setMatrixSummary] = useState<{
+    title: string;
+    seedCount: number;
+    health: SimHealthSummary;
+    tiers: DeckTierEntry[];
+  } | null>(null);
+  const [matrixCancelled, setMatrixCancelled] = useState(false);
   const [matrixMatchups, setMatrixMatchups] = useState<MatchupStats[] | null>(null);
   const [matrixPresets, setMatrixPresets] = useState<TournamentDeckPreset[] | null>(null);
   const [matrixTiers, setMatrixTiers] = useState<ReturnType<typeof computeDeckTierList> | null>(null);
@@ -70,18 +100,20 @@ export function AnalysisLab() {
 
     setMatrixRunning(true);
     setMatrixProgress(null);
-    setMatrixReport(null);
+    setMatrixSummary(null);
+    setMatrixCancelled(false);
     setMatrixMatchups(null);
     setMatrixPresets(null);
     setMatrixTiers(null);
     await new Promise((resolve) => setTimeout(resolve, 0));
     try {
-      const presets =
-        matrixSource === "meta11"
-          ? metaDecks
-          : matrixSource === "worlds26"
-            ? worldsDecks
-            : decksForRun(selectedTournament, deckCount);
+      const presets = resolveMatrixPresets(matrixSource, {
+        metaDecks,
+        worldsDecks,
+        tournament: selectedTournament,
+        deckCount,
+        dedupeArchetypes,
+      });
       const seeds =
         matrixSource === "meta11" || matrixSource === "worlds26"
           ? seedsForPreset(presetSeedMode)
@@ -104,30 +136,13 @@ export function AnalysisLab() {
           : matrixSource === "worlds26"
             ? "World Championships 2026 — Top 8"
             : `${selectedTournament.name} — ${presets.length}-deck matrix`;
-      const lines = [
-        `# ${title} (${seeds.length} seeds)`,
-        "",
-        `Games: ${health.totalGames} · Completion: ${Math.round(health.completionRate * 100)}% · Stalls: ${Math.round(health.stallRate * 100)}%`,
-        "",
-        "## Tier list",
-        ...tiers.map(
-          (row) =>
-            `- ${row.deckName}: ${Math.round(row.winRate * 100)}% (${row.wins}-${row.losses}-${row.draws})`,
-        ),
-        "",
-        "## Matchups",
-        ...health.matchups.map(
-          (m) =>
-            `- ${m.p1DeckName} vs ${m.p2DeckName}: ${Math.round(m.p1WinRate * 100)}% / ${Math.round(m.p2WinRate * 100)}% · avg ${m.avgTurnCount.toFixed(1)} turns`,
-        ),
-      ];
-      setMatrixReport(lines.join("\n"));
+      setMatrixSummary({ title, seedCount: seeds.length, health, tiers });
       setMatrixMatchups(health.matchups);
       setMatrixPresets(presets);
       setMatrixTiers(tiers);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        setMatrixReport("Matrix run cancelled.");
+        setMatrixCancelled(true);
       } else {
         throw error;
       }
@@ -136,18 +151,19 @@ export function AnalysisLab() {
       setMatrixProgress(null);
       matrixAbortRef.current = null;
     }
-  }, [deckCount, matrixSource, metaDecks, presetSeedMode, seedCount, selectedTournament, worldsDecks]);
+  }, [deckCount, dedupeArchetypes, matrixSource, metaDecks, presetSeedMode, seedCount, selectedTournament, worldsDecks]);
 
   const cancelMatrix = useCallback(() => {
     matrixAbortRef.current?.abort();
   }, []);
 
-  const presetCount =
-    matrixSource === "meta11"
-      ? metaDecks.length
-      : matrixSource === "worlds26"
-        ? worldsDecks.length
-        : decksForRun(selectedTournament, deckCount).length;
+  const presetCount = resolveMatrixPresets(matrixSource, {
+    metaDecks,
+    worldsDecks,
+    tournament: selectedTournament,
+    deckCount,
+    dedupeArchetypes,
+  }).length;
 
   function exportMatrixCsv() {
     if (!matrixPresets || !matrixMatchups || !matrixTiers) return;
@@ -254,9 +270,21 @@ export function AnalysisLab() {
                 <p className="matrix-runner__hint">
                   {matrixSource === "meta11"
                     ? `${metaDecks.length} Utrecht archetype reps`
-                    : `${worldsDecks.length} Worlds 2026 Top 8 lists`}
+                    : dedupeArchetypes
+                      ? `${presetCount} unique archetypes (${worldsDecks.length} lists)`
+                      : `${worldsDecks.length} Worlds 2026 Top 8 lists`}
                 </p>
               </>
+            )}
+            {(matrixSource === "worlds26" || matrixSource === "tournament") && (
+              <label className="matrix-runner__field matrix-runner__field--check">
+                <span>Dedupe archetypes</span>
+                <input
+                  type="checkbox"
+                  checked={dedupeArchetypes}
+                  onChange={(e) => setDedupeArchetypes(e.target.checked)}
+                />
+              </label>
             )}
           </div>
           <div className="matrix-runner__actions">
@@ -294,7 +322,15 @@ export function AnalysisLab() {
           {matrixMatchups && matrixPresets && (
             <MatrixGrid presets={matrixPresets} matchups={matrixMatchups} />
           )}
-          {matrixReport && <pre className="matrix-runner__report">{matrixReport}</pre>}
+          {matrixCancelled && <p className="matrix-runner__cancelled">Matrix run cancelled.</p>}
+          {matrixSummary && (
+            <MatrixReport
+              title={matrixSummary.title}
+              seedCount={matrixSummary.seedCount}
+              health={matrixSummary.health}
+              tiers={matrixSummary.tiers}
+            />
+          )}
         </section>
       )}
     </div>

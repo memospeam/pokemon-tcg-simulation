@@ -320,6 +320,13 @@ function canPlayTrainerKind(
         return { ok: false, reason: "Unfair Stamp: none of your Pokémon were Knocked Out during your opponent's last turn." };
       }
       return { ok: true };
+    case "trainer_special_red_card": {
+      const opponent = getPlayer(state, getOpponentId(playerId));
+      if (opponent.prizes.length > 3) {
+        return { ok: false, reason: "Special Red Card: opponent must have 3 or fewer Prize cards remaining." };
+      }
+      return { ok: true };
+    }
     case "trainer_switch_active_bench":
       if (!player.active || player.bench.length === 0) {
         return { ok: false, reason: "Switch requires an Active Pokémon and a Benched Pokémon." };
@@ -474,6 +481,9 @@ function applyTrainerByKind(state: EngineState, playerId: PlayerId, effect: Pars
     case "trainer_unfair_stamp":
       applyUnfairStamp(state, playerId);
       return;
+    case "trainer_special_red_card":
+      applySpecialRedCard(state, playerId);
+      return;
     case "trainer_crispin":
       applyCrispin(state, playerId);
       return;
@@ -569,6 +579,26 @@ function applyCrushingHammer(state: EngineState, playerId: PlayerId): void {
   }
   state.pendingAction = { type: "CRUSHING_HAMMER", playerId, options: targets };
   logMessage(state, "Crushing Hammer: heads — choose an Energy to discard.");
+}
+
+function applySpecialRedCard(state: EngineState, playerId: PlayerId): void {
+  const opponentId = getOpponentId(playerId);
+  const opponent = getPlayer(state, opponentId);
+  const returned = [...opponent.hand];
+  if (returned.length === 0) {
+    logMessage(state, "Special Red Card: opponent's hand was empty.");
+    return;
+  }
+  opponent.hand = [];
+  for (const card of returned) {
+    card.zone = Zone.Deck;
+    opponent.deck.push(card);
+  }
+  drawCards(state, opponentId, 3);
+  logMessage(
+    state,
+    `Special Red Card: opponent put ${returned.length} card(s) on the bottom of their deck and drew 3 cards.`,
+  );
 }
 
 function applyUnfairStamp(state: EngineState, playerId: PlayerId): void {
@@ -703,6 +733,13 @@ function canPlayLegacyTrainerEffect(
   if (matchesTrainer(def, "unfair stamp")) {
     if (!state.ownPokemonKnockedOutOpponentLastTurn[playerId]) {
       return { ok: false, reason: "Unfair Stamp: none of your Pokémon were Knocked Out during your opponent's last turn." };
+    }
+  }
+
+  if (matchesTrainer(def, "special red card")) {
+    const opponent = getPlayer(state, getOpponentId(playerId));
+    if (opponent.prizes.length > 3) {
+      return { ok: false, reason: "Special Red Card: opponent must have 3 or fewer Prize cards remaining." };
     }
   }
 
@@ -1160,6 +1197,11 @@ function applyLegacyTrainerEffect(
 
   if (matchesTrainer(def, "unfair stamp")) {
     applyUnfairStamp(state, playerId);
+    return;
+  }
+
+  if (matchesTrainer(def, "special red card")) {
+    applySpecialRedCard(state, playerId);
     return;
   }
 

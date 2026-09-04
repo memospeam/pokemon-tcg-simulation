@@ -85,6 +85,10 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_unfair_stamp" }),
   },
   {
+    test: /you can use this card only if your opponent has 3 or fewer prize cards remaining\.\s*your opponent shuffles their hand and puts it on the bottom of their deck\. if they put any cards on the bottom of their deck in this way, they draw 3 cards/,
+    build: () => ({ kind: "trainer_special_red_card" }),
+  },
+  {
     test: /search your deck for up to 2 basic energy cards of different types.*put 1 of them into your hand.*attach the other to 1 of your pok[ée]mon/,
     build: () => ({ kind: "trainer_crispin_sv" }),
   },

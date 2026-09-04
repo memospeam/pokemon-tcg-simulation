@@ -39,6 +39,22 @@ describe("parseTrainerText", () => {
     });
   });
 
+  it("parses Special Red Card with prize gate", () => {
+    const def = mockTrainer(
+      "Special Red Card",
+      [
+        "You can use this card only if your opponent has 3 or fewer Prize cards remaining.",
+        "",
+        "Your opponent shuffles their hand and puts it on the bottom of their deck. If they put any cards on the bottom of their deck in this way, they draw 3 cards.",
+        "You may play any number of Item cards during your turn.",
+      ],
+      ["Item"],
+    );
+    const parsed = parseTrainerText(def);
+    expect(parsed.effects).toEqual([{ kind: "trainer_special_red_card" }]);
+    expect(parsed.implementationCoverage).toBe("implemented");
+  });
+
   it("parses Professor's Research", () => {
     const def = mockTrainer("Professor's Research", [
       "Discard your hand and draw 7 cards.",

@@ -510,3 +510,151 @@
   align-items: center;
   justify-content: center;
 }
+
+.matrix-runner__field--check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.matrix-runner__field--check input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #fbbf24;
+}
+
+.matrix-runner__cancelled {
+  margin: 1rem 0 0;
+  color: #fca5a5;
+  font-size: 0.88rem;
+}
+
+.matrix-report {
+  margin-top: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 0.75rem;
+  background: rgba(2, 6, 23, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.matrix-report__header h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.matrix-report__meta {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.matrix-report__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 1.25rem;
+}
+
+.matrix-report__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.55rem;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.matrix-report__stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.matrix-report__stat-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.matrix-report__section h4,
+.matrix-report__matchups summary {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+}
+
+.matrix-report__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.matrix-report__table th,
+.matrix-report__table td {
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+}
+
+.matrix-report__table th {
+  background: rgba(15, 23, 42, 0.85);
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.matrix-report__matchups {
+  margin-top: 1rem;
+}
+
+.matrix-report__matchups summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.matrix-report__matchup-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+
+@media (max-width: 768px) {
+  .analysis-lab__header {
+    flex-direction: column;
+  }
+
+  .analysis-lab__tabs {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .analysis-lab__tabs .tabs__button {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 0.55rem 0.5rem;
+    font-size: 0.82rem;
+  }
+
+  .matrix-report__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .matrix-runner__field select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .panel__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .panel__actions {
+    width: 100%;
+  }
+}

@@ -466,6 +466,7 @@ export type ParsedEffect =
   | { kind: "trainer_enhanced_hammer" }
   | { kind: "trainer_rare_candy" }
   | { kind: "trainer_unfair_stamp" }
+  | { kind: "trainer_special_red_card" }
   | { kind: "trainer_crispin" }
   | { kind: "trainer_crispin_sv" }
   | { kind: "trainer_hilda" }

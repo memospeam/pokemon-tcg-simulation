@@ -94,6 +94,60 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
   // Abort any in-flight LLM capture on unmount.
   useEffect(() => () => { cancelRef.current.cancelled = true; }, []);
 
+  useEffect(() => {
+    function isEditableTarget(target: EventTarget | null): boolean {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName;
+      return tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || target.isContentEditable;
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (isEditableTarget(event.target)) return;
+      if (frames.length === 0) return;
+
+      switch (event.key) {
+        case " ":
+          event.preventDefault();
+          if (isPlaying) pause();
+          else play();
+          break;
+        case "ArrowLeft":
+          event.preventDefault();
+          pause();
+          stepDelta(-1);
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          pause();
+          stepDelta(1);
+          break;
+        case "Home":
+          event.preventDefault();
+          pause();
+          stepTo(0);
+          break;
+        case "End":
+          event.preventDefault();
+          pause();
+          stepTo(frames.length - 1);
+          break;
+        case "a":
+        case "A":
+          setShowAnalysis((value) => !value);
+          break;
+        case "f":
+        case "F":
+          setViewingId((id) => getOpponentId(id));
+          break;
+        default:
+          break;
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [frames.length, isPlaying, pause, play, stepDelta, stepTo]);
+
   const finishResult = useCallback((frames2: { state: EngineState }[]) => {
     const lastState = frames2.at(-1)?.state;
     setResult({
@@ -376,6 +430,9 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
               {currentFrame.label}
             </span>
           )}
+          <span className="sim-controls__shortcuts" aria-hidden="true">
+            Space · ←→ · A · F
+          </span>
         </div>
       )}
 

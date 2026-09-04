@@ -52,3 +52,16 @@ export function getAllDecks(): TournamentDeckPreset[] {
 export function getWorlds2026Decks(): TournamentDeckPreset[] {
   return WORLDS_2026.decks;
 }
+
+/** Keep the best-placed list when multiple players ran the same archetype name. */
+export function dedupeDecksByName(decks: TournamentDeckPreset[]): TournamentDeckPreset[] {
+  const byName = new Map<string, TournamentDeckPreset>();
+  for (const deck of decks) {
+    const key = deck.deckName.trim().toLowerCase();
+    const existing = byName.get(key);
+    if (!existing || deck.placement < existing.placement) {
+      byName.set(key, deck);
+    }
+  }
+  return [...byName.values()].sort((a, b) => a.placement - b.placement);
+}
