@@ -16,6 +16,7 @@ import {
 import { transferPokemonStateOntoEvolution } from "./toolEffects";
 import {
   canUsePrismTower,
+  canUseSpikemuthGym,
   continuePrismTowerPick,
   startPrismTower,
 } from "./stadiumOptionalEffects";
@@ -214,5 +215,20 @@ describe("Batch 3 stadiums (passives)", () => {
     expect(player.discard).toHaveLength(2);
     expect(state.turnFlags.stadiumOncePerTurnUsed).toBe(true);
     expect(state.pendingAction).toBeNull();
+  });
+
+  it("Spikemuth Gym finds Marnie's and Team Rocket's Pokémon", () => {
+    const state = stateWithStadium("Spikemuth Gym", {
+      murkrow: mockPokemon("Team Rocket's Murkrow"),
+      purrloin: mockPokemon("Marnie's Purrloin"),
+    });
+    state.phase = GamePhase.Active;
+    state.currentPlayerId = PlayerId.P1;
+    const player = state.players[PlayerId.P1];
+    player.deck = [
+      createCardInstance("murkrow", PlayerId.P1, Zone.Deck),
+      createCardInstance("purrloin", PlayerId.P1, Zone.Deck),
+    ];
+    expect(canUseSpikemuthGym(state, PlayerId.P1)).toBe(true);
   });
 });

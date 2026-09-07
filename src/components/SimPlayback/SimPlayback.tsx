@@ -246,6 +246,27 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
     [replayLegalActions],
   );
 
+  const replayDropKindForTarget = useCallback(
+    (instanceId: string): HandDragKind | null => {
+      if (
+        replayLegalActions.some(
+          (action) => action.type === "EVOLVE" && action.targetId === instanceId,
+        )
+      ) {
+        return "evolve";
+      }
+      if (
+        replayLegalActions.some(
+          (action) => action.type === "ATTACH_ENERGY" && action.targetId === instanceId,
+        )
+      ) {
+        return "energy";
+      }
+      return null;
+    },
+    [replayLegalActions],
+  );
+
   return (
     <div className={`sim-screen${embedded ? " sim-screen--embedded" : ""}`}>
       {/* Setup bar */}
@@ -372,6 +393,7 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
               prompt={currentFrame?.label ?? ""}
               interactive={false}
               dragKindForCard={replayDragKindForCard}
+              dropKindForTarget={replayDropKindForTarget}
               logTail={8}
               className="match-table--replay-hints"
             />

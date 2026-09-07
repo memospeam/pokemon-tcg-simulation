@@ -2740,6 +2740,10 @@ function pickBestSpikemuthGymPokemon(
       else if (name.includes("liepard")) score += 25;
       else if (name.includes("morpeko")) score += 18;
       else if (name.includes("purrloin")) score += 12;
+      else if (name.includes("honchkrow")) score += 40;
+      else if (name.includes("murkrow")) score += 28;
+      else if (name.includes("porygon")) score += 22;
+      else if (name.includes("articuno")) score += 15;
       if (def && isBasicPokemon(def) && player.bench.length < 4) score += 8;
       if (ctx) score += getArchetypeSearchPriority(ctx.archetype, name) / 2;
       return { instanceId, score };
@@ -2765,6 +2769,58 @@ function grandTreeStage2MinScore(ctx?: StrategyContext): number {
     default:
       return 70;
   }
+}
+
+function pickBestGrandTreeStage1(
+  state: EngineState,
+  playerId: PlayerId,
+  options: string[],
+  ctx?: StrategyContext,
+): string {
+  const { player, inPlayNames, inPlayCounts, handNames } = deckSearchContext(state, playerId);
+  const minStage2 = grandTreeStage2MinScore(ctx);
+  const scored = options
+    .map((instanceId) => {
+      let score = scoreDeckSearchOption(
+        state,
+        playerId,
+        instanceId,
+        ctx,
+        inPlayNames,
+        inPlayCounts,
+        handNames,
+      );
+      const stage1Card = player.deck.find((entry) => entry.instanceId === instanceId);
+      const stage1Def = stage1Card ? getDefinition(state, stage1Card.definitionId) : undefined;
+      if (stage1Def) {
+        const stage2Candidates = player.deck.filter((card) => {
+          const evoDef = getDefinition(state, card.definitionId);
+          return evoDef && isStage2(evoDef) && canEvolveInto(stage1Def, evoDef);
+        });
+        if (stage2Candidates.length === 0) {
+          score -= 10;
+        } else {
+          const bestFollowUp = Math.max(
+            ...stage2Candidates.map((card) =>
+              scoreDeckSearchOption(
+                state,
+                playerId,
+                card.instanceId,
+                ctx,
+                inPlayNames,
+                inPlayCounts,
+                handNames,
+              ),
+            ),
+          );
+          if (bestFollowUp >= minStage2) score += bestFollowUp / 3;
+          else score -= 12;
+        }
+      }
+      return { instanceId, score };
+    })
+    .sort((a, b) => b.score - a.score);
+  return scored[0]?.instanceId ?? options[0]!;
 }
 
 /** Higher = keep in hand; lower = discard first (Mystery Garden / Prism Tower). */
@@ -3680,7 +3736,7 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
       }
       if (pending.step === "STAGE1") {
         if (pending.options.length === 0) return gameReducer(state, { type: "SKIP_GRAND_TREE_STAGE2", playerId });
-        const instanceId = pickBestSearchDeckCard(state, playerId, pending.options, ctx);
+        const instanceId = pickBestGrandTreeStage1(state, playerId, pending.options, ctx);
         return gameReducer(state, { type: "SELECT_GRAND_TREE_STAGE1", playerId, instanceId });
       }
       if (pending.options.length === 0) return gameReducer(state, { type: "SKIP_GRAND_TREE_STAGE2", playerId });

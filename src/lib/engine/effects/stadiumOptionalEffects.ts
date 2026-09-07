@@ -27,9 +27,11 @@ function isWaterPokemon(state: EngineState, pokemon: CardInstance): boolean {
   return def.types?.includes("Water") ?? false;
 }
 
-function isMarniesPokemon(state: EngineState, card: CardInstance): boolean {
+function isSpikemuthSearchablePokemon(state: EngineState, card: CardInstance): boolean {
   const def = getDefinitionSafe(state, card.definitionId);
-  return def.supertype === "Pokémon" && def.name.toLowerCase().includes("marnie's");
+  if (def.supertype !== "Pokémon") return false;
+  const name = def.name.toLowerCase();
+  return name.includes("marnie's") || name.includes("team rocket's");
 }
 
 function isEnergyCard(def: CardDefinition): boolean {
@@ -139,20 +141,20 @@ export function continueLevinciaPick(state: EngineState, playerId: PlayerId, ins
 
 export function canUseSpikemuthGym(state: EngineState, playerId: PlayerId): boolean {
   if (!stadiumGate(state, playerId, "spikemuth_gym")) return false;
-  return getPlayer(state, playerId).deck.some((card) => isMarniesPokemon(state, card));
+  return getPlayer(state, playerId).deck.some((card) => isSpikemuthSearchablePokemon(state, card));
 }
 
 export function startSpikemuthGym(state: EngineState, playerId: PlayerId): void {
   const player = getPlayer(state, playerId);
   const options = player.deck
-    .filter((card) => isMarniesPokemon(state, card))
+    .filter((card) => isSpikemuthSearchablePokemon(state, card))
     .map((card) => card.instanceId);
   state.pendingAction = {
     type: "SPIKEMUTH_GYM",
     playerId,
     options,
   };
-  logMessage(state, "Spikemuth Gym: choose a Marnie's Pokémon from your deck.");
+  logMessage(state, "Spikemuth Gym: choose a Marnie's or Team Rocket's Pokémon from your deck.");
 }
 
 export function resolveSpikemuthGym(state: EngineState, playerId: PlayerId, instanceId: string): void {

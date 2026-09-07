@@ -308,6 +308,21 @@
   opacity: 0.92;
 }
 
+.match-table--replay-hints .board-card-wrap--drop-energy .board-card,
+.match-table--replay-hints .board-card-wrap--drop-evolve .board-card {
+  animation: replay-drop-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes replay-drop-pulse {
+  0%,
+  100% {
+    outline-offset: 2px;
+  }
+  50% {
+    outline-offset: 4px;
+  }
+}
+
 @keyframes damage-float-rise {
   0% {
     opacity: 0;

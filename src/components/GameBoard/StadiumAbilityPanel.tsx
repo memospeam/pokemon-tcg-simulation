@@ -138,7 +138,7 @@ export function StadiumAbilityPanel({ game, viewingId, isMyTurn, onRun }: Stadiu
             className="pending-panel__pick"
             onClick={() => onRun({ type: "USE_SPIKEMUTH_GYM", playerId: viewingId })}
           >
-            Search Marnie's Pokémon
+            Search Marnie's / Team Rocket's Pokémon
           </button>
         )}
         {showSurfing && (
