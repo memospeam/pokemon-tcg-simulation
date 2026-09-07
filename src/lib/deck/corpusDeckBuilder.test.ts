@@ -46,6 +46,17 @@ describe("corpus deck builder", () => {
     expect(result.pokemonMissing, preset.label).toEqual([]);
   });
 
+  it("builds Worlds 2026 #60 N's Zoroark (Liam Halliburton)", () => {
+    const preset = getTournamentDeckById("worlds26-60-liam-halliburton")!;
+    expect(preset?.deckName).toBe("N's Zoroark");
+    const built = buildPlaytestDeckFromCorpusText(preset.label, preset.text);
+    expect(built.resolveErrors, preset.label).toEqual([]);
+    expect(built.cards, preset.label).toHaveLength(60);
+    expect(built.validation.valid, preset.label).toBe(true);
+    const result = validateDeckTextAgainstCorpus(preset.text);
+    expect(result.pokemonMissing, preset.label).toEqual([]);
+  });
+
   it("classifies Pokémon Tools as tools — not Items — even for reprinted printings", () => {
     // Regression: every Trainer was stubbed as ["Item"], so Air Balloon (a
     // Pokémon Tool) was treated as a resolve-and-discard Item and never attached
