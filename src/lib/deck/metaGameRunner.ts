@@ -2700,6 +2700,73 @@ function pickHighestKeepHandOption(
   return sorted[0]?.instanceId ?? options[0]!;
 }
 
+function deckSearchContext(state: EngineState, playerId: PlayerId) {
+  const player = getPlayer(state, playerId);
+  const inPlayDefNames = [
+    ...(player.active ? [getDefinition(state, player.active.definitionId)?.name?.toLowerCase() ?? ""] : []),
+    ...player.bench.map((p) => getDefinition(state, p.definitionId)?.name?.toLowerCase() ?? ""),
+  ];
+  const inPlayNames = new Set(inPlayDefNames);
+  const inPlayCounts = new Map<string, number>();
+  for (const name of inPlayDefNames) inPlayCounts.set(name, (inPlayCounts.get(name) ?? 0) + 1);
+  const handNames = new Set(
+    player.hand.map((c) => getDefinition(state, c.definitionId)?.name?.toLowerCase() ?? ""),
+  );
+  return { player, inPlayNames, inPlayCounts, handNames };
+}
+
+function pickBestSpikemuthGymPokemon(
+  state: EngineState,
+  playerId: PlayerId,
+  options: string[],
+  ctx?: StrategyContext,
+): string {
+  const { player, inPlayNames, inPlayCounts, handNames } = deckSearchContext(state, playerId);
+  const scored = options
+    .map((instanceId) => {
+      let score = scoreDeckSearchOption(
+        state,
+        playerId,
+        instanceId,
+        ctx,
+        inPlayNames,
+        inPlayCounts,
+        handNames,
+      );
+      const card = player.deck.find((entry) => entry.instanceId === instanceId);
+      const def = card ? getDefinition(state, card.definitionId) : undefined;
+      const name = def?.name.toLowerCase() ?? "";
+      if (name.includes("grimmsnarl")) score += 35;
+      else if (name.includes("liepard")) score += 25;
+      else if (name.includes("morpeko")) score += 18;
+      else if (name.includes("purrloin")) score += 12;
+      if (def && isBasicPokemon(def) && player.bench.length < 4) score += 8;
+      if (ctx) score += getArchetypeSearchPriority(ctx.archetype, name) / 2;
+      return { instanceId, score };
+    })
+    .sort((a, b) => b.score - a.score);
+  return scored[0]?.instanceId ?? options[0]!;
+}
+
+function grandTreeStage2MinScore(ctx?: StrategyContext): number {
+  if (!ctx) return 70;
+  switch (ctx.archetype) {
+    case "dragapult":
+    case "dragapult-dusknoir":
+    case "lopunny":
+    case "greninja":
+    case "hydrapple":
+    case "garchomp":
+    case "alakazam":
+      return 55;
+    case "honchkrow":
+    case "ogerpon-box":
+      return 75;
+    default:
+      return 70;
+  }
+}
+
 /** Higher = keep in hand; lower = discard first (Mystery Garden / Prism Tower). */
 export function scoreHandCardKeepValue(
   state: EngineState,
@@ -3550,7 +3617,8 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     }
     case "SPIKEMUTH_GYM": {
       if (pending.options.length === 0) return null;
-      return gameReducer(state, { type: "SELECT_SPIKEMUTH_GYM", playerId, instanceId: pending.options[0]! });
+      const instanceId = pickBestSpikemuthGymPokemon(state, playerId, pending.options, ctx);
+      return gameReducer(state, { type: "SELECT_SPIKEMUTH_GYM", playerId, instanceId });
     }
     case "SURFING_BEACH": {
       if (pending.options.length === 0) return null;
@@ -3617,17 +3685,7 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
       }
       if (pending.options.length === 0) return gameReducer(state, { type: "SKIP_GRAND_TREE_STAGE2", playerId });
       const instanceId = pickBestSearchDeckCard(state, playerId, pending.options, ctx);
-      const grandTreePlayer = getPlayer(state, playerId);
-      const inPlayNames = new Set(
-        allPokemonInPlay(grandTreePlayer).map((pokemon) =>
-          getDefinition(state, pokemon.definitionId)?.name?.toLowerCase() ?? "",
-        ),
-      );
-      const inPlayCounts = new Map<string, number>();
-      for (const name of inPlayNames) inPlayCounts.set(name, (inPlayCounts.get(name) ?? 0) + 1);
-      const handNames = new Set(
-        grandTreePlayer.hand.map((c) => getDefinition(state, c.definitionId)?.name?.toLowerCase() ?? ""),
-      );
+      const { inPlayNames, inPlayCounts, handNames } = deckSearchContext(state, playerId);
       const stage2Score = scoreDeckSearchOption(
         state,
         playerId,
@@ -3637,7 +3695,9 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
         inPlayCounts,
         handNames,
       );
-      if (stage2Score < 70) return gameReducer(state, { type: "SKIP_GRAND_TREE_STAGE2", playerId });
+      if (stage2Score < grandTreeStage2MinScore(ctx)) {
+        return gameReducer(state, { type: "SKIP_GRAND_TREE_STAGE2", playerId });
+      }
       return gameReducer(state, { type: "SELECT_GRAND_TREE_STAGE2", playerId, instanceId });
     }
     case "CRUSHING_HAMMER": {

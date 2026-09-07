@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { capturePresetSimulation, capturePresetPolicySimulation } from "@/lib/deck/simulationCapture";
 import { ALL_TOURNAMENTS, WORLDS_2026 } from "@/lib/deck/tournamentPresets";
 import { createBrowserLlmPolicy } from "@/lib/deck/llm/browserPolicy";
 import { useSimStore } from "@/stores/simStore";
 import { getOpponentId, getPlayer, type EngineState } from "@/lib/engine";
+import { getLegalActions } from "@/lib/engine/reducer";
 import { PlayerId } from "@/lib/models/enums";
 import { MatchTable } from "@/components/Match/MatchTable";
+import type { HandDragKind } from "@/components/Match/useHandDragDrop";
 import { SimAnalysis } from "./SimAnalysis";
 
 interface SimPlaybackProps {
@@ -222,6 +224,28 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
   // showing it up-front would spoil the AI-vs-AI match.
   const atEnd = total > 0 && currentIndex >= total - 1;
 
+  const replayLegalActions = useMemo(() => (game ? getLegalActions(game) : []), [game]);
+  const replayDragKindForCard = useCallback(
+    (instanceId: string): HandDragKind | null => {
+      if (
+        replayLegalActions.some(
+          (action) => action.type === "ATTACH_ENERGY" && action.energyId === instanceId,
+        )
+      ) {
+        return "energy";
+      }
+      if (
+        replayLegalActions.some(
+          (action) => action.type === "EVOLVE" && action.evolutionId === instanceId,
+        )
+      ) {
+        return "evolve";
+      }
+      return null;
+    },
+    [replayLegalActions],
+  );
+
   return (
     <div className={`sim-screen${embedded ? " sim-screen--embedded" : ""}`}>
       {/* Setup bar */}
@@ -347,7 +371,9 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
               visibility="spectator"
               prompt={currentFrame?.label ?? ""}
               interactive={false}
+              dragKindForCard={replayDragKindForCard}
               logTail={8}
+              className="match-table--replay-hints"
             />
           </div>
 

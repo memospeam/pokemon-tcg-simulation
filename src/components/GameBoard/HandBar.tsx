@@ -57,8 +57,9 @@ export function HandBar({
         {hand.map((card, index) => {
           const def = game.definitions[card.definitionId];
           const quick = def && getQuickLabel ? getQuickLabel(def) : null;
-          const draggable = canDragHandCard?.(card.instanceId) ?? false;
-          const dragKind = draggable ? dragKindForCard?.(card.instanceId) : null;
+          const dragKind = dragKindForCard?.(card.instanceId) ?? null;
+          const draggable =
+            Boolean(onHandDragStart) && (canDragHandCard?.(card.instanceId) ?? false);
           const touchDragging = touchDragCardId === card.instanceId;
           const keyboardIndex = showKeyboardIndex && index < 9 ? index + 1 : null;
           return (

@@ -299,6 +299,15 @@
   position: relative;
 }
 
+.match-table--replay-hints .hand-bar__slot--drag-energy,
+.match-table--replay-hints .hand-bar__slot--drag-evolve {
+  cursor: default;
+}
+
+.match-table--replay-hints .hand-bar__drag-hint {
+  opacity: 0.92;
+}
+
 @keyframes damage-float-rise {
   0% {
     opacity: 0;
