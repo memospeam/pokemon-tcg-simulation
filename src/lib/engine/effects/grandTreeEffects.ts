@@ -1,6 +1,6 @@
 import { isBasicPokemon, isStage1, isStage2 } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
-import { canEvolveInto, getDefinitionSafe } from "../rules";
+import { canEvolveInto, getDefinitionSafe, normalizePokemonName } from "../rules";
 import { logMessage, shufflePlayerDeck } from "../helpers";
 import { allPokemonInPlay, getPlayer, type EngineState } from "../types";
 import { canEvolvePokemonThisTurn } from "../rules";
@@ -38,6 +38,53 @@ export function getGrandTreeStage1Options(
     const evoDef = getDefinitionSafe(state, card.definitionId);
     return isStage1(evoDef) && canEvolveInto(basicDef, evoDef);
   });
+}
+
+/** Mirrors the heuristic AI's Stage 2 floor without deck-archetype context. */
+const GRAND_TREE_STAGE2_MIN_SCORE = 70;
+
+function scoreGrandTreeStage2Option(
+  state: EngineState,
+  playerId: import("../../models/enums").PlayerId,
+  stage1: CardInstance,
+  candidate: CardInstance,
+): number {
+  const def = getDefinitionSafe(state, candidate.definitionId);
+  if (!isStage2(def)) return 0;
+
+  const player = getPlayer(state, playerId);
+  const stage1Name = normalizePokemonName(getDefinitionSafe(state, stage1.definitionId).name);
+  const name = def.name.toLowerCase();
+
+  let score = 90;
+  if (def.evolvesFrom) {
+    const pre = normalizePokemonName(def.evolvesFrom);
+    const preInPlay = allPokemonInPlay(player).some(
+      (pokemon) =>
+        normalizePokemonName(getDefinitionSafe(state, pokemon.definitionId).name) === pre,
+    );
+    if (pre === stage1Name || preInPlay) score += 30;
+    else score -= 25;
+  }
+
+  let copies = 0;
+  for (const pokemon of allPokemonInPlay(player)) {
+    const pokemonName = getDefinitionSafe(state, pokemon.definitionId).name.toLowerCase();
+    if (pokemonName === name) copies += 1;
+  }
+  score -= 20 * Math.max(0, copies - 1);
+
+  return score;
+}
+
+function bestGrandTreeStage2Score(
+  state: EngineState,
+  playerId: import("../../models/enums").PlayerId,
+  stage1: CardInstance,
+  options: CardInstance[],
+): number {
+  if (options.length === 0) return 0;
+  return Math.max(...options.map((card) => scoreGrandTreeStage2Option(state, playerId, stage1, card)));
 }
 
 export function getGrandTreeStage2Options(
@@ -159,6 +206,10 @@ export function resolveGrandTreeStage1(
 
   const stage2Options = getGrandTreeStage2Options(state, playerId, stage1);
   if (stage2Options.length === 0) {
+    finishGrandTree(state, playerId);
+    return;
+  }
+  if (bestGrandTreeStage2Score(state, playerId, stage1, stage2Options) < GRAND_TREE_STAGE2_MIN_SCORE) {
     finishGrandTree(state, playerId);
     return;
   }

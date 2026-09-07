@@ -63,6 +63,32 @@ describe("capturePolicyFrames (Simulate LLM-mode capture)", () => {
     expect(frames.at(-1)!.state.turnNumber).toBeGreaterThan(1);
   });
 
+  it("records the primary action on decision frames (attach / evolve / end turn)", async () => {
+    const state = setup(DRAGAPULT, GRENINJA, 11);
+    const frames = await capturePolicyFrames(
+      state,
+      new HeuristicPolicy(),
+      new HeuristicPolicy(),
+      { maxTurns: 30, maxActions: 240 },
+    );
+
+    const decisionFrames = frames.filter(
+      (frame) => frame.category !== "start" && frame.category !== "resolve",
+    );
+    expect(decisionFrames.length).toBeGreaterThan(0);
+    expect(decisionFrames.every((frame) => frame.action !== undefined)).toBe(true);
+
+    const attachOrEvolve = decisionFrames.find(
+      (frame) =>
+        frame.action?.type === "ATTACH_ENERGY" || frame.action?.type === "EVOLVE",
+    );
+    expect(attachOrEvolve).toBeDefined();
+    if (attachOrEvolve?.action?.type === "ATTACH_ENERGY") {
+      expect(attachOrEvolve.action.energyId).toBeTruthy();
+      expect(attachOrEvolve.action.targetId).toBeTruthy();
+    }
+  });
+
   it("honours the cancel() signal — stops emitting further frames", async () => {
     const state = setup(DRAGAPULT, DRAGAPULT, 7);
 

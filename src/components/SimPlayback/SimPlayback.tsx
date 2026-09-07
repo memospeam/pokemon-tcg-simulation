@@ -172,6 +172,7 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
     cancelRef.current = cancelToken;
 
     setResult(null);
+    setReplaySelectedHandId(undefined);
     setRunning(true);
     const maxTurns = noLimit ? 500 : 30;
     const maxActions = noLimit ? 2500 : 240;
@@ -308,6 +309,17 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
     [replayLegalActions, replayFocus],
   );
 
+  const replayLink = useMemo(() => {
+    if (replayFocus?.handId && replayFocus.targetId && replayFocus.kind) {
+      return {
+        handId: replayFocus.handId,
+        targetId: replayFocus.targetId,
+        kind: replayFocus.kind,
+      };
+    }
+    return null;
+  }, [replayFocus]);
+
   return (
     <div className={`sim-screen${embedded ? " sim-screen--embedded" : ""}`}>
       {/* Setup bar */}
@@ -437,6 +449,7 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
               onHandSelect={(card) => setReplaySelectedHandId(card.instanceId)}
               dragKindForCard={replayDragKindForCard}
               dropKindForTarget={replayDropKindForTarget}
+              replayLink={replayLink}
               logTail={8}
               className="match-table--replay-hints"
             />

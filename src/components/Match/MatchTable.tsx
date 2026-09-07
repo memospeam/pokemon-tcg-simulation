@@ -15,6 +15,7 @@ import { useMatchView } from "./useMatchView";
 import { useBoardSlotVfx } from "./useBoardSlotVfx";
 import { useAttackBeam } from "./useAttackBeam";
 import { AttackBeamOverlay } from "./AttackBeamOverlay";
+import { ReplayLinkOverlay, type ReplayLink } from "./ReplayLinkOverlay";
 import type { MatchVisibility } from "./types";
 import type { HandDragKind } from "./useHandDragDrop";
 
@@ -46,6 +47,7 @@ export interface MatchTableProps {
   showPhaseBar?: boolean;
   footer?: ReactNode;
   className?: string;
+  replayLink?: ReplayLink | null;
 }
 
 const NOOP = () => {};
@@ -78,6 +80,7 @@ export function MatchTable({
   showPhaseBar = true,
   footer,
   className = "",
+  replayLink = null,
 }: MatchTableProps) {
   const view = useMatchView(game, viewingPlayerId, visibility);
   const { damageFloats, evolvingSlots, koSlots, promoteSlots, switchSlots, prizeFlies } =
@@ -92,6 +95,7 @@ export function MatchTable({
 
   return (
     <div className={`match-table ${className}`.trim()}>
+      <ReplayLinkOverlay link={replayLink} />
       {showPhaseBar && <TurnPhaseBar game={game} isMyTurn={isMyTurn} />}
       <TurnBanner game={game} prompt={prompt} isMyTurn={isMyTurn} />
 

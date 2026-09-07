@@ -329,6 +329,54 @@
   }
 }
 
+.match-table--replay-hints {
+  position: relative;
+}
+
+.replay-link-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+  overflow: visible;
+}
+
+.replay-link {
+  stroke-width: 2.5;
+  stroke-dasharray: 7 5;
+  animation: replay-link-pulse 1.4s ease-in-out infinite;
+}
+
+.replay-link--energy {
+  stroke: rgba(56, 189, 248, 0.92);
+  filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.55));
+}
+
+.replay-link--evolve {
+  stroke: rgba(167, 139, 250, 0.92);
+  filter: drop-shadow(0 0 5px rgba(167, 139, 250, 0.55));
+}
+
+.replay-link__arrow--energy {
+  fill: rgba(56, 189, 248, 0.92);
+}
+
+.replay-link__arrow--evolve {
+  fill: rgba(167, 139, 250, 0.92);
+}
+
+@keyframes replay-link-pulse {
+  0%,
+  100% {
+    stroke-opacity: 0.75;
+  }
+  50% {
+    stroke-opacity: 1;
+  }
+}
+
 @keyframes damage-float-rise {
   0% {
     opacity: 0;

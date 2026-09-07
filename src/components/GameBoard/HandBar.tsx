@@ -65,11 +65,13 @@ export function HandBar({
           return (
             <div
               key={card.instanceId}
+              data-hand-card-id={card.instanceId}
               className={[
                 "hand-bar__slot",
                 draggable ? "hand-bar__slot--draggable" : "",
                 dragKind === "energy" ? "hand-bar__slot--drag-energy" : "",
                 dragKind === "evolve" ? "hand-bar__slot--drag-evolve" : "",
+                selectedId === card.instanceId ? "hand-bar__slot--replay-focus" : "",
                 touchDragging ? "hand-bar__slot--touch-drag" : "",
               ]
                 .filter(Boolean)
