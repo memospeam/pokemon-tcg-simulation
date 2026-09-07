@@ -205,6 +205,7 @@ export function GameBoard() {
         onHandSelect={controller.handleHandSelect}
         getHandQuickLabel={(def) => getHandQuickLabel(def)}
         canDragHandCard={isMyTurn ? handDrag.canDragHandCard : undefined}
+        dragKindForCard={isMyTurn ? handDrag.dragKindForCard : undefined}
         onHandDragStart={isMyTurn ? handDrag.onHandDragStart : undefined}
         onHandDragEnd={isMyTurn ? handDrag.onHandDragEnd : undefined}
         dropKindForTarget={isMyTurn ? handDrag.dropKindForTarget : undefined}

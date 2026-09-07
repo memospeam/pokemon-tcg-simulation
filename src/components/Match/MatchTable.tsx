@@ -34,6 +34,7 @@ export interface MatchTableProps {
   onHandSelect?: (card: CardInstance) => void;
   getHandQuickLabel?: (def: CardDefinition) => string | null;
   canDragHandCard?: (instanceId: string) => boolean;
+  dragKindForCard?: (instanceId: string) => HandDragKind | null;
   onHandDragStart?: (card: CardInstance) => void;
   onHandDragEnd?: () => void;
   onHandPointerDown?: (card: CardInstance, event: React.PointerEvent) => void;
@@ -65,6 +66,7 @@ export function MatchTable({
   onHandSelect,
   getHandQuickLabel,
   canDragHandCard,
+  dragKindForCard,
   onHandDragStart,
   onHandDragEnd,
   onHandPointerDown,
@@ -179,6 +181,7 @@ export function MatchTable({
         onSelect={onHand}
         getQuickLabel={getHandQuickLabel}
         canDragHandCard={canDragHandCard}
+        dragKindForCard={dragKindForCard}
         onHandDragStart={onHandDragStart}
         onHandDragEnd={onHandDragEnd}
         onHandPointerDown={onHandPointerDown}

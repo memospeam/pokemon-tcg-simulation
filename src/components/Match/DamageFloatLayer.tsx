@@ -18,8 +18,12 @@ export function DamageFloatLayer({ floats, mat, slot, benchIndex }: DamageFloatL
 
   return (
     <div className="damage-float-layer" aria-hidden>
-      {visible.map((item) => (
-        <span key={item.id} className="damage-float">
+      {visible.map((item, index) => (
+        <span
+          key={item.id}
+          className="damage-float"
+          style={index > 0 ? { animationDelay: `${index * 0.08}s` } : undefined}
+        >
           −{item.amount}
         </span>
       ))}

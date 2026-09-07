@@ -239,6 +239,7 @@
 }
 
 .damage-float {
+  position: absolute;
   font-size: 1.35rem;
   font-weight: 800;
   color: #fecaca;
@@ -246,6 +247,56 @@
     0 0 8px rgba(239, 68, 68, 0.9),
     0 2px 4px rgba(0, 0, 0, 0.8);
   animation: damage-float-rise 1s ease-out forwards;
+}
+
+.damage-float-layer .damage-float:nth-child(2) {
+  transform: translateX(14px);
+}
+
+.damage-float-layer .damage-float:nth-child(3) {
+  transform: translateX(-14px);
+}
+
+.hand-bar__slot--drag-energy {
+  outline: 1px solid rgba(74, 222, 128, 0.45);
+  outline-offset: 2px;
+  border-radius: 0.45rem;
+}
+
+.hand-bar__slot--drag-evolve {
+  outline: 1px solid rgba(167, 139, 250, 0.55);
+  outline-offset: 2px;
+  border-radius: 0.45rem;
+}
+
+.hand-bar__drag-hint {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+  z-index: 1;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.hand-bar__drag-hint--energy {
+  background: rgba(6, 78, 59, 0.9);
+  color: #bbf7d0;
+  border: 1px solid rgba(74, 222, 128, 0.45);
+}
+
+.hand-bar__drag-hint--evolve {
+  background: rgba(76, 29, 149, 0.9);
+  color: #e9d5ff;
+  border: 1px solid rgba(167, 139, 250, 0.5);
+}
+
+.hand-bar__slot {
+  position: relative;
 }
 
 @keyframes damage-float-rise {

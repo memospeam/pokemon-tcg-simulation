@@ -8,7 +8,7 @@ import {
 } from "./deckOutAwareness";
 import type { TournamentDeckPreset } from "./tournamentPresets";
 import { canAffordAttack, canAffordRetreat } from "../engine/energy";
-import { applyWeaknessAndResistance, canRareCandyEvolveInto, checkMulliganNeeded, parseDamage } from "../engine/rules";
+import { applyWeaknessAndResistance, canRareCandyEvolveInto, canEvolveInto, checkMulliganNeeded, parseDamage } from "../engine/rules";
 import { beginGame, gameReducer, getLegalActions, startActiveGame } from "../engine/reducer";
 import { getDefinitionSafe } from "../engine/rules";
 import {
@@ -25,7 +25,7 @@ import {
   canUseSpikemuthGym,
   canUseSurfingBeach,
 } from "../engine/effects/stadiumOptionalEffects";
-import { canUseGrandTree, getGrandTreeEligibleBasics } from "../engine/effects/grandTreeEffects";
+import { canUseGrandTree, getGrandTreeEligibleBasics, getGrandTreeStage1Options } from "../engine/effects/grandTreeEffects";
 import { listDevolveEligibleTyped } from "../engine/effects/devolutionEffects";
 import { isBasicEnergy, isBasicPokemon, isStage2, isSupporter } from "../models/definition";
 import type { CardInstance } from "../models/instance";
@@ -2536,6 +2536,64 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext,
  * Pick the best card from deck search options.
  * Priority: Stage 2 attacker > Stage 1 evolution > Basic ex/V > draw supporter > item > basic energy
  */
+function scoreDeckSearchOption(
+  state: EngineState,
+  playerId: PlayerId,
+  instanceId: string,
+  ctx: StrategyContext | undefined,
+  inPlayNames: Set<string>,
+  inPlayCounts: Map<string, number>,
+  handNames: Set<string>,
+): number {
+  const player = getPlayer(state, playerId);
+  const card = player.deck.find((entry) => entry.instanceId === instanceId);
+  if (!card) return 0;
+  const def = getDefinition(state, card.definitionId);
+  if (!def) return 0;
+  const name = def.name.toLowerCase();
+
+  let score = 10;
+  if (def.supertype === "Pokémon") {
+    if (isStage2(def)) score = 90;
+    else if (def.subtypes.includes("Stage 1")) score = 80;
+    else if (name.includes(" ex") || def.subtypes.includes("ex")) score = 75;
+    else if (isBasicPokemon(def)) score = 60;
+
+    if (def.evolvesFrom) {
+      const pre = def.evolvesFrom.toLowerCase();
+      if (inPlayNames.has(pre)) score += 30;
+      else if (handNames.has(pre)) score += 8;
+      else score -= 25;
+    }
+
+    const copies = inPlayCounts.get(name) ?? 0;
+    score -= 20 * Math.max(0, copies - 1);
+    if (ctx) {
+      score += getArchetypeSearchPriority(ctx.archetype, name);
+      if (ctx.archetype === "dragapult-dusknoir" && (name.includes("dusknoir") || name.includes("dusclops") || name.includes("duskull"))) score += 20;
+      if (ctx.archetype === "greninja" && (name.includes("dusknoir") || name.includes("dusclops") || name.includes("duskull"))) score += 20;
+      if (ctx.archetype === "hydrapple" && (name.includes("meganium") || name.includes("bayleef") || name.includes("chikorita"))) score += 25;
+      if (ctx.archetype === "garchomp" && (name.includes("roserade") || name.includes("roselia"))) score += 20;
+      if (ctx.archetype === "zoroark" && name.includes("n's zekrom")) score += 30;
+      if (ctx.archetype === "honchkrow" && (name.includes("team rocket's murkrow") || name.includes("team rocket's porygon"))) score += 15;
+      if (ctx.archetype === "alakazam" && name.includes("alakazam")) score += 40;
+      if (ctx.archetype === "alakazam" && name.includes("kadabra")) score += 25;
+      if (ctx.archetype === "alakazam" && name.includes("abra")) score += 10;
+      if (ctx.archetype === "alakazam" && (name.includes("dudunsparce") || name.includes("dunsparce"))) score += 15;
+    }
+  } else if (def.supertype === "Trainer") {
+    if (isSupporter(def)) {
+      if (name.includes("iono") || name.includes("professor") || name.includes("lillie") || name.includes("hilda") || name.includes("wally")) score = 50;
+      else score = 40;
+    } else {
+      score = 30;
+    }
+  } else if (def.supertype === "Energy") {
+    score = 15;
+  }
+  return score;
+}
+
 function pickBestSearchDeckCard(
   state: EngineState,
   playerId: PlayerId,
@@ -2548,82 +2606,98 @@ function pickBestSearchDeckCard(
     ...player.bench.map((p) => getDefinition(state, p.definitionId)?.name?.toLowerCase() ?? ""),
   ];
   const inPlayNames = new Set(inPlayDefNames);
-  // How many copies of each Pokémon (by name) are already in play, and which
-  // pre-evolutions we hold in hand — used for diminishing-returns and
-  // evolution-readiness scoring below.
   const inPlayCounts = new Map<string, number>();
   for (const n of inPlayDefNames) inPlayCounts.set(n, (inPlayCounts.get(n) ?? 0) + 1);
   const handNames = new Set(
     player.hand.map((c) => getDefinition(state, c.definitionId)?.name?.toLowerCase() ?? ""),
   );
 
-  const scored = options.map((instanceId) => {
-    const card = player.deck.find((c) => c.instanceId === instanceId);
-    if (!card) return { instanceId, score: 0 };
-    const def = getDefinition(state, card.definitionId);
-    if (!def) return { instanceId, score: 0 };
-    const name = def.name.toLowerCase();
-
-    let score = 10;
-    if (def.supertype === "Pokémon") {
-      if (isStage2(def)) score = 90;
-      else if (def.subtypes.includes("Stage 1")) score = 80;
-      else if (name.includes(" ex") || def.subtypes.includes("ex")) score = 75;
-      else if (isBasicPokemon(def)) score = 60;
-
-      // Evolution readiness: an Evolution Pokémon is only useful if we can
-      // actually put it into play. Strongly prefer one whose pre-evolution is
-      // already in play (e.g. Dudunsparce when Dunsparce is benched); penalise
-      // one we can't deploy (e.g. searching a 3rd Mega Lopunny ex with no
-      // Buneary in play or hand).
-      if (def.evolvesFrom) {
-        const pre = def.evolvesFrom.toLowerCase();
-        if (inPlayNames.has(pre)) score += 30;
-        else if (handNames.has(pre)) score += 8;
-        else score -= 25;
-      }
-
-      // Diminishing returns: a 2nd copy of an attacker is fine, but don't keep
-      // grabbing copies of something we already have multiples of in play
-      // (e.g. a 3rd Mega Lopunny ex when 2 are already down).
-      const copies = inPlayCounts.get(name) ?? 0;
-      score -= 20 * Math.max(0, copies - 1);
-      // Archetype-aware: boost key attacker lines
-      if (ctx) {
-        score += getArchetypeSearchPriority(ctx.archetype, name);
-        // Additional deck-specific search bonuses:
-        // Dragapult-Dusknoir: Dusknoir chain is critical for secondary win condition
-        if (ctx.archetype === "dragapult-dusknoir" && (name.includes("dusknoir") || name.includes("dusclops") || name.includes("duskull"))) score += 20;
-        // Greninja: Dusknoir chain gives precision damage placement
-        if (ctx.archetype === "greninja" && (name.includes("dusknoir") || name.includes("dusclops") || name.includes("duskull"))) score += 20;
-        // Hydrapple: Meganium is the engine — highest priority to find
-        if (ctx.archetype === "hydrapple" && (name.includes("meganium") || name.includes("bayleef") || name.includes("chikorita"))) score += 25;
-        // Garchomp: Roserade supporter-lock is game-deciding
-        if (ctx.archetype === "garchomp" && (name.includes("roserade") || name.includes("roselia"))) score += 20;
-        // Zoroark: Always want N's Zekrom (Rampaging Thunder 250) on bench for Night Joker
-        if (ctx.archetype === "zoroark" && name.includes("n's zekrom")) score += 30;
-        // Honchkrow: TR Murkrow and TR Porygon fill bench for Ariana draw engine
-        if (ctx.archetype === "honchkrow" && (name.includes("team rocket's murkrow") || name.includes("team rocket's porygon"))) score += 15;
-        // Alakazam: evolution line is the win condition — Alakazam >> Kadabra >> Abra >> Dudunsparce
-        if (ctx.archetype === "alakazam" && name.includes("alakazam")) score += 40;
-        if (ctx.archetype === "alakazam" && name.includes("kadabra")) score += 25;
-        if (ctx.archetype === "alakazam" && name.includes("abra")) score += 10;
-        if (ctx.archetype === "alakazam" && (name.includes("dudunsparce") || name.includes("dunsparce"))) score += 15;
-      }
-    } else if (def.supertype === "Trainer") {
-      if (isSupporter(def)) {
-        if (name.includes("iono") || name.includes("professor") || name.includes("lillie") || name.includes("hilda") || name.includes("wally")) score = 50;
-        else score = 40;
-      } else {
-        score = 30;
-      }
-    } else if (def.supertype === "Energy") {
-      score = 15;
-    }
-    return { instanceId, score };
-  }).sort((a, b) => b.score - a.score);
+  const scored = options
+    .map((instanceId) => ({
+      instanceId,
+      score: scoreDeckSearchOption(state, playerId, instanceId, ctx, inPlayNames, inPlayCounts, handNames),
+    }))
+    .sort((a, b) => b.score - a.score);
 
   return scored[0]?.instanceId ?? options[0]!;
+}
+
+function scoreGrandTreeBasicTarget(
+  state: EngineState,
+  playerId: PlayerId,
+  basicTargetId: string,
+  ctx?: StrategyContext,
+): number {
+  const player = getPlayer(state, playerId);
+  const basic =
+    player.active?.instanceId === basicTargetId
+      ? player.active
+      : player.bench.find((entry) => entry.instanceId === basicTargetId);
+  if (!basic) return 0;
+
+  const stage1Options = getGrandTreeStage1Options(state, playerId, basic);
+  if (stage1Options.length === 0) return 0;
+
+  const basicDef = getDefinitionSafe(state, basic.definitionId);
+  const basicName = basicDef.name.toLowerCase();
+  const isActive = player.active?.instanceId === basicTargetId;
+  let score = 25 + (isActive ? 12 : 0) + basic.attachedEnergy.length * 4;
+
+  const stage1Defs = stage1Options.map((card) => getDefinitionSafe(state, card.definitionId));
+  const hasStage2FollowUp = player.deck.some((card) => {
+    const evoDef = getDefinitionSafe(state, card.definitionId);
+    if (!isStage2(evoDef)) return false;
+    return stage1Defs.some((stage1Def) => canEvolveInto(stage1Def, evoDef));
+  });
+  if (hasStage2FollowUp) score += 35;
+
+  const bestStage1Score = Math.max(
+    ...stage1Options.map((card) => {
+      const inPlayNames = new Set(
+        allPokemonInPlay(player).map((pokemon) =>
+          getDefinition(state, pokemon.definitionId)?.name?.toLowerCase() ?? "",
+        ),
+      );
+      inPlayNames.add(basicName);
+      const inPlayCounts = new Map<string, number>();
+      for (const n of inPlayNames) inPlayCounts.set(n, (inPlayCounts.get(n) ?? 0) + 1);
+      const handNames = new Set(
+        player.hand.map((c) => getDefinition(state, c.definitionId)?.name?.toLowerCase() ?? ""),
+      );
+      return scoreDeckSearchOption(
+        state,
+        playerId,
+        card.instanceId,
+        ctx,
+        inPlayNames,
+        inPlayCounts,
+        handNames,
+      );
+    }),
+  );
+  score += bestStage1Score / 4;
+
+  if (ctx) {
+    score += getArchetypeSearchPriority(ctx.archetype, basicName) / 4;
+    if (ctx.archetype === "lopunny" && basicName.includes("dunsparce") && isActive) score -= 200;
+  }
+
+  return score;
+}
+
+function pickHighestKeepHandOption(
+  state: EngineState,
+  playerId: PlayerId,
+  options: string[],
+  ctx?: StrategyContext,
+): string {
+  const sorted = options
+    .map((instanceId) => ({
+      instanceId,
+      keep: scoreHandCardKeepValue(state, playerId, instanceId, ctx),
+    }))
+    .sort((a, b) => b.keep - a.keep);
+  return sorted[0]?.instanceId ?? options[0]!;
 }
 
 /** Higher = keep in hand; lower = discard first (Mystery Garden / Prism Tower). */
@@ -3453,11 +3527,26 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     }
     case "ACADEMY_AT_NIGHT": {
       if (pending.options.length === 0) return null;
-      return gameReducer(state, { type: "SELECT_ACADEMY_AT_NIGHT", playerId, instanceId: pending.options[0]! });
+      const instanceId = pickHighestKeepHandOption(state, playerId, pending.options, ctx);
+      return gameReducer(state, { type: "SELECT_ACADEMY_AT_NIGHT", playerId, instanceId });
     }
     case "LEVINCIA": {
       if (pending.options.length === 0) return null;
-      return gameReducer(state, { type: "SELECT_LEVINCIA", playerId, instanceId: pending.options[0]! });
+      const levinciaPlayer = getPlayer(state, playerId);
+      const scoreLightningRecover = (instanceId: string) => {
+        const card = levinciaPlayer.discard.find((entry) => entry.instanceId === instanceId);
+        if (!card) return 0;
+        let score = 10;
+        for (const pokemon of allPokemonInPlay(levinciaPlayer)) {
+          if (pickBestEnergyForTarget(state, [card], pokemon)?.instanceId === instanceId) score += 40;
+        }
+        if (levinciaPlayer.active && !activeCanAffordAnyAttack(state, levinciaPlayer.active)) score += 15;
+        return score;
+      };
+      const instanceId = [...pending.options].sort(
+        (a, b) => scoreLightningRecover(b) - scoreLightningRecover(a),
+      )[0]!;
+      return gameReducer(state, { type: "SELECT_LEVINCIA", playerId, instanceId });
     }
     case "SPIKEMUTH_GYM": {
       if (pending.options.length === 0) return null;
@@ -3508,14 +3597,48 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     case "GRAND_TREE": {
       if (pending.step === "BASIC") {
         if (pending.options.length === 0) return null;
-        return gameReducer(state, { type: "SELECT_GRAND_TREE_BASIC", playerId, targetId: pending.options[0]! });
+        const bestBasic = pending.options
+          .map((targetId) => ({
+            targetId,
+            score: scoreGrandTreeBasicTarget(state, playerId, targetId, ctx),
+          }))
+          .sort((a, b) => b.score - a.score)[0];
+        if (!bestBasic || bestBasic.score <= 0) return null;
+        return gameReducer(state, {
+          type: "SELECT_GRAND_TREE_BASIC",
+          playerId,
+          targetId: bestBasic.targetId,
+        });
       }
       if (pending.step === "STAGE1") {
         if (pending.options.length === 0) return gameReducer(state, { type: "SKIP_GRAND_TREE_STAGE2", playerId });
-        return gameReducer(state, { type: "SELECT_GRAND_TREE_STAGE1", playerId, instanceId: pending.options[0]! });
+        const instanceId = pickBestSearchDeckCard(state, playerId, pending.options, ctx);
+        return gameReducer(state, { type: "SELECT_GRAND_TREE_STAGE1", playerId, instanceId });
       }
       if (pending.options.length === 0) return gameReducer(state, { type: "SKIP_GRAND_TREE_STAGE2", playerId });
-      return gameReducer(state, { type: "SELECT_GRAND_TREE_STAGE2", playerId, instanceId: pending.options[0]! });
+      const instanceId = pickBestSearchDeckCard(state, playerId, pending.options, ctx);
+      const grandTreePlayer = getPlayer(state, playerId);
+      const inPlayNames = new Set(
+        allPokemonInPlay(grandTreePlayer).map((pokemon) =>
+          getDefinition(state, pokemon.definitionId)?.name?.toLowerCase() ?? "",
+        ),
+      );
+      const inPlayCounts = new Map<string, number>();
+      for (const name of inPlayNames) inPlayCounts.set(name, (inPlayCounts.get(name) ?? 0) + 1);
+      const handNames = new Set(
+        grandTreePlayer.hand.map((c) => getDefinition(state, c.definitionId)?.name?.toLowerCase() ?? ""),
+      );
+      const stage2Score = scoreDeckSearchOption(
+        state,
+        playerId,
+        instanceId,
+        ctx,
+        inPlayNames,
+        inPlayCounts,
+        handNames,
+      );
+      if (stage2Score < 70) return gameReducer(state, { type: "SKIP_GRAND_TREE_STAGE2", playerId });
+      return gameReducer(state, { type: "SELECT_GRAND_TREE_STAGE2", playerId, instanceId });
     }
     case "CRUSHING_HAMMER": {
       if (pending.options.length === 0) return null;

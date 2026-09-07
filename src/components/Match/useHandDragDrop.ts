@@ -132,6 +132,7 @@ export function useHandDragDrop(
   return {
     drag,
     touchDragCardId,
+    dragKindForCard,
     canDragHandCard,
     onHandDragStart,
     onHandDragEnd,

@@ -1,4 +1,5 @@
 import type { PointerEvent } from "react";
+import type { HandDragKind } from "@/components/Match/useHandDragDrop";
 import type { CardDefinition } from "@/lib/models/definition";
 import type { CardInstance } from "@/lib/models/instance";
 import type { EngineState } from "@/lib/engine";
@@ -11,6 +12,7 @@ interface HandBarProps {
   onSelect: (card: CardInstance) => void;
   getQuickLabel?: (def: CardDefinition) => string | null;
   canDragHandCard?: (instanceId: string) => boolean;
+  dragKindForCard?: (instanceId: string) => HandDragKind | null;
   onHandDragStart?: (card: CardInstance) => void;
   onHandDragEnd?: () => void;
   onHandPointerDown?: (card: CardInstance, event: PointerEvent) => void;
@@ -30,6 +32,7 @@ export function HandBar({
   onSelect,
   getQuickLabel,
   canDragHandCard,
+  dragKindForCard,
   onHandDragStart,
   onHandDragEnd,
   onHandPointerDown,
@@ -55,6 +58,7 @@ export function HandBar({
           const def = game.definitions[card.definitionId];
           const quick = def && getQuickLabel ? getQuickLabel(def) : null;
           const draggable = canDragHandCard?.(card.instanceId) ?? false;
+          const dragKind = draggable ? dragKindForCard?.(card.instanceId) : null;
           const touchDragging = touchDragCardId === card.instanceId;
           const keyboardIndex = showKeyboardIndex && index < 9 ? index + 1 : null;
           return (
@@ -63,6 +67,8 @@ export function HandBar({
               className={[
                 "hand-bar__slot",
                 draggable ? "hand-bar__slot--draggable" : "",
+                dragKind === "energy" ? "hand-bar__slot--drag-energy" : "",
+                dragKind === "evolve" ? "hand-bar__slot--drag-evolve" : "",
                 touchDragging ? "hand-bar__slot--touch-drag" : "",
               ]
                 .filter(Boolean)
@@ -96,6 +102,11 @@ export function HandBar({
                 selected={selectedId === card.instanceId}
                 onSelect={() => onSelect(card)}
               />
+              {dragKind && (
+                <span className={`hand-bar__drag-hint hand-bar__drag-hint--${dragKind}`}>
+                  {dragKind === "energy" ? "Energy" : "Evolve"}
+                </span>
+              )}
               {quick && <span className="hand-bar__quick">{quick}</span>}
             </div>
           );
