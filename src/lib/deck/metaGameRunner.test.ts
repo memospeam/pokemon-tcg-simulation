@@ -8,6 +8,8 @@ import { buildPlaytestDeckFromCorpusText } from "./corpusDeckBuilder";
 import {
   autoSetupEngineState,
   beginMatchFromBuiltDecks,
+  pickAutoStadiumAction,
+  scoreHandCardKeepValue,
   runEngineAutoPlay,
   runMatchFromBuiltDecks,
   runTournamentPresetMatch,
@@ -234,5 +236,221 @@ describe("metaGameRunner", () => {
     expect(result.setupComplete).toBe(true);
     expect(result.resolveErrors).toEqual([]);
     expect(result.actionCount).toBeGreaterThan(0);
+  });
+
+  it("uses Mystery Garden when discarding Energy draws multiple cards", () => {
+    const psychic = mockBasic("Abra", "60", ["Psychic"]);
+    const energy = mockEnergy("Psychic Energy", ["Psychic"]);
+    const filler = mockBasic("Filler", "60", ["Colorless"]);
+    const stadiumDef: CardDefinition = {
+      apiId: "Mystery Garden",
+      name: "Mystery Garden",
+      supertype: "Trainer",
+      subtypes: ["Stadium"],
+      rules: [],
+      set: { id: "test", name: "Test" },
+      number: "1",
+      images: { small: "", large: "" },
+    };
+    const stadium = createCardInstance("stadium", PlayerId.P1, Zone.Stadium);
+    const active = createCardInstance("psy-0", PlayerId.P1, Zone.Active);
+    const bench = Array.from({ length: 3 }, (_, index) =>
+      createCardInstance(`psy-${index + 1}`, PlayerId.P1, Zone.Bench),
+    );
+    const hand = [
+      createCardInstance("hand-energy", PlayerId.P1, Zone.Hand),
+      createCardInstance("hand-filler-1", PlayerId.P1, Zone.Hand),
+      createCardInstance("hand-filler-2", PlayerId.P1, Zone.Hand),
+    ];
+    const deckCards = Array.from({ length: 8 }, (_, index) =>
+      createCardInstance(`deck-${index}`, PlayerId.P1, Zone.Deck),
+    );
+
+    const state: EngineState = {
+      ...mirrorMatchState(),
+      stadium,
+      stadiumOwnerId: PlayerId.P1,
+      players: {
+        ...mirrorMatchState().players,
+        [PlayerId.P1]: {
+          ...mirrorMatchState().players[PlayerId.P1],
+          active,
+          bench,
+          hand,
+          deck: deckCards,
+        },
+      },
+      definitions: {
+        stadium: stadiumDef,
+        "psy-0": psychic,
+        "psy-1": psychic,
+        "psy-2": psychic,
+        "psy-3": psychic,
+        "hand-energy": energy,
+        "hand-filler-1": filler,
+        "hand-filler-2": filler,
+        ...Object.fromEntries(deckCards.map((card) => [card.definitionId, filler])),
+      },
+    };
+
+    const action = pickAutoStadiumAction(state, PlayerId.P1);
+    expect(action).toEqual({ type: "USE_MYSTERY_GARDEN", playerId: PlayerId.P1 });
+  });
+
+  it("defers Lumiose City when the active Pokémon can already attack", () => {
+    const lumioseDef: CardDefinition = {
+      apiId: "Lumiose City",
+      name: "Lumiose City",
+      supertype: "Trainer",
+      subtypes: ["Stadium"],
+      rules: [],
+      set: { id: "test", name: "Test" },
+      number: "1",
+      images: { small: "", large: "" },
+    };
+    const basic = mockBasic("Pikachu", "60", ["Lightning"], [
+      { name: "Shock", cost: ["Lightning"], convertedEnergyCost: 1, damage: "20", text: "" },
+    ]);
+    const energy = mockEnergy("Lightning Energy", ["Lightning"]);
+    const stadium = createCardInstance("stadium", PlayerId.P1, Zone.Stadium);
+    const active = createCardInstance("active", PlayerId.P1, Zone.Active);
+    const attached = createCardInstance("energy", PlayerId.P1, Zone.Active);
+    active.attachedEnergy = [attached];
+    const deckBasic = createCardInstance("deck-basic", PlayerId.P1, Zone.Deck);
+
+    const state: EngineState = {
+      ...mirrorMatchState(),
+      stadium,
+      stadiumOwnerId: PlayerId.P1,
+      players: {
+        ...mirrorMatchState().players,
+        [PlayerId.P1]: {
+          ...mirrorMatchState().players[PlayerId.P1],
+          active,
+          bench: [createCardInstance("bench", PlayerId.P1, Zone.Bench)],
+          deck: [deckBasic],
+        },
+      },
+      definitions: {
+        stadium: lumioseDef,
+        active: basic,
+        bench: basic,
+        energy: energy,
+        "deck-basic": basic,
+      },
+    };
+
+    expect(pickAutoStadiumAction(state, PlayerId.P1)).toBeNull();
+  });
+
+  it("uses Community Center when Supporter was played and Pokémon are damaged", () => {
+    const communityDef: CardDefinition = {
+      apiId: "Community Center",
+      name: "Community Center",
+      supertype: "Trainer",
+      subtypes: ["Stadium"],
+      rules: [],
+      set: { id: "test", name: "Test" },
+      number: "1",
+      images: { small: "", large: "" },
+    };
+    const pokemon = mockBasic("Damagedmon", "120", ["Colorless"]);
+    const stadium = createCardInstance("stadium", PlayerId.P1, Zone.Stadium);
+    const active = createCardInstance("active", PlayerId.P1, Zone.Active);
+    active.damageCounters = 30;
+
+    const state: EngineState = {
+      ...mirrorMatchState(),
+      stadium,
+      stadiumOwnerId: PlayerId.P1,
+      turnFlags: { ...emptyTurnFlags(), supporterPlayed: true },
+      players: {
+        ...mirrorMatchState().players,
+        [PlayerId.P1]: {
+          ...mirrorMatchState().players[PlayerId.P1],
+          active,
+        },
+      },
+      definitions: {
+        stadium: communityDef,
+        active: pokemon,
+      },
+    };
+
+    expect(pickAutoStadiumAction(state, PlayerId.P1)).toEqual({
+      type: "USE_COMMUNITY_CENTER",
+      playerId: PlayerId.P1,
+    });
+  });
+
+  it("prefers discarding duplicate Basic Energy over Special Energy for Mystery Garden", () => {
+    const psychic = mockBasic("Abra", "60", ["Psychic"]);
+    const basicEnergy = mockEnergy("Psychic Energy", ["Psychic"]);
+    const specialEnergy: CardDefinition = {
+      apiId: "Magnetic Metal Energy",
+      name: "Magnetic Metal Energy",
+      supertype: "Energy",
+      subtypes: ["Special"],
+      types: ["Metal"],
+      set: { id: "test", name: "Test" },
+      number: "1",
+      images: { small: "", large: "" },
+    };
+    const duplicateBasic = createCardInstance("energy-1", PlayerId.P1, Zone.Hand);
+    const duplicateBasic2 = createCardInstance("energy-2", PlayerId.P1, Zone.Hand);
+    const special = createCardInstance("special", PlayerId.P1, Zone.Hand);
+
+    const state: EngineState = {
+      ...mirrorMatchState(),
+      players: {
+        ...mirrorMatchState().players,
+        [PlayerId.P1]: {
+          ...mirrorMatchState().players[PlayerId.P1],
+          hand: [duplicateBasic, duplicateBasic2, special],
+        },
+      },
+      definitions: {
+        ...mirrorMatchState().definitions,
+        "energy-1": basicEnergy,
+        "energy-2": basicEnergy,
+        special: specialEnergy,
+        active: psychic,
+      },
+    };
+
+    expect(scoreHandCardKeepValue(state, PlayerId.P1, duplicateBasic.instanceId)).toBeLessThan(
+      scoreHandCardKeepValue(state, PlayerId.P1, special.instanceId),
+    );
+  });
+
+  it("prefers discarding filler cards over evolution lines for Prism Tower", () => {
+    const filler = mockBasic("Filler", "60", ["Colorless"]);
+    const stage2: CardDefinition = {
+      ...mockBasic("Alakazam", "140", ["Psychic"]),
+      subtypes: ["Stage 2"],
+      evolvesFrom: "Kadabra",
+    };
+    const handFiller = createCardInstance("filler", PlayerId.P1, Zone.Hand);
+    const handStage2 = createCardInstance("stage2", PlayerId.P1, Zone.Hand);
+
+    const state: EngineState = {
+      ...mirrorMatchState(),
+      players: {
+        ...mirrorMatchState().players,
+        [PlayerId.P1]: {
+          ...mirrorMatchState().players[PlayerId.P1],
+          hand: [handFiller, handStage2],
+        },
+      },
+      definitions: {
+        ...mirrorMatchState().definitions,
+        filler: filler,
+        stage2: stage2,
+      },
+    };
+
+    expect(scoreHandCardKeepValue(state, PlayerId.P1, handFiller.instanceId)).toBeLessThan(
+      scoreHandCardKeepValue(state, PlayerId.P1, handStage2.instanceId),
+    );
   });
 });

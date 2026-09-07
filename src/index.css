@@ -2287,6 +2287,17 @@ button {
     overflow-y: auto;
   }
 
+  .hand-bar__cards {
+    justify-content: flex-start;
+    scroll-snap-type: x proximity;
+    padding-bottom: 0.35rem;
+  }
+
+  .hand-bar__slot {
+    scroll-snap-align: center;
+    flex: 0 0 auto;
+  }
+
   .ai-thinking-banner {
     top: 3.5rem;
     max-width: calc(100vw - 1rem);

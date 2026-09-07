@@ -25,12 +25,20 @@ import {
   canUseSpikemuthGym,
   canUseSurfingBeach,
 } from "../engine/effects/stadiumOptionalEffects";
-import { canUseGrandTree } from "../engine/effects/grandTreeEffects";
+import { canUseGrandTree, getGrandTreeEligibleBasics } from "../engine/effects/grandTreeEffects";
 import { listDevolveEligibleTyped } from "../engine/effects/devolutionEffects";
 import { isBasicEnergy, isBasicPokemon, isStage2, isSupporter } from "../models/definition";
 import type { CardInstance } from "../models/instance";
 import { GamePhase, PlayerId } from "../models/enums";
-import { getDefinition, getOpponentId, getPlayer, remainingHp, type EngineState, type GameAction } from "../engine/types";
+import {
+  allPokemonInPlay,
+  getDefinition,
+  getOpponentId,
+  getPlayer,
+  remainingHp,
+  type EngineState,
+  type GameAction,
+} from "../engine/types";
 import {
   buildStrategyContext,
   getArchetypeBossPriority,
@@ -328,7 +336,7 @@ export function runEngineAutoPlay(
     }
 
     if (!state.pendingAction && !state.turnFlags.attacked) {
-      const stadiumAction = pickAutoStadiumAction(state, playerId);
+      const stadiumAction = pickAutoStadiumAction(state, playerId, ctx);
       if (stadiumAction) {
         const r = applyAndDrain(state, stadiumAction, ctx);
         state = r.state;
@@ -522,7 +530,7 @@ export function runAISingleTurn(
 
     // 3b. Once-per-turn stadium abilities
     if (!current.pendingAction && !current.turnFlags.attacked) {
-      const stadiumAction = pickAutoStadiumAction(current, aiPlayerId);
+      const stadiumAction = pickAutoStadiumAction(current, aiPlayerId, ctx);
       if (stadiumAction) {
         current = gameReducer(current, stadiumAction);
         const { state: drained } = drainAutoPending(current, 12, ctx);
@@ -649,52 +657,160 @@ export function isPlayStalled(state: EngineState): boolean {
   );
 }
 
-export function pickAutoStadiumAction(state: EngineState, playerId: PlayerId): GameAction | null {
+function activeCanAffordAnyAttack(state: EngineState, pokemon: CardInstance): boolean {
+  const def = getDefinition(state, pokemon.definitionId);
+  if (!def?.attacks?.length) return false;
+  return def.attacks.some((attack) => canAffordAttack(state, pokemon, attack));
+}
+
+function isBasicLightningEnergyCard(state: EngineState, card: CardInstance): boolean {
+  const def = getDefinitionSafe(state, card.definitionId);
+  if (!isBasicEnergy(def)) return false;
+  return (def.types?.includes("Lightning") ?? false) || def.name.toLowerCase().includes("lightning");
+}
+
+function pickBestLumioseBasic(
+  state: EngineState,
+  playerId: PlayerId,
+  options: CardInstance[],
+  ctx?: StrategyContext,
+): CardInstance | null {
+  if (options.length === 0) return null;
+  const player = getPlayer(state, playerId);
+  const scored = options
+    .map((card) => {
+      const def = getDefinitionSafe(state, card.definitionId);
+      const name = def.name.toLowerCase();
+      let score = 10;
+      const allCards = [...player.deck, ...player.hand];
+      if (
+        allCards.some((entry) => {
+          const evolvesFrom = getDefinition(state, entry.definitionId)?.evolvesFrom?.toLowerCase();
+          return evolvesFrom === name;
+        })
+      ) {
+        score += 20;
+      }
+      if (ctx) {
+        score += getArchetypeEnergyPriority(ctx.archetype, name) / 5;
+        const benchPrio = ctx.profile.benchPriority.findIndex((entry) => name.includes(entry.toLowerCase()));
+        if (benchPrio !== -1) score += (ctx.profile.benchPriority.length - benchPrio) * 5;
+      }
+      return { card, score };
+    })
+    .sort((a, b) => b.score - a.score);
+  return scored[0]?.card ?? null;
+}
+
+/** Score once-per-turn stadium abilities and pick the highest-value option. */
+export function pickAutoStadiumAction(
+  state: EngineState,
+  playerId: PlayerId,
+  ctx?: StrategyContext,
+): GameAction | null {
   if (state.pendingAction || state.turnFlags.stadiumOncePerTurnUsed || state.turnFlags.attacked) {
     return null;
   }
 
+  const candidates: { action: GameAction; score: number }[] = [];
+  const consider = (score: number, action: GameAction) => {
+    if (score >= 5) candidates.push({ action, score });
+  };
+
   if (canUseCommunityCenter(state, playerId)) {
-    return { type: "USE_COMMUNITY_CENTER", playerId };
+    const player = getPlayer(state, playerId);
+    const healValue = allPokemonInPlay(player).reduce(
+      (sum, pokemon) => sum + Math.min(10, pokemon.damageCounters),
+      0,
+    );
+    consider(healValue * 3 + 5, { type: "USE_COMMUNITY_CENTER", playerId });
   }
 
   if (canUseLevincia(state, playerId)) {
-    return { type: "USE_LEVINCIA", playerId };
+    const player = getPlayer(state, playerId);
+    const recoverable = Math.min(
+      2,
+      player.discard.filter((card) => isBasicLightningEnergyCard(state, card)).length,
+    );
+    let score = 12 + recoverable * 12;
+    if (player.active && !activeCanAffordAnyAttack(state, player.active)) score += 15;
+    if (ctx && getArchetypeEnergyPriority(ctx.archetype, "lightning") > 0) score += 10;
+    consider(score, { type: "USE_LEVINCIA", playerId });
   }
 
   if (canUseSurfingBeach(state, playerId)) {
-    return { type: "USE_SURFING_BEACH", playerId };
+    const player = getPlayer(state, playerId);
+    const active = player.active;
+    if (active) {
+      const activeRemaining = remainingHp(state, active);
+      const bestBench = player.bench
+        .filter((pokemon) => getDefinitionSafe(state, pokemon.definitionId).types?.includes("Water"))
+        .sort((a, b) => {
+          const hpDiff = remainingHp(state, b) - remainingHp(state, a);
+          if (hpDiff !== 0) return hpDiff;
+          return b.attachedEnergy.length - a.attachedEnergy.length;
+        })[0];
+      if (bestBench) {
+        const hpGain = remainingHp(state, bestBench) - activeRemaining;
+        const energyGain = bestBench.attachedEnergy.length - active.attachedEnergy.length;
+        let score = hpGain / 10 + energyGain * 8;
+        if (activeRemaining <= 30) score += 25;
+        if (score >= 8) consider(score, { type: "USE_SURFING_BEACH", playerId });
+      }
+    }
   }
 
   if (canUseSpikemuthGym(state, playerId)) {
-    return { type: "USE_SPIKEMUTH_GYM", playerId };
+    consider(ctx?.archetype === "honchkrow" ? 32 : 16, { type: "USE_SPIKEMUTH_GYM", playerId });
   }
 
   if (canUseAcademyAtNight(state, playerId)) {
-    return { type: "USE_ACADEMY_AT_NIGHT", playerId };
+    const handSize = getPlayer(state, playerId).hand.length;
+    consider(handSize >= 6 ? 8 : 5, { type: "USE_ACADEMY_AT_NIGHT", playerId });
   }
 
   if (canUseMysteryGarden(state, playerId)) {
-    return { type: "USE_MYSTERY_GARDEN", playerId };
+    const player = getPlayer(state, playerId);
+    const psychicCount = allPokemonInPlay(player).filter((pokemon) =>
+      getDefinitionSafe(state, pokemon.definitionId).types?.includes("Psychic"),
+    ).length;
+    const netDraw = Math.min(
+      Math.max(0, psychicCount - (player.hand.length - 1)),
+      player.deck.length,
+    );
+    consider(10 + netDraw * 15, { type: "USE_MYSTERY_GARDEN", playerId });
   }
 
   if (canUsePrismTower(state, playerId)) {
-    return { type: "USE_PRISM_TOWER", playerId };
+    const handSize = getPlayer(state, playerId).hand.length;
+    const score = handSize >= 7 ? 22 : handSize >= 5 ? 12 : handSize >= 4 ? 4 : -1;
+    if (score >= 5) consider(score, { type: "USE_PRISM_TOWER", playerId });
+  }
+
+  if (canUseGrandTree(state, playerId)) {
+    const player = getPlayer(state, playerId);
+    const basics = getGrandTreeEligibleBasics(state, playerId);
+    let score = 45;
+    if (basics.some((basic) => player.active?.instanceId === basic.instanceId)) score += 20;
+    consider(score, { type: "USE_GRAND_TREE", playerId });
   }
 
   if (canUseLumioseCity(state, playerId)) {
     const player = getPlayer(state, playerId);
     if (player.bench.length < 3) {
-      const option = getLumioseDeckOptions(state, playerId)[0];
-      if (option) return { type: "USE_LUMIOSE_CITY", playerId, instanceId: option.instanceId };
+      const option = pickBestLumioseBasic(state, playerId, getLumioseDeckOptions(state, playerId), ctx);
+      if (option) {
+        let score = 10 + (3 - player.bench.length) * 8;
+        if (player.bench.length === 0) score += 25;
+        if (player.active && activeCanAffordAnyAttack(state, player.active)) score -= 30;
+        consider(score, { type: "USE_LUMIOSE_CITY", playerId, instanceId: option.instanceId });
+      }
     }
   }
 
-  if (canUseGrandTree(state, playerId)) {
-    return { type: "USE_GRAND_TREE", playerId };
-  }
-
-  return null;
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0]!.action;
 }
 
 export function pickAutoPlayBasicAction(
@@ -2510,6 +2626,94 @@ function pickBestSearchDeckCard(
   return scored[0]?.instanceId ?? options[0]!;
 }
 
+/** Higher = keep in hand; lower = discard first (Mystery Garden / Prism Tower). */
+export function scoreHandCardKeepValue(
+  state: EngineState,
+  playerId: PlayerId,
+  instanceId: string,
+  ctx?: StrategyContext,
+): number {
+  const player = getPlayer(state, playerId);
+  const card = player.hand.find((entry) => entry.instanceId === instanceId);
+  if (!card) return 999;
+  const def = getDefinition(state, card.definitionId);
+  if (!def) return 999;
+
+  if (def.supertype === "Energy") {
+    if (!isBasicEnergy(def)) return 120;
+    let keep = 25;
+    const energyType = def.types?.[0] ?? "Colorless";
+    const sameTypeCount = player.hand.filter((entry) => {
+      const entryDef = getDefinitionSafe(state, entry.definitionId);
+      return entryDef.supertype === "Energy" && (entryDef.types?.[0] ?? "Colorless") === energyType;
+    }).length;
+    keep += Math.max(0, 4 - sameTypeCount) * 10;
+
+    const handEnergies = player.hand.filter(
+      (entry) => getDefinitionSafe(state, entry.definitionId).supertype === "Energy",
+    );
+    for (const pokemon of allPokemonInPlay(player)) {
+      const best = pickBestEnergyForTarget(state, handEnergies, pokemon);
+      if (best?.instanceId === card.instanceId) keep += 45;
+    }
+    return keep;
+  }
+
+  const name = def.name.toLowerCase();
+  let keep = 40;
+  if (def.supertype === "Pokémon") {
+    if (isStage2(def)) keep = 95;
+    else if (def.subtypes.includes("Stage 1")) keep = 85;
+    else if (name.includes(" ex") || def.subtypes.includes("ex")) keep = 80;
+    else if (isBasicPokemon(def)) keep = 65;
+
+    if (def.evolvesFrom) {
+      const pre = def.evolvesFrom.toLowerCase();
+      const inPlayNames = new Set(
+        allPokemonInPlay(player).map((pokemon) =>
+          getDefinition(state, pokemon.definitionId)?.name.toLowerCase() ?? "",
+        ),
+      );
+      if (inPlayNames.has(pre)) keep += 25;
+      else keep -= 20;
+    }
+  } else if (def.supertype === "Trainer") {
+    if (isSupporter(def)) {
+      if (
+        name.includes("iono") ||
+        name.includes("professor") ||
+        name.includes("lillie") ||
+        name.includes("hilda") ||
+        name.includes("wally")
+      ) {
+        keep = 75;
+      } else {
+        keep = 55;
+      }
+    } else {
+      keep = 45;
+    }
+  }
+
+  if (ctx) keep += getArchetypeSearchPriority(ctx.archetype, name) / 2;
+  return keep;
+}
+
+function pickLowestKeepHandOption(
+  state: EngineState,
+  playerId: PlayerId,
+  options: string[],
+  ctx?: StrategyContext,
+): string {
+  const sorted = options
+    .map((instanceId) => ({
+      instanceId,
+      keep: scoreHandCardKeepValue(state, playerId, instanceId, ctx),
+    }))
+    .sort((a, b) => a.keep - b.keep);
+  return sorted[0]?.instanceId ?? options[0]!;
+}
+
 function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): EngineState | null {
   const pending = state.pendingAction;
   if (!pending) return null;
@@ -3273,11 +3477,13 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     }
     case "MYSTERY_GARDEN": {
       if (pending.options.length === 0) return null;
-      return gameReducer(state, { type: "SELECT_MYSTERY_GARDEN", playerId, instanceId: pending.options[0]! });
+      const discardId = pickLowestKeepHandOption(state, playerId, pending.options, ctx);
+      return gameReducer(state, { type: "SELECT_MYSTERY_GARDEN", playerId, instanceId: discardId });
     }
     case "PRISM_TOWER": {
       if (pending.options.length === 0) return null;
-      return gameReducer(state, { type: "SELECT_PRISM_TOWER", playerId, instanceId: pending.options[0]! });
+      const discardId = pickLowestKeepHandOption(state, playerId, pending.options, ctx);
+      return gameReducer(state, { type: "SELECT_PRISM_TOWER", playerId, instanceId: discardId });
     }
     case "STRANGE_TIMEPIECE": {
       if (pending.options.length === 0) return null;
