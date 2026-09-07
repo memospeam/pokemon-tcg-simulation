@@ -362,6 +362,7 @@ export const STRATEGY_PROFILES: Record<Archetype, StrategyProfile> = {
       "T1: Bench N's Zorua ×2 and N's Zekrom (the Night Joker damage source). Attach Darkness Energy to a Zorua/Zoroark line, NOT to Zekrom (it can't be powered).",
       "T2: Evolve Zorua → N's Zoroark ex. Night Joker → copy N's Zekrom's Rampaging Thunder for 250. Use Trade (discard 1, draw 2) to dig — but don't over-draw into a deck-out.",
       "Loop: Rampaging Thunder locks this Zoroark out of attacking next turn → Pecharunt ex Subjugating Chains swaps a fresh Benched N's Zoroark ex (with Energy) into Active so it can Night Joker → 250 again. Always keep N's Zekrom Benched.",
+      "Worlds #9 (Öjvind): 4 Transformation Tome + Janine's Secret Art replace heavy Poké Pad — Tome (play 2) swaps a Basic from discard onto the field; Janine attaches Darkness and poisons Active for Binding Mochi +40.",
       "Tech: N's Darmanitan for Fire coverage, Munkidori/Fezandipiti ex utility, Boss's Orders to target the right Pokémon. Conserve deck — stop using Trade when the deck is low.",
     ],
     trainerScoreAdjust: {
