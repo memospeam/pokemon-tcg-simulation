@@ -308,6 +308,12 @@
   opacity: 0.92;
 }
 
+.hand-bar__slot--replay-focus {
+  outline: 2px solid rgba(251, 191, 36, 0.75);
+  outline-offset: 2px;
+  border-radius: 0.45rem;
+}
+
 .match-table--replay-hints .board-card-wrap--drop-energy .board-card,
 .match-table--replay-hints .board-card-wrap--drop-evolve .board-card {
   animation: replay-drop-pulse 1.4s ease-in-out infinite;

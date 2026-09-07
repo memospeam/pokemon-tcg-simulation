@@ -56,6 +56,7 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
   const [viewingId, setViewingId] = useState<PlayerId>(PlayerId.P1);
   const [result, setResult] = useState<SimResult | null>(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [replaySelectedHandId, setReplaySelectedHandId] = useState<string | undefined>();
 
   // Cancel flag for an in-flight async (LLM) capture, flipped when a new run
   // starts or the component unmounts.
@@ -225,8 +226,41 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
   const atEnd = total > 0 && currentIndex >= total - 1;
 
   const replayLegalActions = useMemo(() => (game ? getLegalActions(game) : []), [game]);
+
+  const replayFocus = useMemo(() => {
+    const action = currentFrame?.action;
+    if (action?.type === "ATTACH_ENERGY") {
+      return {
+        handId: action.energyId,
+        targetId: action.targetId,
+        kind: "energy" as const,
+      };
+    }
+    if (action?.type === "EVOLVE") {
+      return {
+        handId: action.evolutionId,
+        targetId: action.targetId,
+        kind: "evolve" as const,
+      };
+    }
+    if (replaySelectedHandId) {
+      return { handId: replaySelectedHandId, targetId: null as string | null, kind: null };
+    }
+    return null;
+  }, [currentFrame?.action, replaySelectedHandId]);
+
+  useEffect(() => {
+    const action = currentFrame?.action;
+    if (action?.type === "ATTACH_ENERGY") {
+      setReplaySelectedHandId(action.energyId);
+    } else if (action?.type === "EVOLVE") {
+      setReplaySelectedHandId(action.evolutionId);
+    }
+  }, [currentIndex, currentFrame?.action]);
+
   const replayDragKindForCard = useCallback(
     (instanceId: string): HandDragKind | null => {
+      if (replayFocus && instanceId !== replayFocus.handId) return null;
       if (
         replayLegalActions.some(
           (action) => action.type === "ATTACH_ENERGY" && action.energyId === instanceId,
@@ -243,28 +277,35 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
       }
       return null;
     },
-    [replayLegalActions],
+    [replayLegalActions, replayFocus],
   );
 
   const replayDropKindForTarget = useCallback(
     (instanceId: string): HandDragKind | null => {
-      if (
-        replayLegalActions.some(
-          (action) => action.type === "EVOLVE" && action.targetId === instanceId,
-        )
-      ) {
-        return "evolve";
+      if (replayFocus?.targetId) {
+        if (instanceId !== replayFocus.targetId) return null;
+        return replayFocus.kind;
       }
-      if (
-        replayLegalActions.some(
-          (action) => action.type === "ATTACH_ENERGY" && action.targetId === instanceId,
-        )
-      ) {
-        return "energy";
+      if (replayFocus?.handId) {
+        const canEvolve = replayLegalActions.some(
+          (action) =>
+            action.type === "EVOLVE" &&
+            action.evolutionId === replayFocus.handId &&
+            action.targetId === instanceId,
+        );
+        if (canEvolve) return "evolve";
+        const canEnergy = replayLegalActions.some(
+          (action) =>
+            action.type === "ATTACH_ENERGY" &&
+            action.energyId === replayFocus.handId &&
+            action.targetId === instanceId,
+        );
+        if (canEnergy) return "energy";
+        return null;
       }
       return null;
     },
-    [replayLegalActions],
+    [replayLegalActions, replayFocus],
   );
 
   return (
@@ -392,6 +433,8 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
               visibility="spectator"
               prompt={currentFrame?.label ?? ""}
               interactive={false}
+              selectedHandId={replaySelectedHandId}
+              onHandSelect={(card) => setReplaySelectedHandId(card.instanceId)}
               dragKindForCard={replayDragKindForCard}
               dropKindForTarget={replayDropKindForTarget}
               logTail={8}

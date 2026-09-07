@@ -388,7 +388,7 @@ export function PendingActionPanel({
       .filter(Boolean) as CardInstance[];
     return (
       <div className="pending-panel pending-panel--deck">
-        <h4>Spikemuth Gym — choose a Marnie's Pokémon</h4>
+        <h4>Spikemuth Gym — choose a Marnie's or Team Rocket's Pokémon</h4>
         <div className="pending-panel__cards pending-panel__cards--scroll">
           {cards.map((card) => {
             const def = getDefinition(game, card.definitionId);

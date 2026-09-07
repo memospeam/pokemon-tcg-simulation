@@ -48,6 +48,8 @@ export interface SimFrame {
   logDelta: string[];
   /** Heuristic candidates weighed for this decision, best-first (when traced). */
   decision?: DecisionCandidate[];
+  /** Primary action that produced this frame (attach / evolve / etc.). */
+  action?: GameAction;
 }
 
 function applyAction(
@@ -67,6 +69,7 @@ function applyAction(
     label: logDelta.at(-1) ?? fallback,
     category,
     logDelta,
+    action,
     ...(decision && decision.length > 0 ? { decision } : {}),
   };
   frames.push(frame);
