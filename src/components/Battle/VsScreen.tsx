@@ -21,7 +21,7 @@ export function VsScreen({
   onBack,
 }: VsScreenProps) {
   return (
-    <div className="vs-screen">
+    <div className="vs-screen" data-testid="vs-screen">
       <div className="vs-screen__backdrop" />
       <div className="vs-screen__content">
         <p className="vs-screen__eyebrow">Ready to battle</p>
@@ -46,10 +46,10 @@ export function VsScreen({
         </div>
 
         <div className="vs-screen__actions">
-          <button type="button" className="vs-screen__back" onClick={onBack}>
+          <button type="button" data-testid="vs-back" className="vs-screen__back" onClick={onBack}>
             ← Back
           </button>
-          <button type="button" className="vs-screen__start action-dock__primary" onClick={onStart}>
+          <button type="button" data-testid="start-battle" className="vs-screen__start action-dock__primary" onClick={onStart}>
             Start Battle
           </button>
         </div>

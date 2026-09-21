@@ -94,7 +94,7 @@ export function MatchTable({
   const winner = game.winnerId ? getPlayer(game, game.winnerId).name : null;
 
   return (
-    <div className={`match-table ${className}`.trim()}>
+    <div className={`match-table ${className}`.trim()} data-testid="match-table">
       <ReplayLinkOverlay link={replayLink} />
       {showPhaseBar && <TurnPhaseBar game={game} isMyTurn={isMyTurn} />}
       <TurnBanner game={game} prompt={prompt} isMyTurn={isMyTurn} />

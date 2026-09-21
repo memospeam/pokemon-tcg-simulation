@@ -101,7 +101,7 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
     player2Deck.resolveErrors.length === 0;
 
   return (
-    <div className="battle-setup">
+    <div className="battle-setup" data-testid="battle-setup">
       <section className="panel battle-setup__hero">
         <header className="panel__header">
           <div>
@@ -118,6 +118,7 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
         <div className="panel__actions lobby-presets">
           <button
             type="button"
+            data-testid="quick-dragapult"
             disabled={loadingSlot !== null}
             onClick={() => void loadDecks(DRAGAPULT_DECK_1, DRAGAPULT_DECK_2)}
           >
@@ -136,9 +137,14 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
           <h3>Your deck</h3>
           <label className="field">
             <span>Display name</span>
-            <input value={player1Name} onChange={(e) => setPlayer1Name(e.target.value)} />
+            <input
+              data-testid="player-name"
+              value={player1Name}
+              onChange={(e) => setPlayer1Name(e.target.value)}
+            />
           </label>
           <select
+            data-testid="select-p1-deck"
             defaultValue=""
             onChange={(event) => {
               const preset = getTournamentDeckById(event.target.value);
@@ -173,7 +179,7 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
             )}
           </select>
           {player1Deck ? (
-            <div className="deck-box__summary">
+            <div className="deck-box__summary" data-testid="p1-deck-summary">
               <strong>{player1Deck.name}</strong>
               <span>{player1Deck.cards.length} cards</span>
               <span className={player1Deck.validation.valid ? "status-ok" : "status-bad"}>
@@ -190,7 +196,11 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
           <h3>AI opponent</h3>
           <label className="field">
             <span>Opponent name</span>
-            <input value={player2Name} onChange={(e) => setPlayer2Name(e.target.value)} />
+            <input
+              data-testid="opponent-name"
+              value={player2Name}
+              onChange={(e) => setPlayer2Name(e.target.value)}
+            />
           </label>
 
           <fieldset className="battle-setup__ai-kind">
@@ -198,6 +208,7 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
             <label>
               <input
                 type="radio"
+                data-testid="ai-heuristic"
                 name="aiKind"
                 checked={aiKind === "heuristic"}
                 onChange={() => setAiKind("heuristic")}
@@ -207,6 +218,7 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
             <label>
               <input
                 type="radio"
+                data-testid="ai-llm"
                 name="aiKind"
                 checked={aiKind === "llm"}
                 onChange={() => setAiKind("llm")}
@@ -216,6 +228,7 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
           </fieldset>
 
           <select
+            data-testid="select-p2-deck"
             defaultValue=""
             onChange={(event) => {
               const preset = getTournamentDeckById(event.target.value);
@@ -250,7 +263,7 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
             )}
           </select>
           {player2Deck ? (
-            <div className="deck-box__summary">
+            <div className="deck-box__summary" data-testid="p2-deck-summary">
               <strong>{player2Deck.name}</strong>
               <span>{player2Deck.cards.length} cards</span>
               <span className={player2Deck.validation.valid ? "status-ok" : "status-bad"}>
@@ -264,7 +277,7 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
         </section>
       </div>
 
-      {error && <pre className="error-box">{error}</pre>}
+      {error && <pre className="error-box" data-testid="battle-error">{error}</pre>}
 
       <div className="panel__actions battle-setup__footer">
         <button type="button" onClick={refreshSavedDecks}>
@@ -272,6 +285,7 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
         </button>
         <button
           type="button"
+          data-testid="continue-vs"
           disabled={!canProceed || loadingSlot !== null}
           className="action-dock__primary battle-setup__continue"
           onClick={() => onBattleReady({ player1Name, player2Name, aiKind })}

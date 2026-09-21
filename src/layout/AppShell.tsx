@@ -27,6 +27,7 @@ export function AppShell() {
       <nav className="tabs" aria-label="Modes">
         <NavLink
           to="/battle"
+          data-testid="nav-battle"
           className={({ isActive }) =>
             isActive ? "tabs__button tabs__button--active" : "tabs__button"
           }
@@ -35,6 +36,7 @@ export function AppShell() {
         </NavLink>
         <NavLink
           to="/decks"
+          data-testid="nav-decks"
           className={({ isActive }) =>
             isActive ? "tabs__button tabs__button--active" : "tabs__button"
           }
@@ -43,6 +45,7 @@ export function AppShell() {
         </NavLink>
         <NavLink
           to="/analysis"
+          data-testid="nav-analysis"
           className={({ isActive }) =>
             isActive ? "tabs__button tabs__button--active" : "tabs__button"
           }

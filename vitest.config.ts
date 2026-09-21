@@ -12,6 +12,7 @@ export default defineConfig({
     environment: "node",
     exclude: [
       "**/node_modules/**",
+      "e2e/**",
       "scripts/prepare-standard-effects.test.ts",
       "scripts/fetchAttackCosts.test.ts",
       "scripts/report-invariants.test.ts",

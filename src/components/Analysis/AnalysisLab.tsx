@@ -178,7 +178,7 @@ export function AnalysisLab() {
   }
 
   return (
-    <div className="analysis-lab">
+    <div className="analysis-lab" data-testid="analysis-lab">
       <header className="analysis-lab__header panel">
         <div>
           <h2>Analysis Lab</h2>
@@ -187,6 +187,7 @@ export function AnalysisLab() {
         <nav className="analysis-lab__tabs" aria-label="Analysis mode">
           <button
             type="button"
+            data-testid="tab-watch"
             className={tab === "watch" ? "tabs__button tabs__button--active" : "tabs__button"}
             onClick={() => setTab("watch")}
           >
@@ -194,6 +195,7 @@ export function AnalysisLab() {
           </button>
           <button
             type="button"
+            data-testid="tab-matrix"
             className={tab === "matrix" ? "tabs__button tabs__button--active" : "tabs__button"}
             onClick={() => setTab("matrix")}
           >
@@ -288,7 +290,7 @@ export function AnalysisLab() {
             )}
           </div>
           <div className="matrix-runner__actions">
-            <button type="button" disabled={matrixRunning} onClick={() => void runMatrix()}>
+            <button type="button" data-testid="run-matrix" disabled={matrixRunning} onClick={() => void runMatrix()}>
               {matrixRunning
                 ? "Running…"
                 : matrixSource === "tournament"

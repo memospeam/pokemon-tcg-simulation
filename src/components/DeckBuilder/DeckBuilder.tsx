@@ -119,7 +119,7 @@ export function DeckBuilder({ onDeckBuilt, onUseDeck }: DeckBuilderProps) {
   }
 
   return (
-    <section className="panel">
+    <section className="panel" data-testid="deck-builder">
       <header className="panel__header">
         <div>
           <h2>Deck Builder</h2>
@@ -128,18 +128,19 @@ export function DeckBuilder({ onDeckBuilt, onUseDeck }: DeckBuilderProps) {
         <div className="panel__actions">
           <label className="field">
             <span>Deck name</span>
-            <input value={name} onChange={(event) => setName(event.target.value)} />
+            <input data-testid="deck-name" value={name} onChange={(event) => setName(event.target.value)} />
           </label>
           <button type="button" onClick={() => void handleClipboardImport()}>
             Import from clipboard
           </button>
-          <button type="button" onClick={() => void handleImport()} disabled={loading}>
+          <button type="button" data-testid="resolve-deck" onClick={() => void handleImport()} disabled={loading}>
             {loading ? "Resolving..." : "Resolve deck"}
           </button>
         </div>
       </header>
 
       <textarea
+        data-testid="deck-textarea"
         className="deck-textarea"
         value={text}
         onChange={(event) => setText(event.target.value)}

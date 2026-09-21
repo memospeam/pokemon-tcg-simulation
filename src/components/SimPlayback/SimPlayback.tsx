@@ -384,7 +384,7 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
           <option value="llm">AI: LLM agent</option>
         </select>
 
-        <button type="button" onClick={handleRun} disabled={running} className="sim-setup__run">
+        <button type="button" data-testid="run-simulation" onClick={handleRun} disabled={running} className="sim-setup__run">
           {running ? (aiKind === "llm" ? "Thinking…" : "Running…") : "Run Simulation"}
         </button>
       </div>
@@ -399,6 +399,7 @@ export function SimPlayback({ embedded = false }: SimPlaybackProps) {
         const tag = aiKind === "llm" ? "AI vs AI · LLM" : "AI vs AI";
         return (
           <div
+            data-testid="sim-result"
             className={`sim-result${inProgress ? " sim-result--live" : result?.winnerName ? "" : " sim-result--stall"}`}
           >
             {inProgress ? (

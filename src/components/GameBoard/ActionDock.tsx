@@ -51,7 +51,7 @@ export function ActionDock({
           </button>
         )}
         {canStart && (
-          <button type="button" className="action-dock__primary" onClick={onStartGame}>
+          <button type="button" data-testid="start-game" className="action-dock__primary" onClick={onStartGame}>
             Start game
           </button>
         )}
@@ -67,7 +67,7 @@ export function ActionDock({
       </div>
 
       <div className="action-dock__group">
-        <button type="button" className="action-dock__danger" onClick={onConcede}>
+        <button type="button" data-testid="concede" className="action-dock__danger" onClick={onConcede}>
           Concede
         </button>
       </div>

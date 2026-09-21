@@ -20,3 +20,7 @@ npm-debug.log*
 
 # Test / build artifacts
 coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
