@@ -15,11 +15,10 @@ export function AppShell() {
     <div className={`app${inMatch ? " app--play" : ""}`}>
       {!inMatch && (
         <header className="hero">
-          <p className="hero__eyebrow">Pokémon TCG Live-style</p>
-          <h1>Battle the AI. Analyse the meta.</h1>
+          <p className="hero__eyebrow">Free to play</p>
+          <h1>Pokémon TCG</h1>
           <p className="hero__subtitle">
-            Import tournament decks, play solo against heuristic or LLM agents, and run AI-vs-AI
-            simulations with full replay analysis.
+            Play a match in the browser. Pick a Worlds deck and battle the AI — no account, no install.
           </p>
         </header>
       )}
@@ -32,7 +31,7 @@ export function AppShell() {
             isActive ? "tabs__button tabs__button--active" : "tabs__button"
           }
         >
-          Battle
+          Play
         </NavLink>
         <NavLink
           to="/decks"

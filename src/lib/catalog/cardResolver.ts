@@ -65,10 +65,17 @@ export class CardResolver {
   }
 
   async resolveLines(inputs: ResolveLineInput[]): Promise<ResolveLineResult[]> {
-    const results: ResolveLineResult[] = [];
-    for (const input of inputs) {
-      results.push(await this.resolveLine(input));
-    }
+    const results = new Array<ResolveLineResult>(inputs.length);
+    let cursor = 0;
+    const run = async () => {
+      while (cursor < inputs.length) {
+        const index = cursor;
+        cursor += 1;
+        results[index] = await this.resolveLine(inputs[index]!);
+      }
+    };
+    const width = Math.min(6, inputs.length);
+    await Promise.all(Array.from({ length: width }, () => run()));
     return results;
   }
 }

@@ -57,9 +57,8 @@ button {
 
 .hero h1 {
   margin: 0;
-  max-width: 14ch;
-  font-size: clamp(2rem, 4vw, 3.25rem);
-  line-height: 1.05;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  line-height: 1.1;
 }
 
 .hero__subtitle {

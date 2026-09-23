@@ -1,6 +1,10 @@
 # Pokémon TCG Simulation
 
-Web-based simulation for the [Pokémon Trading Card Game](https://www.pokemon.com/us/pokemon-tcg/) built with TypeScript, React, and Vite. Import Limitless decklists, resolve real cards via [pokemontcg.io](https://docs.pokemontcg.io/), play vs AI, or run batch meta simulations.
+Play in the browser: [memospeam.github.io/pokemon-tcg-simulation](https://memospeam.github.io/pokemon-tcg-simulation/)
+
+Pick a Worlds matchup and battle the AI. No account and no install. Featured decks are bundled, so a match starts without an API key. Card images still load from [pokemontcg.io](https://docs.pokemontcg.io/) when that service is up.
+
+Web-based simulation for the [Pokémon Trading Card Game](https://www.pokemon.com/us/pokemon-tcg/) built with TypeScript, React, and Vite. Import Limitless decklists, play vs AI, or run batch meta simulations.
 
 ## Features
 
@@ -16,14 +20,7 @@ Web-based simulation for the [Pokémon Trading Card Game](https://www.pokemon.co
 - Node.js 20+
 - Internet for card resolution, images, and corpus refresh
 
-## Setup
-
-```bash
-npm install
-cp .env.example .env.local
-```
-
-Add your API key from [dev.pokemontcg.io](https://dev.pokemontcg.io/) to `.env.local`:
+An API key is optional. The public site and `npm run dev` both call pokemontcg.io from the browser without one. A key from [dev.pokemontcg.io](https://dev.pokemontcg.io/) only raises the rate limit. Put it in `.env.local` if you want it locally:
 
 ```
 VITE_POKEMONTCG_API_KEY=your-key-here
@@ -32,6 +29,7 @@ VITE_POKEMONTCG_API_KEY=your-key-here
 ## Development
 
 ```bash
+npm install
 npm run dev
 ```
 
@@ -39,7 +37,7 @@ Open `http://localhost:5173` — routes:
 
 | Route | Purpose |
 | --- | --- |
-| `/battle` | Pick decks + AI → VS screen → match |
+| `/battle` | Play lobby → VS screen → match |
 | `/decks` | Deck Builder |
 | `/analysis` | Sim Playback + batch matrix |
 
@@ -52,9 +50,9 @@ npm run lint
 
 ## Quick start — play a match
 
-1. Go to **Battle** (`/battle`)
-2. Load tournament presets or pick saved decks for Player 1 / AI opponent
-3. Click **Start battle** → VS screen → game board
+1. Open the site, or go to **Play** (`/battle`) locally
+2. Tap a matchup (Dragapult mirror is the fastest start)
+3. On the VS screen, click **Start battle**
 4. Place Active (and optional Bench), **Start game**
 5. Your turn: click cards or drag Energy/Evolution onto Pokémon; **End turn** when done
 

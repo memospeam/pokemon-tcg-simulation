@@ -34,7 +34,7 @@ export class BattlePage {
     return this.page.locator(this.SELECTOR.root);
   }
   get heading() {
-    return this.root.locator(this.SELECTOR.heading).filter({ hasText: "Battle" });
+    return this.root.locator(this.SELECTOR.heading).filter({ hasText: "Play" });
   }
   get playerName() {
     return this.page.locator(this.SELECTOR.playerName);
@@ -101,10 +101,10 @@ export class BattlePage {
   async clickQuickDragapult() {
     await mockPokemonTcgApi(this.page);
     await this.quickDragapult.click();
-    await expect(this.p1Summary).toContainText("Valid", { timeout: 30_000 });
-    await expect(this.p2Summary).toContainText("Valid");
+    await expect(this.vsScreen).toBeVisible({ timeout: 30_000 });
+    await expect(this.vsScreen).toContainText("Dragapult");
     await expect(this.page.locator(this.SELECTOR.errorBox)).toHaveCount(0);
-    await expect(this.continueVs).toBeEnabled();
+    await expect(this.startBattle).toBeEnabled();
   }
 
   async clickContinueToVs() {

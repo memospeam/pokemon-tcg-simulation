@@ -4,9 +4,14 @@ import { BattlePage } from "@/pages/BattlePage";
 import { DecksPage } from "@/pages/DecksPage";
 import { AnalysisLab } from "@/components/Analysis/AnalysisLab";
 
+function appBasename(): string | undefined {
+  const trimmed = import.meta.env.BASE_URL.replace(/\/$/, "");
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export function AppRouter() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={appBasename()}>
       <Routes>
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/battle" replace />} />

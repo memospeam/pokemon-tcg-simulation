@@ -34,11 +34,10 @@ test.describe("Battle setup", () => {
     await battlePage.verifySetupVisible();
   });
 
-  test("TC-BATTLE-04  Quick Dragapult continues to VS and starts the match", async ({
+  test("TC-BATTLE-04  Quick Dragapult opens the VS screen and starts the match", async ({
     battlePage,
   }) => {
     await battlePage.clickQuickDragapult();
-    await battlePage.clickContinueToVs();
     await expect(battlePage.vsScreen).toContainText("Dragapult");
     await battlePage.clickStartBattle();
   });

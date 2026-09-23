@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
-import { buildDeckFromText } from "@/lib/deck/builder";
-import {
-  DRAGAPULT_DECK_1,
-  DRAGAPULT_DECK_2,
-  buildShareUrl,
-  parseLocationHash,
-} from "@/lib/deck/tcgmastersUrl";
+import type { BuiltDeck } from "@/lib/deck/builder";
+import { buildPlaytestDeckFromCorpusText } from "@/lib/deck/corpusDeckBuilder";
+import { buildShareUrl, parseLocationHash } from "@/lib/deck/tcgmastersUrl";
+import { matchupSides, PUBLIC_MATCHUPS, type PublicMatchup } from "@/lib/deck/publicMatchups";
 import { ALL_TOURNAMENTS, getTournamentDeckById } from "@/lib/deck/tournamentPresets";
 import type { AiKind } from "@/stores/gameStore";
 import { useDeckStore } from "@/stores/deckStore";
@@ -32,63 +29,67 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
   } = useDeckStore();
   const [player1Name, setPlayer1Name] = useState("You");
   const [player2Name, setPlayer2Name] = useState("AI Opponent");
-  const [loadingSlot, setLoadingSlot] = useState<"p1" | "p2" | "both" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showBuilder, setShowBuilder] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [aiKind, setAiKind] = useState<AiKind>("heuristic");
 
-  async function loadDecks(
-    p1: { name: string; text: string },
-    p2: { name: string; text: string },
-  ) {
-    setLoadingSlot("both");
+  function deckFromList(name: string, text: string): BuiltDeck {
+    return { ...buildPlaytestDeckFromCorpusText(name, text), id: crypto.randomUUID() };
+  }
+
+  function playMatchup(matchup: PublicMatchup) {
+    const { you, ai } = matchupSides(matchup);
+    setError(null);
+    setPlayer1Name("You");
+    setPlayer2Name("AI");
+    const deck1 = deckFromList(you.name, you.text);
+    const deck2 = deckFromList(ai.name, ai.text);
+    setPlayer1Deck(deck1);
+    setPlayer2Deck(deck2);
+    const messages = [...deck1.resolveErrors, ...deck2.resolveErrors];
+    const ready = deck1.validation.valid && deck2.validation.valid && messages.length === 0;
+    if (!ready) {
+      setError(messages.join("\n") || "Those decks are not ready to play yet.");
+      return;
+    }
+    onBattleReady({ player1Name: "You", player2Name: "AI", aiKind: "heuristic" });
+  }
+
+  function loadDecks(p1: { name: string; text: string }, p2: { name: string; text: string }) {
     setError(null);
     setPlayer1Name(p1.name);
     setPlayer2Name(p2.name);
-    try {
-      const [deck1, deck2] = await Promise.all([
-        buildDeckFromText(p1.name, p1.text),
-        buildDeckFromText(p2.name, p2.text),
-      ]);
-      setPlayer1Deck(deck1);
-      setPlayer2Deck(deck2);
-      setShareUrl(buildShareUrl({ list1: p1.text, list2: p2.text, list1Name: p1.name, list2Name: p2.name }));
-      const messages = [...deck1.resolveErrors, ...deck2.resolveErrors];
-      if (messages.length > 0) setError(messages.join("\n"));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load decks");
-    } finally {
-      setLoadingSlot(null);
-    }
+    const deck1 = deckFromList(p1.name, p1.text);
+    const deck2 = deckFromList(p2.name, p2.text);
+    setPlayer1Deck(deck1);
+    setPlayer2Deck(deck2);
+    setShareUrl(
+      buildShareUrl({ list1: p1.text, list2: p2.text, list1Name: p1.name, list2Name: p2.name }),
+    );
+    const messages = [...deck1.resolveErrors, ...deck2.resolveErrors];
+    if (messages.length > 0) setError(messages.join("\n"));
   }
 
-  async function loadSavedDeck(slot: "p1" | "p2", text: string, name: string) {
-    setLoadingSlot(slot);
+  function loadSavedDeck(slot: "p1" | "p2", text: string, name: string) {
     setError(null);
-    try {
-      const deck = await buildDeckFromText(name, text);
-      if (slot === "p1") setPlayer1Deck(deck);
-      else setPlayer2Deck(deck);
-      if (!deck.validation.valid || deck.resolveErrors.length > 0) {
-        setError(
-          [
-            ...deck.resolveErrors,
-            ...deck.validation.issues.filter((i) => i.level === "error").map((i) => i.message),
-          ].join("\n"),
-        );
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load deck");
-    } finally {
-      setLoadingSlot(null);
+    const deck = deckFromList(name, text);
+    if (slot === "p1") setPlayer1Deck(deck);
+    else setPlayer2Deck(deck);
+    if (!deck.validation.valid || deck.resolveErrors.length > 0) {
+      setError(
+        [
+          ...deck.resolveErrors,
+          ...deck.validation.issues.filter((issue) => issue.level === "error").map((issue) => issue.message),
+        ].join("\n"),
+      );
     }
   }
 
   useEffect(() => {
     const payload = parseLocationHash();
     if (!payload) return;
-    void loadDecks(
+    loadDecks(
       { name: payload.list1Name ?? "You", text: payload.list1 },
       { name: payload.list2Name ?? "AI Opponent", text: payload.list2 },
     );
@@ -105,33 +106,53 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
       <section className="panel battle-setup__hero">
         <header className="panel__header">
           <div>
-            <h2>Battle</h2>
+            <h2>Play</h2>
             <p className="battle-setup__lead">
-              Choose your deck and AI opponent — PTCGL-style solo battles against heuristic or LLM agents.
+              Tap a matchup to start. The decks are already in the app, so the game opens immediately.
             </p>
           </div>
-          <button type="button" onClick={() => setShowBuilder((value) => !value)}>
-            {showBuilder ? "Hide deck builder" : "Build deck"}
-          </button>
         </header>
 
-        <div className="panel__actions lobby-presets">
-          <button
-            type="button"
-            data-testid="quick-dragapult"
-            disabled={loadingSlot !== null}
-            onClick={() => void loadDecks(DRAGAPULT_DECK_1, DRAGAPULT_DECK_2)}
-          >
-            {loadingSlot === "both" ? "Loading…" : "Quick: Dragapult mirror"}
-          </button>
-          {shareUrl && (
-            <button type="button" onClick={() => void navigator.clipboard.writeText(shareUrl)}>
-              Copy share link
+        <div className="matchup-grid">
+          {PUBLIC_MATCHUPS.map((matchup) => (
+            <button
+              key={matchup.id}
+              type="button"
+              className="matchup-card"
+              data-testid={matchup.testId}
+              onClick={() => playMatchup(matchup)}
+            >
+              <strong>{matchup.title}</strong>
+              <span>{matchup.detail}</span>
             </button>
-          )}
+          ))}
         </div>
+        {error && (
+          <pre className="error-box" data-testid="battle-error">
+            {error}
+          </pre>
+        )}
       </section>
 
+      <section className="battle-setup__custom">
+        <header className="panel__header">
+          <div>
+            <h3>Or pick your own decks</h3>
+            <p className="battle-setup__lead">
+              Tournament lists and saved decks. The fast AI plays the opponent.
+            </p>
+          </div>
+          <div className="panel__actions">
+            <button type="button" onClick={() => setShowBuilder((value) => !value)}>
+              {showBuilder ? "Hide deck builder" : "Build deck"}
+            </button>
+            {shareUrl && (
+              <button type="button" onClick={() => void navigator.clipboard.writeText(shareUrl)}>
+                Copy share link
+              </button>
+            )}
+          </div>
+        </header>
       <div className="battle-setup__grid">
         <section className="panel deck-box deck-box--you">
           <h3>Your deck</h3>
@@ -149,11 +170,11 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
             onChange={(event) => {
               const preset = getTournamentDeckById(event.target.value);
               if (preset) {
-                void loadSavedDeck("p1", preset.text, preset.label);
+                loadSavedDeck("p1", preset.text, preset.label);
                 return;
               }
               const saved = savedDecks.find((entry) => entry.id === event.target.value);
-              if (saved) void loadSavedDeck("p1", saved.text, saved.name);
+              if (saved) loadSavedDeck("p1", saved.text, saved.name);
             }}
           >
             <option value="" disabled>
@@ -189,7 +210,6 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
           ) : (
             <p className="panel__meta">No deck selected</p>
           )}
-          {loadingSlot === "p1" && <p className="panel__meta">Resolving…</p>}
         </section>
 
         <section className="panel deck-box deck-box--ai">
@@ -223,7 +243,7 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
                 checked={aiKind === "llm"}
                 onChange={() => setAiKind("llm")}
               />
-              LLM agent (reads card text)
+              LLM agent (local model only)
             </label>
           </fieldset>
 
@@ -233,11 +253,11 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
             onChange={(event) => {
               const preset = getTournamentDeckById(event.target.value);
               if (preset) {
-                void loadSavedDeck("p2", preset.text, preset.label);
+                loadSavedDeck("p2", preset.text, preset.label);
                 return;
               }
               const saved = savedDecks.find((entry) => entry.id === event.target.value);
-              if (saved) void loadSavedDeck("p2", saved.text, saved.name);
+              if (saved) loadSavedDeck("p2", saved.text, saved.name);
             }}
           >
             <option value="" disabled>
@@ -273,11 +293,8 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
           ) : (
             <p className="panel__meta">No opponent deck</p>
           )}
-          {loadingSlot === "p2" && <p className="panel__meta">Resolving…</p>}
         </section>
       </div>
-
-      {error && <pre className="error-box" data-testid="battle-error">{error}</pre>}
 
       <div className="panel__actions battle-setup__footer">
         <button type="button" onClick={refreshSavedDecks}>
@@ -286,13 +303,14 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
         <button
           type="button"
           data-testid="continue-vs"
-          disabled={!canProceed || loadingSlot !== null}
+          disabled={!canProceed}
           className="action-dock__primary battle-setup__continue"
           onClick={() => onBattleReady({ player1Name, player2Name, aiKind })}
         >
           Continue to VS →
         </button>
       </div>
+      </section>
 
       {showBuilder && (
         <DeckBuilder

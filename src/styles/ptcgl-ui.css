@@ -217,6 +217,58 @@
   margin-left: auto;
 }
 
+.battle-setup__custom {
+  margin-top: 1rem;
+}
+
+.battle-setup__custom > .panel__header h3 {
+  margin: 0;
+}
+
+.matchup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.matchup-card {
+  display: grid;
+  gap: 0.25rem;
+  text-align: left;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  background: rgba(2, 6, 23, 0.45);
+  color: inherit;
+}
+
+.matchup-card strong {
+  font-size: 1.05rem;
+}
+
+.matchup-card span {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.matchup-card:hover:not(:disabled) {
+  border-color: rgba(251, 191, 36, 0.75);
+}
+
+.matchup-card:disabled {
+  opacity: 0.65;
+}
+
+.battle-setup__hero .error-box {
+  margin-top: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .matchup-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Analysis lab */
 .analysis-lab__header {
   display: flex;
