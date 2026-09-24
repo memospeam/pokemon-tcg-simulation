@@ -16,6 +16,7 @@ interface CardPreviewPanelProps {
   onAction: (action: GameAction) => void;
   onClose: () => void;
   attackActions?: CardAction[];
+  attachments?: CardDefinition[];
 }
 
 function groupActions(actions: CardAction[]) {
@@ -42,6 +43,7 @@ export function CardPreviewPanel({
   definition,
   actions,
   attackActions = [],
+  attachments = [],
   onAction,
   onClose,
 }: CardPreviewPanelProps) {
@@ -70,6 +72,17 @@ export function CardPreviewPanel({
           </span>
           <h3>{definition.name}</h3>
 
+          {attachments.length > 0 && (
+            <div className="card-preview__section">
+              <h4>Attached</h4>
+              <ul className="card-preview__attachments">
+                {attachments.map((entry, index) => (
+                  <li key={`${entry.apiId}-${index}`}>{entry.name}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {definition.supertype === "Trainer" && (
             <div className="card-preview__trainer">
               <span className="card-preview__badge">{getTrainerCategory(definition)}</span>
@@ -77,6 +90,14 @@ export function CardPreviewPanel({
               {isSupporter(definition) && (
                 <p className="card-preview__note">Only one Supporter card per turn.</p>
               )}
+            </div>
+          )}
+
+          {definition.rules && definition.rules.length > 0 && (
+            <div className="card-preview__section">
+              {definition.rules.map((rule) => (
+                <p key={rule} className="card-preview__note">{rule}</p>
+              ))}
             </div>
           )}
 

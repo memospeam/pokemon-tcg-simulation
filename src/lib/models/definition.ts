@@ -159,6 +159,14 @@ export function isNitroFireEnergy(def: CardDefinition | undefined): boolean {
   return def?.name.toLowerCase().includes("nitro fire energy") ?? false;
 }
 
+export function isGrowingGrassEnergy(def: CardDefinition | undefined): boolean {
+  return def?.name.toLowerCase().includes("growing grass energy") ?? false;
+}
+
+export function isSpikyEnergy(def: CardDefinition | undefined): boolean {
+  return def?.name.toLowerCase().includes("spiky energy") ?? false;
+}
+
 export function isAceSpec(def: CardDefinition): boolean {
   return def.subtypes.includes("ACE SPEC");
 }

@@ -13,6 +13,8 @@ import {
   resolvePrimeCatcherOwnBench,
 } from "./trainerBatch7Effects";
 import { applyAttackDamagePhase } from "./attackFlow";
+import { onDefenderDamagedByAttack } from "./abilityHooks";
+import { remainingHpWithPassives } from "./passiveRules";
 import { emptyTurnFlags, getPlayer, type EngineState } from "../types";
 
 function mockBasic(name: string, hp = "70", attacks?: CardDefinition["attacks"]): CardDefinition {
@@ -272,5 +274,32 @@ describe("batch 7 ace spec / special energy", () => {
     applyAttackDamagePhase(state, PlayerId.P2, "Burn Strike");
     expect(defender.damageCounters).toBeGreaterThan(0);
     expect(defender.statusConditions).not.toContain("Burned");
+  });
+
+  it("Spiky Energy puts 2 damage counters on the attacker for each copy", () => {
+    const state = minimalBattleState();
+    const defender = getPlayer(state, PlayerId.P1).active!;
+    const attacker = getPlayer(state, PlayerId.P2).active!;
+    const spiky = mockEnergy("Spiky Energy", ["Colorless"]);
+    spiky.subtypes = ["Special"];
+    state.definitions.spiky = spiky;
+    defender.attachedEnergy = [
+      createCardInstance("spiky", PlayerId.P1, Zone.Active),
+      createCardInstance("spiky", PlayerId.P1, Zone.Active),
+    ];
+    onDefenderDamagedByAttack(state, defender, attacker, 30);
+    expect(attacker.damageCounters).toBe(40);
+  });
+
+  it("Growing Grass Energy adds 20 HP to a Grass Pokémon", () => {
+    const state = minimalBattleState();
+    const active = getPlayer(state, PlayerId.P1).active!;
+    state.definitions.active = { ...state.definitions.active!, types: ["Grass"], hp: "100" };
+    const grass = mockEnergy("Growing Grass Energy", ["Grass"]);
+    grass.subtypes = ["Special"];
+    state.definitions.grass = grass;
+    active.attachedEnergy = [createCardInstance("grass", PlayerId.P1, Zone.Active)];
+    active.damageCounters = 30;
+    expect(remainingHpWithPassives(state, active)).toBe(90);
   });
 });

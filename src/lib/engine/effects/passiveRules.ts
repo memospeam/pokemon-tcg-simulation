@@ -1,4 +1,5 @@
 import type { CardAttack } from "../../models/definition";
+import { isGrowingGrassEnergy } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import type { PlayerId } from "../../models/enums";
 import { getDefinitionSafe } from "../rules";
@@ -268,14 +269,27 @@ export function getPassiveHpBonus(state: EngineState, pokemon: CardInstance): nu
   return bonus;
 }
 
-export function remainingHpWithPassives(state: EngineState, pokemon: CardInstance): number {
+export function maxHpWithPassives(state: EngineState, pokemon: CardInstance): number {
   const def = getDefinitionSafe(state, pokemon.definitionId);
-  const maxHp =
+  return (
     (parseInt(def.hp ?? "0", 10) || 0) +
     getPassiveHpBonus(state, pokemon) +
     getStadiumHpModifier(state, pokemon) +
-    getToolHpBonus(state, pokemon);
-  return Math.max(0, maxHp - pokemon.damageCounters);
+    getToolHpBonus(state, pokemon) +
+    growingGrassHpBonus(state, pokemon)
+  );
+}
+
+function growingGrassHpBonus(state: EngineState, pokemon: CardInstance): number {
+  const def = getDefinitionSafe(state, pokemon.definitionId);
+  if (!def.types?.includes("Grass")) return 0;
+  return pokemon.attachedEnergy.filter((energy) =>
+    isGrowingGrassEnergy(getDefinitionSafe(state, energy.definitionId)),
+  ).length * 20;
+}
+
+export function remainingHpWithPassives(state: EngineState, pokemon: CardInstance): number {
+  return Math.max(0, maxHpWithPassives(state, pokemon) - pokemon.damageCounters);
 }
 
 export function isKnockedOutWithPassives(state: EngineState, pokemon: CardInstance): boolean {

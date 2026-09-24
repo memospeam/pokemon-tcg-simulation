@@ -68,6 +68,52 @@ describe("engine", () => {
     expect(getPlayer(state, PlayerId.P2).hand.length).toBe(7);
   });
 
+  it("gives the opponent one card for each mulligan", () => {
+    const energy: CardDefinition[] = Array.from({ length: 60 }, (_, i) => ({
+      apiId: `only-energy-${i}`,
+      name: `Fire Energy ${i}`,
+      supertype: "Energy",
+      subtypes: ["Basic"],
+      set: { id: "test", name: "Test" },
+      number: `${i}`,
+      images: { small: "", large: "" },
+    }));
+    let state = beginGame({
+      player1Name: "Alice",
+      player2Name: "Bob",
+      player1Cards: energy,
+      player2Cards: buildDeck(),
+      seed: 3,
+    });
+    expect(state.phase).toBe(GamePhase.Mulligan);
+    expect(state.pendingMulliganPlayerId).toBe(PlayerId.P1);
+    const before = getPlayer(state, PlayerId.P2).hand.length;
+    state = gameReducer(state, { type: "MULLIGAN", playerId: PlayerId.P1 });
+    expect(getPlayer(state, PlayerId.P2).hand.length).toBe(before + 1);
+    expect(state.log.some((line) => line.includes("drew 1 card for the mulligan"))).toBe(true);
+  });
+
+  it("lets a player bench before the opponent has an Active", () => {
+    let state = beginGame({
+      player1Name: "Alice",
+      player2Name: "Bob",
+      player1Cards: buildDeck(),
+      player2Cards: buildDeck(),
+      seed: 1,
+    });
+    while (state.phase === GamePhase.Mulligan && state.pendingMulliganPlayerId) {
+      state = gameReducer(state, { type: "MULLIGAN", playerId: state.pendingMulliganPlayerId });
+    }
+    const active = findBasicInHand(state, PlayerId.P1);
+    expect(active).toBeTruthy();
+    state = gameReducer(state, { type: "PLACE_ACTIVE", playerId: PlayerId.P1, instanceId: active!.instanceId });
+    expect(getPlayer(state, PlayerId.P2).active).toBeNull();
+    const bench = findBasicInHand(state, PlayerId.P1);
+    expect(bench).toBeTruthy();
+    state = gameReducer(state, { type: "PLACE_BENCH", playerId: PlayerId.P1, instanceId: bench!.instanceId });
+    expect(getPlayer(state, PlayerId.P1).bench).toHaveLength(1);
+  });
+
   it("allows placing active pokemon for both players", () => {
     let state = beginGame({
       player1Name: "Alice",

@@ -2,8 +2,9 @@ import { create } from "zustand";
 import type { BuiltDeck } from "@/lib/deck/builder";
 import { clearGameState, loadGameState, saveGameState } from "@/lib/deck/storage";
 import { beginGame, gameReducer, getLegalActions, startActiveGame, type EngineState, type GameAction } from "@/lib/engine";
-import { PlayerId } from "@/lib/models/enums";
-import { autoSetupEngineState, drainAutoPending, runAISingleTurn } from "@/lib/deck/metaGameRunner";
+import { GamePhase, PlayerId } from "@/lib/models/enums";
+import { runAIOneStep, setupAiBoard, mulliganAi } from "@/lib/deck/metaGameRunner";
+import { flipCoin, logMessage } from "@/lib/engine/helpers";
 import { buildStrategyContext, type StrategyContext } from "@/lib/deck/deckStrategy";
 import { getDefinition, getPlayer } from "@/lib/engine";
 import { runPolicyTurn } from "@/lib/deck/policyMatch";
@@ -20,6 +21,10 @@ interface GameStore {
   isAIThinking: boolean;
   /** Which opponent the human is facing. */
   aiKind: AiKind;
+  /** "call" = heads/tails, "choose" = winner picks who goes first. */
+  openingCoin: "call" | "choose" | null;
+  callOpeningCoin: (calledHeads: boolean) => void;
+  chooseOpeningSeat: (goFirst: boolean) => void;
   startMatch: (input: {
     player1Name: string;
     player2Name: string;
@@ -59,6 +64,15 @@ function buildAIContext(state: EngineState): StrategyContext {
 // LLM policy instance for the current match (module-level — not serializable,
 // so it lives outside the zustand state). Rebuilt per match in startMatch.
 let llmPolicy: TurnPolicy | null = null;
+let aiStepTimer: ReturnType<typeof setTimeout> | null = null;
+const AI_STEP_MS = 800;
+
+function cancelAiSteps(): void {
+  if (aiStepTimer != null) {
+    clearTimeout(aiStepTimer);
+    aiStepTimer = null;
+  }
+}
 
 export const useGameStore = create<GameStore>((set, get) => {
   /** Is it the AI's move and the engine isn't waiting on the human? */
@@ -71,10 +85,33 @@ export const useGameStore = create<GameStore>((set, get) => {
     return true;
   }
 
-  /** Heuristic AI: run its turn synchronously (unchanged legacy behaviour). */
-  function maybeRunHeuristicAI(state: EngineState, humanPlayerId: PlayerId | null): EngineState {
-    if (!isAiToMove(state, humanPlayerId)) return state;
-    return runAISingleTurn(state, buildAIContext(state));
+  function persist(state: EngineState): void {
+    saveGameState({ ...state, humanPlayerId: get().humanPlayerId });
+  }
+
+  /** Heuristic AI plays one action, then waits so the board can show it. */
+  function queueAiSteps(humanPlayerId: PlayerId): void {
+    cancelAiSteps();
+    const state = get().engineState;
+    if (!state || !aiShouldStep(state, humanPlayerId)) return;
+    const tick = () => {
+      const state = get().engineState;
+      if (!state || get().humanPlayerId !== humanPlayerId || get().aiKind !== "heuristic") return;
+      const aiId = humanPlayerId === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
+      const aiPending = state.pendingAction?.playerId === aiId;
+      const aiTurn = !state.pendingAction && state.currentPlayerId === aiId;
+      if (state.winnerId || (!aiPending && !aiTurn)) {
+        set({ isAIThinking: false });
+        return;
+      }
+      const { state: next, done } = runAIOneStep(state, buildAIContext(state), aiId);
+      next.viewingPlayerId = humanPlayerId;
+      persist(next);
+      set({ ...withActions(next), humanPlayerId, isAIThinking: !done });
+      if (!done && !next.winnerId) aiStepTimer = setTimeout(tick, AI_STEP_MS);
+    };
+    set({ isAIThinking: true });
+    aiStepTimer = setTimeout(tick, AI_STEP_MS);
   }
 
   /** LLM AI: run its turn asynchronously, showing the thinking state meanwhile. */
@@ -88,7 +125,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     try {
       const after = await runPolicyTurn(state, llmPolicy, buildAIContext(state));
       after.viewingPlayerId = human;
-      saveGameState(after);
+      persist(after);
       set({ ...withActions(after), humanPlayerId: human, isAIThinking: false });
     } catch {
       // Should not happen — LlmPolicy already falls back internally — but never
@@ -97,55 +134,34 @@ export const useGameStore = create<GameStore>((set, get) => {
     }
   }
 
-  /**
-   * Resolve any pending action that belongs to the AI opponent (e.g. the
-   * opponent must PROMOTE a new Active after we KO'd theirs). Such a pending
-   * can appear DURING the human's turn — getLegalActions would otherwise
-   * surface the opponent's bench to the human to choose. The AI must resolve
-   * its own pendings via the heuristic drainAutoPending.
-   */
-  function resolveAiPendings(state: EngineState, humanPlayerId: PlayerId): EngineState {
+  function aiShouldStep(state: EngineState, humanPlayerId: PlayerId): boolean {
+    if (state.winnerId || state.phase !== "active") return false;
     const aiId = humanPlayerId === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
-    let cur = state;
-    let guard = 0;
-    while (
-      guard++ < 20 &&
-      cur.pendingAction != null &&
-      cur.pendingAction.playerId === aiId &&
-      !cur.winnerId
-    ) {
-      const { state: drained, steps } = drainAutoPending(cur, 12, buildAIContext(cur));
-      if (steps === 0) break; // can't resolve → avoid infinite loop
-      cur = drained;
-    }
-    return cur;
+    if (state.pendingAction) return state.pendingAction.playerId === aiId;
+    return state.currentPlayerId === aiId;
   }
 
   /** Hand control to the opponent after a human action / game start. */
   function advanceAfterHuman(next: EngineState, humanPlayerId: PlayerId | null): void {
     if (humanPlayerId === null) {
-      saveGameState(next);
+      persist(next);
       set({ ...withActions(next), humanPlayerId: null });
       return;
     }
-    // Auto-resolve opponent-owned pendings (e.g. their post-KO PROMOTE) so the
-    // human is never asked to choose for the opponent.
-    next = resolveAiPendings(next, humanPlayerId);
     next.viewingPlayerId = humanPlayerId;
+    if (next.phase === GamePhase.Mulligan) {
+      next = mulliganAi(next, humanPlayerId === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1);
+    }
+    persist(next);
+    set({ ...withActions(next), humanPlayerId, isAIThinking: false });
 
     if (get().aiKind === "llm" && isAiToMove(next, humanPlayerId)) {
-      // Show the human's move immediately, then run the LLM turn async.
-      saveGameState(next);
-      set({ ...withActions(next), humanPlayerId, isAIThinking: true });
+      set({ isAIThinking: true });
       void runLlmAiTurn();
       return;
     }
 
-    // Heuristic (or not the AI's turn): synchronous.
-    const afterAI = maybeRunHeuristicAI(next, humanPlayerId);
-    afterAI.viewingPlayerId = humanPlayerId;
-    saveGameState(afterAI);
-    set({ ...withActions(afterAI), humanPlayerId, isAIThinking: false });
+    queueAiSteps(humanPlayerId);
   }
 
   return {
@@ -154,6 +170,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     humanPlayerId: null,
     isAIThinking: false,
     aiKind: "heuristic",
+    openingCoin: null,
 
     startMatch: ({ player1Name, player2Name, player1Deck, player2Deck, seed, vsAI, aiKind }) => {
       const extraDefinitions = [
@@ -172,32 +189,72 @@ export const useGameStore = create<GameStore>((set, get) => {
       const humanPlayerId = vsAI ? PlayerId.P1 : null;
       const kind: AiKind = aiKind ?? "heuristic";
       llmPolicy = vsAI && kind === "llm" ? createBrowserLlmPolicy() : null;
-      set({ aiKind: kind });
+      cancelAiSteps();
+      clearGameState();
+      state.viewingPlayerId = PlayerId.P1;
+      set({
+        ...withActions(state),
+        humanPlayerId,
+        isAIThinking: false,
+        aiKind: kind,
+        openingCoin: "call",
+      });
+    },
 
-      if (vsAI) {
-        state = autoSetupEngineState(state, { placeBenchBasics: true });
-        state.viewingPlayerId = PlayerId.P1;
-        saveGameState(state);
-        set({ ...withActions(state), humanPlayerId, isAIThinking: false });
-        // If the AI goes first, run its opening turn (async for LLM).
-        if (isAiToMove(state, humanPlayerId)) {
-          if (kind === "llm") {
-            void runLlmAiTurn();
-          } else {
-            const afterAI = maybeRunHeuristicAI(state, humanPlayerId);
-            afterAI.viewingPlayerId = PlayerId.P1;
-            saveGameState(afterAI);
-            set({ ...withActions(afterAI), humanPlayerId, isAIThinking: false });
-          }
-        }
-      } else {
-        state.viewingPlayerId = state.currentPlayerId;
-        saveGameState(state);
-        set({ ...withActions(state), humanPlayerId, isAIThinking: false });
+    callOpeningCoin: (calledHeads) => {
+      const current = get().engineState;
+      const human = get().humanPlayerId;
+      if (!current || get().openingCoin !== "call") return;
+      const next = structuredClone(current);
+      const heads = flipCoin(next);
+      const caller = human ?? PlayerId.P1;
+      const other = caller === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
+      const callerWins = heads === calledHeads;
+      const call = calledHeads ? "heads" : "tails";
+      const callerName = getPlayer(next, caller).name;
+      const otherName = getPlayer(next, other).name;
+      if (callerWins) {
+        logMessage(next, `${callerName} called ${call} and wins the flip.`);
+        next.viewingPlayerId = caller;
+        set({ ...withActions(next), openingCoin: "choose", isAIThinking: false });
+        return;
       }
+      if (human) {
+        next.firstPlayerId = caller;
+        next.currentPlayerId = caller;
+        logMessage(next, `${callerName} called ${call}. ${otherName} wins the flip and chooses to go second.`);
+      } else {
+        logMessage(next, `${callerName} called ${call}. ${otherName} wins the flip.`);
+        next.viewingPlayerId = other;
+        set({ ...withActions(next), openingCoin: "choose", isAIThinking: false });
+        return;
+      }
+      const prepared = mulliganAi(next, other);
+      prepared.viewingPlayerId = caller;
+      persist(prepared);
+      set({ ...withActions(prepared), openingCoin: null, isAIThinking: false });
+    },
+
+    chooseOpeningSeat: (goFirst) => {
+      const current = get().engineState;
+      const human = get().humanPlayerId;
+      if (!current || get().openingCoin !== "choose") return;
+      const next = structuredClone(current);
+      const caller = human ?? next.viewingPlayerId ?? PlayerId.P1;
+      const other = caller === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
+      const first = goFirst ? caller : other;
+      next.firstPlayerId = first;
+      next.currentPlayerId = first;
+      logMessage(next, `${getPlayer(next, caller).name} chooses to go ${goFirst ? "first" : "second"}.`);
+      const prepared = human ? mulliganAi(next, other) : next;
+      prepared.viewingPlayerId = caller;
+      persist(prepared);
+      set({ ...withActions(prepared), openingCoin: null, isAIThinking: false });
     },
 
     dispatch: (action) => {
+      if (get().isAIThinking) return;
+      if (get().openingCoin && action.type !== "MULLIGAN") return;
       const current = get().engineState;
       const { humanPlayerId } = get();
       if (!current) return;
@@ -208,8 +265,12 @@ export const useGameStore = create<GameStore>((set, get) => {
     startGame: () => {
       const current = get().engineState;
       const { humanPlayerId } = get();
-      if (!current) return;
-      const next = startActiveGame(current);
+      if (!current || get().openingCoin) return;
+      let next = current;
+      if (humanPlayerId) {
+        next = setupAiBoard(next, humanPlayerId === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1);
+      }
+      next = startActiveGame(next);
       advanceAfterHuman(next, humanPlayerId);
     },
 
@@ -219,14 +280,15 @@ export const useGameStore = create<GameStore>((set, get) => {
       // A reloaded LLM match can't restore the policy instance; fall back to
       // heuristic so the game remains playable.
       llmPolicy = null;
-      set({ ...withActions(saved), humanPlayerId: saved.humanPlayerId ?? null, aiKind: "heuristic" });
+      set({ ...withActions(saved), humanPlayerId: saved.humanPlayerId ?? null, aiKind: "heuristic", openingCoin: null });
       return true;
     },
 
     clearSaved: () => {
+      cancelAiSteps();
       clearGameState();
       llmPolicy = null;
-      set({ engineState: null, legalActions: [], humanPlayerId: null, aiKind: "heuristic" });
+      set({ engineState: null, legalActions: [], humanPlayerId: null, aiKind: "heuristic", openingCoin: null });
     },
   };
 });

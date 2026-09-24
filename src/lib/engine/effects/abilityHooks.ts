@@ -1,10 +1,10 @@
-import { isBasicEnergy, isBasicPokemon, isMagneticMetalEnergy, isNsPokemon } from "../../models/definition";
+import { isBasicEnergy, isBasicPokemon, isMagneticMetalEnergy, isNsPokemon, isSpikyEnergy } from "../../models/definition";
 import type { CardInstance } from "../../models/instance";
 import type { PlayerId } from "../../models/enums";
 import { PlayerId as PlayerIdEnum } from "../../models/enums";
 import { drawCards, getDefinitionSafe } from "../rules";
 import { flipCoin, logMessage } from "../helpers";
-import { allPokemonInPlay, getOpponentId, getPlayer, type EngineState } from "../types";
+import { allPokemonInPlay, getDefinition, getOpponentId, getPlayer, type EngineState } from "../types";
 import { attachEnergyToPokemon } from "../trainerEffects";
 import { getExecutableAbilityEffects } from "./abilityMeta";
 import { canUseAbilityNow, markAbilityUsed } from "./abilities";
@@ -141,6 +141,17 @@ export function onDefenderDamagedByAttack(
   }
 
   onActiveDamagedByOpponentAttackTools(state, defender, attacker, damageDealt);
+
+  const spikes = defender.attachedEnergy.filter((energy) =>
+    isSpikyEnergy(getDefinition(state, energy.definitionId)),
+  ).length;
+  if (spikes > 0 && defender === getPlayer(state, defender.ownerId).active) {
+    attacker.damageCounters += spikes * 20;
+    logMessage(
+      state,
+      `Spiky Energy placed ${spikes * 2} damage counter(s) on ${getDefinitionSafe(state, attacker.definitionId).name}.`,
+    );
+  }
 }
 
 export function onBenchPlay(state: EngineState, playerId: PlayerId, pokemon: CardInstance): void {

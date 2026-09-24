@@ -192,6 +192,7 @@ import {
   onSpecialEnergyAttachedFromHand,
   purgeInvalidAttachedSpecialEnergy,
 } from "./effects/specialEnergyEffects";
+import { canReceiveBenchAttackDamage } from "./effects/pokemonRules";
 import { isTeraPokemon } from "../models/definition";
 import { canAffordAttack, canAffordRetreat, payRetreatCost } from "./energy";
 import { createRng } from "./rng";
@@ -288,6 +289,13 @@ function handleMulligan(state: EngineState, playerId: PlayerId): EngineState {
   }
 
   log(next, `${player.name} mulligans.`);
+  const opponent = getPlayer(next, getOpponentId(playerId));
+  const bonus = opponent.deck.shift();
+  if (bonus) {
+    bonus.zone = Zone.Hand;
+    opponent.hand.push(bonus);
+    log(next, `${opponent.name} drew 1 card for the mulligan.`);
+  }
   if (!checkMulliganNeeded(next, playerId)) {
     advanceMulliganAfterPlayer(next, playerId);
   }
@@ -316,7 +324,8 @@ function handlePlaceActive(state: EngineState, playerId: PlayerId, instanceId: s
 }
 
 function handlePlaceBench(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
-  if (state.phase !== GamePhase.PlaceBench) return state;
+  const playerReady = state.phase === GamePhase.PlaceActive && !!getPlayer(state, playerId).active;
+  if (state.phase !== GamePhase.PlaceBench && !playerReady) return state;
   return playBasicToBench(state, playerId, instanceId);
 }
 
@@ -2144,7 +2153,16 @@ export function getLegalActions(state: EngineState): GameAction[] {
   if (state.phase === GamePhase.PlaceActive) {
     for (const playerId of [PlayerId.P1, PlayerId.P2]) {
       const setupPlayer = getPlayer(state, playerId);
-      if (setupPlayer.active) continue;
+      if (setupPlayer.active) {
+        if (setupPlayer.bench.length >= 5) continue;
+        for (const card of setupPlayer.hand) {
+          const def = getDefinition(state, card.definitionId);
+          if (def && isBasicPokemon(def)) {
+            actions.push({ type: "PLACE_BENCH", playerId, instanceId: card.instanceId });
+          }
+        }
+        continue;
+      }
       for (const card of setupPlayer.hand) {
         const def = getDefinition(state, card.definitionId);
         if (def && isBasicPokemon(def)) {
@@ -2717,6 +2735,7 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       if (pending.playerId !== current) break;
       const opponent = getPlayer(state, getOpponentId(current));
       for (const bench of opponent.bench) {
+        if (!canReceiveBenchAttackDamage(state, bench, current)) continue;
         actions.push({ type: "ASSIGN_BENCH_DAMAGE", playerId: current, targetId: bench.instanceId });
       }
       break;

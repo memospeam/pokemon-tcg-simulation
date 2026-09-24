@@ -51,6 +51,8 @@ interface PlayerMatProps {
   promoteSlots?: Set<string>;
   switchSlots?: Set<string>;
   prizeFlies?: PrizeFly[];
+  /** Opponent board stays face-down until both players have started. */
+  concealBoard?: boolean;
 }
 
 export function PlayerMat({
@@ -72,9 +74,10 @@ export function PlayerMat({
   promoteSlots = new Set<string>(),
   switchSlots = new Set<string>(),
   prizeFlies = [],
+  concealBoard = false,
 }: PlayerMatProps) {
   const matSide = isOpponent ? "opponent" : "self";
-  const benchSlots = Array.from({ length: 5 }, (_, i) => player.bench[i] ?? null);
+  const benchSlots = Array.from({ length: 5 }, (_, i) => (concealBoard ? null : player.bench[i] ?? null));
 
   return (
     <section className={`player-mat${isOpponent ? " player-mat--opponent" : " player-mat--self"}${isActiveTurn ? " player-mat--turn" : ""}`}>
@@ -128,7 +131,7 @@ export function PlayerMat({
           </div>
 
           <div className="player-mat__active">
-            {player.active ? (
+            {player.active && !concealBoard ? (
               <>
                 <BoardCard
                   state={game}
@@ -147,6 +150,11 @@ export function PlayerMat({
                 />
                 <DamageFloatLayer floats={damageFloats} mat={matSide} slot="active" />
               </>
+            ) : concealBoard ? (
+              <div className="player-mat__active-empty player-mat__setting-up" aria-label="Opponent is setting up">
+                <div className="pile-zone__card-back" />
+                Setting up
+              </div>
             ) : (
               <div className="player-mat__active-empty">Active</div>
             )}

@@ -147,6 +147,50 @@ export function autoSetupEngineState(
   return startActiveGame(next);
 }
 
+/** Shuffle the AI's opening hand until it has a Basic. Does not place Pokémon. */
+export function mulliganAi(state: EngineState, aiId: PlayerId): EngineState {
+  let next = state;
+  let guard = 0;
+  while (
+    next.phase === GamePhase.Mulligan &&
+    next.pendingMulliganPlayerId === aiId &&
+    guard++ < 30
+  ) {
+    next = gameReducer(next, { type: "MULLIGAN", playerId: aiId });
+  }
+  return next;
+}
+
+/** Mulligan and place only the AI's Pokémon. The human places their own. */
+export function setupAiBoard(state: EngineState, aiId: PlayerId): EngineState {
+  let next = mulliganAi(state, aiId);
+
+  if (next.phase === GamePhase.PlaceActive) {
+    const ai = getPlayer(next, aiId);
+    if (!ai.active) {
+      const basic = findBasicInHand(next, aiId);
+      if (basic) {
+        next = gameReducer(next, { type: "PLACE_ACTIVE", playerId: aiId, instanceId: basic.instanceId });
+      }
+    }
+  }
+
+  if (next.phase === GamePhase.PlaceBench) {
+    let safety = 0;
+    while (safety++ < 5) {
+      const ai = getPlayer(next, aiId);
+      if (ai.bench.length >= 5) break;
+      const basic = findBasicInHand(next, aiId);
+      if (!basic) break;
+      const before = ai.bench.length;
+      next = gameReducer(next, { type: "PLACE_BENCH", playerId: aiId, instanceId: basic.instanceId });
+      if (getPlayer(next, aiId).bench.length === before) break;
+    }
+  }
+
+  return next;
+}
+
 export function runMatchFromBuiltDecks(
   input: {
     player1Name: string;
@@ -468,146 +512,145 @@ export { checkMulliganNeeded };
  * - The game ends (winner found)
  * - The turn number advances (turn ended via attack or END_TURN)
  */
+function aiStepFinished(before: EngineState, after: EngineState, aiPlayerId: PlayerId): boolean {
+  if (after.winnerId || after.phase !== GamePhase.Active) return true;
+  if (after.pendingAction?.playerId === aiPlayerId) return false;
+  if (after.turnNumber > before.turnNumber) return true;
+  if (after.currentPlayerId !== aiPlayerId) return true;
+  return false;
+}
+
+/** One AI decision: a single play, or one pending choice. `done` means the turn is over. */
+export function runAIOneStep(
+  state: EngineState,
+  ctx: StrategyContext,
+  aiPlayerId: PlayerId = state.currentPlayerId,
+): { state: EngineState; done: boolean } {
+  if (state.winnerId || state.phase !== GamePhase.Active) return { state, done: true };
+
+  if (state.pendingAction) {
+    if (state.pendingAction.playerId !== aiPlayerId) return { state, done: true };
+    const resolved = tryResolveAutoPending(state, ctx) ?? emergencyResolvePending(state);
+    if (!resolved) return { state, done: true };
+    return { state: resolved, done: aiStepFinished(state, resolved, aiPlayerId) };
+  }
+
+  if (state.currentPlayerId !== aiPlayerId) return { state, done: true };
+
+  const player = getPlayer(state, aiPlayerId);
+
+  if (!state.turnFlags.attacked) {
+    const trainerAction = pickAutoTrainerAction(state, ctx);
+    if (trainerAction) {
+      const next = gameReducer(state, trainerAction);
+      return { state: next, done: aiStepFinished(state, next, aiPlayerId) };
+    }
+  }
+
+  if (!state.turnFlags.attacked) {
+    const toolAction = pickAutoToolAction(state, ctx);
+    if (toolAction) {
+      const next = gameReducer(state, toolAction);
+      return { state: next, done: aiStepFinished(state, next, aiPlayerId) };
+    }
+  }
+
+  if (!state.turnFlags.attacked) {
+    const basicAction = pickAutoPlayBasicAction(state, ctx);
+    if (basicAction) {
+      const next = gameReducer(state, basicAction);
+      return { state: next, done: aiStepFinished(state, next, aiPlayerId) };
+    }
+  }
+
+  if (!state.turnFlags.attacked) {
+    const evolveAction = pickAutoEvolveAction(state, ctx);
+    if (evolveAction) {
+      const next = gameReducer(state, evolveAction);
+      return { state: next, done: aiStepFinished(state, next, aiPlayerId) };
+    }
+  }
+
+  if (!state.turnFlags.attacked) {
+    const stadiumAction = pickAutoStadiumAction(state, aiPlayerId, ctx);
+    if (stadiumAction) {
+      const next = gameReducer(state, stadiumAction);
+      return { state: next, done: aiStepFinished(state, next, aiPlayerId) };
+    }
+  }
+
+  if (
+    !state.turnFlags.energyAttached &&
+    player.hand.some((card) => getDefinition(state, card.definitionId)?.supertype === "Energy")
+  ) {
+    const primaryTarget = pickBestEnergyTarget(state, aiPlayerId, ctx);
+    if (primaryTarget) {
+      const targetMon = [...(player.active ? [player.active] : []), ...player.bench]
+        .find((p) => p.instanceId === primaryTarget);
+      const energiesInHand = player.hand.filter(
+        (card) => getDefinition(state, card.definitionId)?.supertype === "Energy",
+      );
+      const bestEnergy = targetMon
+        ? pickBestEnergyForTarget(state, energiesInHand, targetMon)
+        : energiesInHand[0];
+      if (bestEnergy) {
+        const next = gameReducer(state, {
+          type: "ATTACH_ENERGY",
+          playerId: aiPlayerId,
+          energyId: bestEnergy.instanceId,
+          targetId: primaryTarget,
+        });
+        return { state: next, done: aiStepFinished(state, next, aiPlayerId) };
+      }
+    }
+  }
+
+  const abilityAction = pickAutoAbilityAction(state, ctx);
+  if (abilityAction) {
+    const next = gameReducer(state, abilityAction);
+    return { state: next, done: aiStepFinished(state, next, aiPlayerId) };
+  }
+
+  if (!state.turnFlags.retreated && !state.turnFlags.attacked) {
+    const retreatAction = pickRetreatAction(state, aiPlayerId, ctx);
+    if (retreatAction) {
+      const next = gameReducer(state, retreatAction);
+      if (next.turnFlags.retreated || next.pendingAction) {
+        return { state: next, done: aiStepFinished(state, next, aiPlayerId) };
+      }
+    }
+  }
+
+  const canAttack =
+    player.active &&
+    !state.turnFlags.attacked &&
+    getLegalActions(state).some((a) => a.type === "ATTACK");
+  if (canAttack) {
+    const bestAttack = pickBestAttack(state, aiPlayerId, ctx);
+    if (bestAttack) {
+      const next = gameReducer(state, { type: "ATTACK", playerId: aiPlayerId, attackName: bestAttack });
+      return { state: next, done: aiStepFinished(state, next, aiPlayerId) };
+    }
+  }
+
+  const next = gameReducer(state, { type: "END_TURN" });
+  return { state: next, done: true };
+}
+
 export function runAISingleTurn(
   state: EngineState,
   ctx: StrategyContext,
 ): EngineState {
   const aiPlayerId = state.currentPlayerId;
-  const startTurn = state.turnNumber;
   let current = state;
   let steps = 0;
   const maxSteps = 150;
 
   while (steps < maxSteps && current.phase === GamePhase.Active && !current.winnerId) {
-    steps++;
-
-    // Turn changed — AI is done (attacked, or END_TURN fired)
-    if (current.turnNumber > startTurn) break;
-
-    // Pending action: only auto-resolve if it's for the AI player.
-    // If it's for the human (e.g., PROMOTE after KO), stop and let the UI handle it.
-    if (current.pendingAction) {
-      if (current.pendingAction.playerId !== aiPlayerId) break;
-      const { state: drained, steps: n } = drainAutoPending(current, 12, ctx);
-      if (n === 0) break; // Couldn't resolve — stop to avoid infinite loop
-      current = drained;
-      continue;
-    }
-
-    // Switched to opponent without a pending — shouldn't happen normally but guard
-    if (current.currentPlayerId !== aiPlayerId) break;
-
-    const player = getPlayer(current, aiPlayerId);
-
-    // 1. Play trainers (highest priority)
-    if (!current.turnFlags.attacked) {
-      const trainerAction = pickAutoTrainerAction(current, ctx);
-      if (trainerAction) {
-        current = gameReducer(current, trainerAction);
-        const { state: drained } = drainAutoPending(current, 12, ctx);
-        current = drained;
-        continue;
-      }
-    }
-
-    // 1b. Attach a Pokémon Tool (e.g. Air Balloon → Mega Lopunny ex)
-    if (!current.turnFlags.attacked) {
-      const toolAction = pickAutoToolAction(current, ctx);
-      if (toolAction) { current = gameReducer(current, toolAction); continue; }
-    }
-
-    // 2. Bench Basic Pokémon
-    if (!current.turnFlags.attacked) {
-      const basicAction = pickAutoPlayBasicAction(current, ctx);
-      if (basicAction) { current = gameReducer(current, basicAction); continue; }
-    }
-
-    // 3. Evolve Pokémon
-    if (!current.turnFlags.attacked) {
-      const evolveAction = pickAutoEvolveAction(current, ctx);
-      if (evolveAction) { current = gameReducer(current, evolveAction); continue; }
-    }
-
-    // 3b. Once-per-turn stadium abilities
-    if (!current.pendingAction && !current.turnFlags.attacked) {
-      const stadiumAction = pickAutoStadiumAction(current, aiPlayerId, ctx);
-      if (stadiumAction) {
-        current = gameReducer(current, stadiumAction);
-        const { state: drained } = drainAutoPending(current, 12, ctx);
-        current = drained;
-        if (current.turnNumber > startTurn) break;
-        continue;
-      }
-    }
-
-    // 4. Attach energy (with type-matching)
-    if (
-      !current.turnFlags.energyAttached &&
-      player.hand.some((card) => getDefinition(current, card.definitionId)?.supertype === "Energy")
-    ) {
-      const primaryTarget = pickBestEnergyTarget(current, aiPlayerId, ctx);
-      if (primaryTarget) {
-        const targetMon = [...(player.active ? [player.active] : []), ...player.bench]
-          .find((p) => p.instanceId === primaryTarget);
-        const energiesInHand = player.hand.filter(
-          (card) => getDefinition(current, card.definitionId)?.supertype === "Energy",
-        );
-        // Pick the energy that fills the target's actual attack shortfall.
-        const bestEnergy = targetMon
-          ? pickBestEnergyForTarget(current, energiesInHand, targetMon)
-          : energiesInHand[0];
-        if (bestEnergy) {
-          current = gameReducer(current, {
-            type: "ATTACH_ENERGY",
-            playerId: aiPlayerId,
-            energyId: bestEnergy.instanceId,
-            targetId: primaryTarget,
-          });
-          continue;
-        }
-      }
-    }
-
-    // 5. Use abilities
-    if (!current.pendingAction) {
-      const abilityAction = pickAutoAbilityAction(current, ctx);
-      if (abilityAction) {
-        current = gameReducer(current, abilityAction);
-        const { state: drained } = drainAutoPending(current, 12, ctx);
-        current = drained;
-        continue;
-      }
-    }
-
-    // 6. Retreat to better attacker
-    if (!current.turnFlags.retreated && !current.turnFlags.attacked) {
-      const retreatAction = pickRetreatAction(current, aiPlayerId, ctx);
-      if (retreatAction) {
-        current = gameReducer(current, retreatAction);
-        // Only loop back if the retreat actually took; otherwise fall through
-        // to avoid an infinite no-op retreat loop (see main loop comment).
-        if (current.turnFlags.retreated) continue;
-      }
-    }
-
-    // 7. Attack
-    const canAttack =
-      player.active &&
-      !current.turnFlags.attacked &&
-      getLegalActions(current).some((a) => a.type === "ATTACK");
-    if (canAttack) {
-      const bestAttack = pickBestAttack(current, aiPlayerId, ctx);
-      if (bestAttack) {
-        current = gameReducer(current, { type: "ATTACK", playerId: aiPlayerId, attackName: bestAttack });
-        const { state: drained } = drainAutoPending(current, 12, ctx);
-        current = drained;
-        break; // Turn ends after attack
-      }
-    }
-
-    // 8. End turn (no profitable actions left)
-    current = gameReducer(current, { type: "END_TURN" });
-    break;
+    steps += 1;
+    const step = runAIOneStep(current, ctx, aiPlayerId);
+    current = step.state;
+    if (step.done) break;
   }
 
   return current;

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { CardDefinition } from "@/lib/models/definition";
 import type { CardInstance } from "@/lib/models/instance";
-import { getDefinition, remainingHp } from "@/lib/engine";
+import { getDefinition } from "@/lib/engine";
+import { maxHpWithPassives, remainingHpWithPassives } from "@/lib/engine/effects/passiveRules";
 import type { EngineState } from "@/lib/engine";
 import { useCardImage } from "@/lib/ui/useCardImage";
 
@@ -138,7 +139,7 @@ export function BoardCard({
       {showName && size !== "hand" && <span className="board-card__name">{def.name}</span>}
       {def.supertype === "Pokémon" && size !== "hand" && (
         <span className="board-card__hp">
-          {remainingHp(state, card)}/{def.hp ?? 0}
+          {remainingHpWithPassives(state, card)}/{maxHpWithPassives(state, card)}
           {card.attachedEnergy.length > 0 ? ` · ⚡${card.attachedEnergy.length}` : ""}
         </span>
       )}

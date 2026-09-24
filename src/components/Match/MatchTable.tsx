@@ -129,6 +129,12 @@ export function MatchTable({
           promoteSlots={promoteSlots}
           switchSlots={switchSlots}
           prizeFlies={prizeFlies}
+          concealBoard={
+            hideOpponentHand &&
+            (game.phase === GamePhase.Mulligan ||
+              game.phase === GamePhase.PlaceActive ||
+              game.phase === GamePhase.PlaceBench)
+          }
         />
 
         <div className="match-table__center">

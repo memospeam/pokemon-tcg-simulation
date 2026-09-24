@@ -143,17 +143,34 @@ const ENERGY_TYPE_BY_NAME: Record<string, string[]> = {
   "Fighting Energy": ["Fighting"],
   "Metal Energy": ["Metal"],
   "Mist Energy": ["Colorless"],
+  "Spiky Energy": ["Colorless"],
+  "Growing Grass Energy": ["Grass"],
+  "Telepathic Psychic Energy": ["Psychic"],
   "Enriching Energy": ["Colorless"],
   "Team Rocket's Energy": ["Darkness"],
   "Ignition Energy": ["Fire"],
 };
 
 function inferEnergyTypes(name: string): string[] {
-  for (const [label, types] of Object.entries(ENERGY_TYPE_BY_NAME)) {
+  const entries = Object.entries(ENERGY_TYPE_BY_NAME).sort((a, b) => b[0].length - a[0].length);
+  for (const [label, types] of entries) {
     if (name.toLowerCase().includes(label.toLowerCase())) return types;
   }
   return ["Colorless"];
 }
+
+const BASIC_ENERGY_NAME = /^(grass|fire|water|lightning|psychic|fighting|darkness|metal|colorless) energy$/i;
+
+const SPECIAL_ENERGY_RULES: Record<string, string> = {
+  "mist energy":
+    "Provides Colorless Energy. Prevent all effects of attacks used by your opponent's Pokémon done to the Pokémon this card is attached to. (Damage is not an effect.)",
+  "spiky energy":
+    "Provides Colorless Energy. If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), put 2 damage counters on the Attacking Pokémon.",
+  "growing grass energy":
+    "Provides Grass Energy. The Grass Pokémon this card is attached to gets +20 HP.",
+  "telepathic psychic energy":
+    "Provides Psychic Energy. When you attach this card from your hand to one of your Psychic Pokémon, you may search your deck for up to 2 Basic Psychic Pokémon and put them onto your Bench. Then, shuffle your deck.",
+};
 
 function inferPokemonTypes(name: string, deckEnergyTypes: Set<string>): string[] {
   const lower = name.toLowerCase();
@@ -407,19 +424,21 @@ function stubEnergyDefinition(line: ParsedDeckLine, corpus?: StandardCardIndex):
   // name contains "Energy" as Basic — wrong for Special Energies, which must
   // be capped at 4 copies by the validator and stay visible to
   // discard-special-energy effects.
+  const plainBasic = BASIC_ENERGY_NAME.test(line.name.trim());
   const subtypes =
     corpus && corpus.subtypes.length > 0
       ? [...corpus.subtypes]
-      : line.name.toLowerCase().includes("energy")
+      : plainBasic
         ? ["Basic"]
         : ["Special"];
+  const printed = SPECIAL_ENERGY_RULES[line.name.trim().toLowerCase()];
 
   return {
     apiId,
     name: line.name,
     supertype: "Energy",
     subtypes,
-    rules: corpus?.trainerRules ? [corpus.trainerRules.text] : undefined,
+    rules: corpus?.trainerRules ? [corpus.trainerRules.text] : printed ? [printed] : undefined,
     types,
     set: { id: setCode.toLowerCase(), name: setCode, ptcgoCode: setCode },
     number: line.number ?? "1",

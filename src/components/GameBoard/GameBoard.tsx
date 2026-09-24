@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { GamePhase } from "@/lib/models/enums";
-import { getOpponentId, getPlayer } from "@/lib/engine";
+import { getDefinition, getOpponentId, getPlayer, type GameAction } from "@/lib/engine";
 import type { PlayerId } from "@/lib/models/enums";
 import { isSupporter } from "@/lib/models/definition";
 import { getTrainerCategory } from "@/lib/ui/trainerHints";
@@ -18,7 +18,7 @@ import { StadiumAbilityPanel } from "./StadiumAbilityPanel";
 import { useGameBoardController } from "./useGameBoardController";
 
 export function GameBoard() {
-  const { engineState, dispatch, startGame, clearSaved, humanPlayerId } = useGameStore();
+  const { engineState, dispatch, startGame, clearSaved, humanPlayerId, openingCoin, callOpeningCoin, chooseOpeningSeat } = useGameStore();
   const vsAI = humanPlayerId !== null;
   const controller = useGameBoardController(engineState, dispatch);
   const [discardViewPlayerId, setDiscardViewPlayerId] = useState<PlayerId | null>(null);
@@ -179,12 +179,40 @@ export function GameBoard() {
     (boardGame.pendingAction?.type === "BOSS_ORDERS" ||
       boardGame.pendingAction?.type === "CRUSHING_HAMMER" ||
       boardGame.pendingAction?.type === "CHOOSE_OPPONENT_POKEMON_DAMAGE" ||
+      boardGame.pendingAction?.type === "DISTRIBUTE_BENCH_DAMAGE" ||
+      boardGame.pendingAction?.type === "CHOOSE_BENCH_DAMAGE" ||
       (boardGame.pendingAction?.type === "GIOVANNI" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH") ||
       (boardGame.pendingAction?.type === "PRIME_CATCHER" && (boardGame.pendingAction as { step: string }).step === "OPPONENT_BENCH"));
 
   return (
     <>
       <CoinFlipOverlay game={boardGame} />
+      {openingCoin === "call" && (
+        <div className="pending-panel pending-panel--top" role="dialog" aria-label="Opening coin">
+          <p>Call the coin. Win the flip and you choose who goes first.</p>
+          <div className="pending-panel__cards">
+            <button type="button" className="pending-panel__pick" data-testid="call-heads" onClick={() => callOpeningCoin(true)}>
+              Heads
+            </button>
+            <button type="button" className="pending-panel__pick" data-testid="call-tails" onClick={() => callOpeningCoin(false)}>
+              Tails
+            </button>
+          </div>
+        </div>
+      )}
+      {openingCoin === "choose" && (
+        <div className="pending-panel pending-panel--top" role="dialog" aria-label="Choose turn order">
+          <p>You won the flip. Choose who goes first.</p>
+          <div className="pending-panel__cards">
+            <button type="button" className="pending-panel__pick" data-testid="go-first" onClick={() => chooseOpeningSeat(true)}>
+              Go first
+            </button>
+            <button type="button" className="pending-panel__pick" data-testid="go-second" onClick={() => chooseOpeningSeat(false)}>
+              Go second
+            </button>
+          </div>
+        </div>
+      )}
       <MatchTable
         className={eventClass}
         game={boardGame}
@@ -232,6 +260,12 @@ export function GameBoard() {
           definition={selectedBoardDef}
           actions={boardOtherActions}
           attackActions={boardAttackActions}
+          attachments={[
+            ...controller.selectedBoardPokemon.attachedEnergy,
+            ...controller.selectedBoardPokemon.attachedTools,
+          ]
+            .map((entry) => game.definitions[entry.definitionId])
+            .filter((entry): entry is NonNullable<typeof entry> => !!entry)}
           onAction={controller.runAction}
           onClose={controller.clearSelection}
         />
@@ -401,12 +435,37 @@ export function GameBoard() {
       {boardGame.pendingAction?.type === "DISTRIBUTE_BENCH_DAMAGE" && (
         <div className="pending-panel pending-panel--compact pending-panel--top">
           <p>
-            {boardGame.pendingAction.countersRemaining} damage counter(s) left — click opponent Bench Pokémon
+            {boardGame.pendingAction.countersRemaining} damage counter(s) left — choose an opponent's Benched Pokémon
           </p>
+          <div className="pending-panel__cards">
+            {controller.legalActions
+              .filter(
+                (entry): entry is Extract<GameAction, { type: "ASSIGN_BENCH_DAMAGE" }> =>
+                  entry.type === "ASSIGN_BENCH_DAMAGE",
+              )
+              .map((entry) => {
+                const card = opponent.bench.find((mon) => mon.instanceId === entry.targetId);
+                const def = card ? getDefinition(boardGame, card.definitionId) : undefined;
+                if (!card || !def) return null;
+                return (
+                  <button
+                    key={card.instanceId}
+                    type="button"
+                    className="pending-panel__pick"
+                    onClick={() => controller.runAction(entry)}
+                  >
+                    {def.name}
+                    <span>
+                      {card.damageCounters}/{def.hp ?? "?"}
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
         </div>
       )}
 
-      {vsAI && !isMyTurn && !boardGame.winnerId && (
+      {vsAI && boardGame.phase === GamePhase.Active && !isMyTurn && !boardGame.winnerId && (
         <div className="ai-thinking-banner">🤖 AI is playing…</div>
       )}
 
@@ -414,7 +473,13 @@ export function GameBoard() {
         phase={boardGame.phase}
         isMyTurn={isMyTurn}
         hasPendingAction={!!boardGame.pendingAction}
-        canStart={controller.canStart}
+        canStart={
+          controller.canStart ||
+          (vsAI &&
+            !openingCoin &&
+            (boardGame.phase === GamePhase.PlaceActive || boardGame.phase === GamePhase.PlaceBench) &&
+            !!viewingPlayer?.active)
+        }
         viewingId={viewingId}
         currentId={boardGame.currentPlayerId}
         opponentId={opponentId}

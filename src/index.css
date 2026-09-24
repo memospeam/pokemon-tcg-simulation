@@ -664,6 +664,11 @@ button {
   font-size: 0.8rem;
 }
 
+.player-mat__setting-up {
+  gap: 0.35rem;
+  font-size: 0.7rem;
+}
+
 .pile-zone {
   display: grid;
   gap: 0.15rem;
@@ -1063,6 +1068,12 @@ button {
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.card-preview__attachments {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
 }
 
 .card-preview__action,
