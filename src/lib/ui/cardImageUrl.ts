@@ -23,6 +23,18 @@ const PTCGO_TO_TCG_ID: Record<string, string> = {
   svp: "svp",    // Scarlet & Violet Promos
 };
 
+const LIMITLESS_CDN = "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci";
+
+/** Limitless scan: `{SET}/{SET}_{number}_R_EN_LG.png`, number zero-padded to 3. */
+export function limitlessImageUrl(setCode: string | undefined, number: string | undefined): string {
+  if (!setCode || !number) return "";
+  const set = setCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const raw = number.trim().split("/")[0] ?? "";
+  if (!set || !/^[A-Za-z0-9]+$/.test(raw)) return "";
+  const num = /^\d+$/.test(raw) ? raw.padStart(3, "0") : raw.toUpperCase();
+  return `${LIMITLESS_CDN}/${set}/${set}_${num}_R_EN_LG.png`;
+}
+
 /**
  * Derive the pokemontcg.io image URL from a card's apiId.
  * apiId format: "{setCode}-{number}" e.g. "sv5-128", "tef-144", "me1-84"
@@ -41,14 +53,19 @@ function deriveImageBase(apiId: string): string {
   return `https://images.pokemontcg.io/${setCode}/${number}`;
 }
 
-export function cardImageSmall(def: CardDefinition): string {
-  if (def.images.small) return def.images.small;
+function derivedCardImage(def: CardDefinition): string {
+  const limitless = limitlessImageUrl(def.set.ptcgoCode || def.set.id, def.number);
+  if (limitless) return limitless;
   const base = deriveImageBase(def.apiId);
   return base ? `${base}.png` : "";
 }
 
+export function cardImageSmall(def: CardDefinition): string {
+  if (def.images.small) return def.images.small;
+  return derivedCardImage(def);
+}
+
 export function cardImageLarge(def: CardDefinition): string {
   if (def.images.large) return def.images.large;
-  const base = deriveImageBase(def.apiId);
-  return base ? `${base}_hires.png` : "";
+  return derivedCardImage(def);
 }

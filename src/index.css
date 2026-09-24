@@ -891,19 +891,29 @@ button {
 
 .board-card__energy-row {
   position: absolute;
-  top: 0.15rem;
-  left: 0.15rem;
-  right: 0.15rem;
+  top: 0.2rem;
+  left: 0.2rem;
+  right: 0.2rem;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.1rem;
+  gap: 0.15rem;
 }
 
 .board-card__energy-icon {
-  width: 18px;
-  height: auto;
-  border-radius: 0.15rem;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  width: 28px;
+  height: 39px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border-radius: 0.2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+.card-img-placeholder.board-card__energy-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 0.55rem;
+  border-radius: 999px;
 }
 
 .hand-bar {
@@ -1248,7 +1258,25 @@ button {
   align-content: flex-start;
 }
 
-.pending-panel__pick {
+.pending-panel__browse {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.pending-panel__section-label {
+  margin: 0.15rem 0 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.pending-panel__pick,
+.pending-panel__peek {
   display: grid;
   gap: 0.25rem;
   padding: 0.35rem;
@@ -1258,6 +1286,11 @@ button {
   color: inherit;
   font-size: 0.72rem;
   text-align: center;
+}
+
+.pending-panel__peek {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .pending-panel__skip {

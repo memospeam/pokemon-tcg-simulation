@@ -217,6 +217,66 @@ describe("engine", () => {
     expect(state.log.some((entry) => entry.includes("ended their turn"))).toBe(true);
   });
 
+  it("keeps attached basic energy when the turn ends", () => {
+    const mon = mockBasic("Keeper", "200");
+    const cards: CardDefinition[] = [];
+    for (let i = 0; i < 59; i += 1) {
+      cards.push({
+        apiId: `energy-${i}`,
+        name: "Fire Energy",
+        supertype: "Energy",
+        subtypes: ["Basic"],
+        types: ["Fire"],
+        set: { id: "mee", name: "MEE", ptcgoCode: "MEE" },
+        number: "2",
+        images: { small: "", large: "" },
+      });
+    }
+    cards.push(mon);
+
+    let state = beginGame({
+      player1Name: "Alice",
+      player2Name: "Bob",
+      player1Cards: cards,
+      player2Cards: cards,
+      seed: 4,
+    });
+
+    while (state.phase === GamePhase.Mulligan && state.pendingMulliganPlayerId) {
+      state = gameReducer(state, { type: "MULLIGAN", playerId: state.pendingMulliganPlayerId });
+    }
+
+    const p1Basic = findBasicInHand(state, PlayerId.P1);
+    const p2Basic = findBasicInHand(state, PlayerId.P2);
+    state = gameReducer(state, { type: "PLACE_ACTIVE", playerId: PlayerId.P1, instanceId: p1Basic!.instanceId });
+    state = gameReducer(state, { type: "PLACE_ACTIVE", playerId: PlayerId.P2, instanceId: p2Basic!.instanceId });
+    state = startActiveGame(state);
+    if (state.currentPlayerId !== PlayerId.P1) {
+      state = gameReducer(state, { type: "END_TURN" });
+    }
+
+    const player = getPlayer(state, PlayerId.P1);
+    const energy = player.hand.find((card) => state.definitions[card.definitionId]?.supertype === "Energy");
+    expect(energy).toBeTruthy();
+    expect(player.active).toBeTruthy();
+    const energyId = energy!.instanceId;
+
+    state = gameReducer(state, {
+      type: "ATTACH_ENERGY",
+      playerId: PlayerId.P1,
+      energyId,
+      targetId: player.active!.instanceId,
+    });
+    state = gameReducer(state, { type: "END_TURN" });
+
+    const after = getPlayer(state, PlayerId.P1);
+    const stillAttached = [after.active, ...after.bench]
+      .filter(Boolean)
+      .some((pokemon) => pokemon!.attachedEnergy.some((entry) => entry.instanceId === energyId));
+    expect(stillAttached).toBe(true);
+    expect(after.discard.some((card) => card.instanceId === energyId)).toBe(false);
+  });
+
   it("blocks Item cards on the opponent's next turn after Budew Itchy Pollen", () => {
     const budew: CardDefinition = {
       apiId: "budew",

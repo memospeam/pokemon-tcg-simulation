@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BattleSetup, type BattleReadyPayload } from "@/components/Battle/BattleSetup";
 import { VsScreen } from "@/components/Battle/VsScreen";
 import { GameBoard } from "@/components/GameBoard/GameBoard";
@@ -9,15 +9,35 @@ type BattleFlow = "setup" | "vs";
 
 export function BattlePage() {
   const { player1Deck, player2Deck } = useDeckStore();
-  const { engineState, startMatch } = useGameStore();
+  const engineState = useGameStore((state) => state.engineState);
+  const startMatch = useGameStore((state) => state.startMatch);
+  const clearSaved = useGameStore((state) => state.clearSaved);
   const [flow, setFlow] = useState<BattleFlow>("setup");
   const [pending, setPending] = useState<BattleReadyPayload | null>(null);
+  // Set while leaving a finished match so the lobby shows even if the VS
+  // screen state has not flushed yet.
+  const returnedHome = useRef(false);
+
+  useEffect(() => {
+    if (!engineState?.winnerId) return;
+    const timer = window.setTimeout(() => {
+      returnedHome.current = true;
+      setFlow("setup");
+      setPending(null);
+      clearSaved();
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [engineState?.winnerId, clearSaved]);
+
+  useEffect(() => {
+    if (!engineState && flow === "setup") returnedHome.current = false;
+  }, [engineState, flow]);
 
   if (engineState) {
     return <GameBoard />;
   }
 
-  if (flow === "vs" && pending && player1Deck && player2Deck) {
+  if (!returnedHome.current && flow === "vs" && pending && player1Deck && player2Deck) {
     return (
       <VsScreen
         playerName={pending.player1Name}

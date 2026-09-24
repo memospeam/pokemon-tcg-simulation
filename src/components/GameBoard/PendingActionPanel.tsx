@@ -55,6 +55,57 @@ function resolveDeckCards(
     .filter(Boolean) as CardInstance[];
 }
 
+function cardLabel(game: EngineState, card: CardInstance): string {
+  return getDefinition(game, card.definitionId)?.name ?? "Card";
+}
+
+/** Selectable matches, plus every other card still in the deck (not clickable). */
+function DeckBrowse({
+  game,
+  pickable,
+  deck,
+  onPick,
+}: {
+  game: EngineState;
+  pickable: CardInstance[];
+  deck: CardInstance[];
+  onPick: (instanceId: string) => void;
+}) {
+  const pickIds = new Set(pickable.map((card) => card.instanceId));
+  const rest = deck.filter((card) => !pickIds.has(card.instanceId));
+  return (
+    <div className="pending-panel__browse">
+      <p className="pending-panel__section-label">Choose ({pickable.length})</p>
+      <div className="pending-panel__cards">
+        {pickable.map((card) => (
+          <button
+            key={card.instanceId}
+            type="button"
+            className="pending-panel__pick"
+            onClick={() => onPick(card.instanceId)}
+          >
+            <BoardCard state={game} card={card} size="hand" showName={false} />
+            <span>{cardLabel(game, card)}</span>
+          </button>
+        ))}
+      </div>
+      {rest.length > 0 && (
+        <>
+          <p className="pending-panel__section-label">Rest of your deck ({rest.length})</p>
+          <div className="pending-panel__cards">
+            {rest.map((card) => (
+              <div key={card.instanceId} className="pending-panel__peek">
+                <BoardCard state={game} card={card} size="hand" showName={false} />
+                <span>{cardLabel(game, card)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function PendingActionPanel({
   game,
   onPickDeck,
@@ -80,6 +131,8 @@ export function PendingActionPanel({
   if (pending.type === "SEARCH_DECK") {
     const cards = resolveDeckCards(game, pending);
     const showSkip = pending.filter === "POKEGEAR_TOP7" || (pending.slotsRemaining ?? 1) > 1;
+    const revealDeck = pending.filter !== "POKEGEAR_TOP7";
+    const player = getPlayer(game, pending.playerId);
 
     return (
       <div className="pending-panel pending-panel--deck">
@@ -91,10 +144,11 @@ export function PendingActionPanel({
             </button>
           )}
         </div>
-        <div className="pending-panel__cards pending-panel__cards--scroll">
-          {cards.map((card) => {
-            const def = getDefinition(game, card.definitionId);
-            return (
+        {revealDeck ? (
+          <DeckBrowse game={game} pickable={cards} deck={player.deck} onPick={onPickDeck} />
+        ) : (
+          <div className="pending-panel__cards pending-panel__cards--scroll">
+            {cards.map((card) => (
               <button
                 key={card.instanceId}
                 type="button"
@@ -102,11 +156,11 @@ export function PendingActionPanel({
                 onClick={() => onPickDeck(card.instanceId)}
               >
                 <BoardCard state={game} card={card} size="hand" showName={false} />
-                <span>{def?.name}</span>
+                <span>{cardLabel(game, card)}</span>
               </button>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -389,22 +443,12 @@ export function PendingActionPanel({
     return (
       <div className="pending-panel pending-panel--deck">
         <h4>Spikemuth Gym — choose a Marnie's or Team Rocket's Pokémon</h4>
-        <div className="pending-panel__cards pending-panel__cards--scroll">
-          {cards.map((card) => {
-            const def = getDefinition(game, card.definitionId);
-            return (
-              <button
-                key={card.instanceId}
-                type="button"
-                className="pending-panel__pick"
-                onClick={() => onSelectSpikemuthGym?.(card.instanceId)}
-              >
-                <BoardCard state={game} card={card} size="hand" showName={false} />
-                <span>{def?.name}</span>
-              </button>
-            );
-          })}
-        </div>
+        <DeckBrowse
+          game={game}
+          pickable={cards}
+          deck={player.deck}
+          onPick={(instanceId) => onSelectSpikemuthGym?.(instanceId)}
+        />
       </div>
     );
   }
@@ -570,22 +614,12 @@ export function PendingActionPanel({
             </button>
           )}
         </div>
-        <div className="pending-panel__cards pending-panel__cards--scroll">
-          {deckCards.map((card) => {
-            const def = getDefinition(game, card.definitionId);
-            return (
-              <button
-                key={card.instanceId}
-                type="button"
-                className="pending-panel__pick"
-                onClick={() => onSelectGrandTreeDeck?.(card.instanceId)}
-              >
-                <BoardCard state={game} card={card} size="hand" showName={false} />
-                <span>{def?.name}</span>
-              </button>
-            );
-          })}
-        </div>
+        <DeckBrowse
+          game={game}
+          pickable={deckCards}
+          deck={player.deck}
+          onPick={(instanceId) => onSelectGrandTreeDeck?.(instanceId)}
+        />
       </div>
     );
   }

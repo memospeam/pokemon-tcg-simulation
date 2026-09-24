@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { CardDefinition } from "@/lib/models/definition";
 import type { CardInstance } from "@/lib/models/instance";
 import { getDefinition, remainingHp } from "@/lib/engine";
@@ -17,10 +18,14 @@ function CardImage({
   title?: string;
 }) {
   const src = useCardImage(def);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
   // Until the image URL resolves (or if it never does), render a typed
   // placeholder instead of <img src="">, which triggers a React warning and a
   // wasteful re-request of the whole page.
-  if (!src) {
+  if (!src || failed) {
     return (
       <span
         className={`${className} card-img-placeholder card-img-placeholder--${def.supertype.toLowerCase()}`}
@@ -31,7 +36,16 @@ function CardImage({
       </span>
     );
   }
-  return <img src={src} alt={def.name} className={className} title={title} loading="lazy" />;
+  return (
+    <img
+      src={src}
+      alt={def.name}
+      className={className}
+      title={title}
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 interface BoardCardProps {
@@ -125,6 +139,7 @@ export function BoardCard({
       {def.supertype === "Pokémon" && size !== "hand" && (
         <span className="board-card__hp">
           {remainingHp(state, card)}/{def.hp ?? 0}
+          {card.attachedEnergy.length > 0 ? ` · ⚡${card.attachedEnergy.length}` : ""}
         </span>
       )}
       {card.attachedEnergy.length > 0 && (
