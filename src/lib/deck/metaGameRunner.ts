@@ -351,6 +351,15 @@ export function runEngineAutoPlay(
       }
     }
 
+    if (!state.pendingAction && !state.turnFlags.attacked && !state.turnFlags.energyAttached) {
+      const koAttach = pickAttachForKnockout(state, playerId);
+      if (koAttach) {
+        state = gameReducer(state, koAttach);
+        actionCount += 1;
+        continue;
+      }
+    }
+
     if (!state.pendingAction && !state.turnFlags.attacked) {
       const trainerAction = pickAutoTrainerAction(state, ctx);
       if (trainerAction) {
@@ -558,6 +567,14 @@ export function runAIOneStep(
     const comboAction = pickComboAction(state, aiPlayerId, ctx);
     if (comboAction) {
       const next = gameReducer(state, comboAction);
+      return { state: next, done: aiStepFinished(state, next, aiPlayerId) };
+    }
+  }
+
+  if (!state.turnFlags.attacked && !state.turnFlags.energyAttached) {
+    const koAttach = pickAttachForKnockout(state, aiPlayerId);
+    if (koAttach) {
+      const next = gameReducer(state, koAttach);
       return { state: next, done: aiStepFinished(state, next, aiPlayerId) };
     }
   }
@@ -1863,6 +1880,59 @@ function gustKoPrizes(state: EngineState, playerId: PlayerId): number {
   return best;
 }
 
+/**
+ * Attach one Energy to the Active when that attachment makes an attack Knock Out
+ * this turn. Runs before draw supporters, which would shuffle the Energy away.
+ */
+export function pickAttachForKnockout(
+  state: EngineState,
+  playerId: PlayerId,
+): Extract<GameAction, { type: "ATTACH_ENERGY" }> | null {
+  if (state.turnFlags.attacked || state.turnFlags.energyAttached || state.pendingAction) return null;
+  if (!canAttackThisTurn(state)) return null;
+  const player = getPlayer(state, playerId);
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  const active = player.active;
+  const defender = opponent.active;
+  if (!active || !defender) return null;
+  if (knocksOut(state, bestAffordableDamageInto(state, playerId, active, defender), defender)) return null;
+
+  const attaches = getLegalActions(state).filter(
+    (action): action is Extract<GameAction, { type: "ATTACH_ENERGY" }> =>
+      action.type === "ATTACH_ENERGY" && action.targetId === active.instanceId,
+  );
+  for (const action of attaches) {
+    const energy = player.hand.find((card) => card.instanceId === action.energyId);
+    if (!energy) continue;
+    active.attachedEnergy.push(energy);
+    const kos = knocksOut(state, bestAffordableDamageInto(state, playerId, active, defender), defender);
+    active.attachedEnergy.pop();
+    if (kos) return action;
+  }
+  return null;
+}
+
+function deckHasEnergyForAttack(state: EngineState, playerId: PlayerId, pokemon: CardInstance): boolean {
+  const def = getDefinition(state, pokemon.definitionId);
+  const colors = new Set<string>();
+  for (const attack of def?.attacks ?? []) {
+    for (const cost of attack.cost ?? []) {
+      if (cost !== "Colorless") colors.add(cost);
+    }
+  }
+  const player = getPlayer(state, playerId);
+  const basics = player.deck.filter((card) => {
+    const energy = getDefinition(state, card.definitionId);
+    return energy && isBasicEnergy(energy);
+  });
+  if (basics.length === 0) return false;
+  if (colors.size === 0) return true;
+  return basics.some((card) => {
+    const type = getDefinition(state, card.definitionId)?.types?.[0];
+    return !!type && colors.has(type);
+  });
+}
+
 export function pickBestAttack(
   state: EngineState,
   playerId: PlayerId,
@@ -2102,6 +2172,11 @@ export function pickHeuristicMainAction(
   //    the generic scoring chain.
   const comboAction = pickComboAction(state, playerId, ctx);
   if (comboAction) return comboAction;
+
+  if (!state.turnFlags.attacked && !state.turnFlags.energyAttached) {
+    const koAttach = pickAttachForKnockout(state, playerId);
+    if (koAttach) return koAttach;
+  }
 
   // 1-3. Trainer / tool / basic / evolve (only before attacking)
   if (!state.turnFlags.attacked) {
@@ -2453,24 +2528,17 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext,
           }
         }
       } else if (name.includes("crispin") && (player.bench.length > 0 || player.active)) {
-        // Crispin: attach 2 Basic Energy from discard to any Basic Pokémon (or evolve into one).
-        // Urgently prioritize when primary attacker is in play with 0-1 energy (needs acceleration).
+        // Crispin SCR searches the deck for up to 2 Basic Energy of different types.
+        // Play it over a hand refresh when a primary attacker is still short and the deck has a matching type.
         const allInPlay = [...(player.active ? [player.active] : []), ...player.bench];
-        const primaryNeedsEnergy = allInPlay.some((p) => {
-          const pName = (getDefinition(state, p.definitionId)?.name ?? "").toLowerCase();
-          const archPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, pName) : 0;
-          return archPrio >= 80 && p.attachedEnergy.length <= 1; // Primary attacker with ≤1 energy
+        const primaryNeedsEnergy = allInPlay.some((pokemon) => {
+          const pokemonName = (getDefinition(state, pokemon.definitionId)?.name ?? "").toLowerCase();
+          const archPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, pokemonName) : 0;
+          return archPrio >= 80 && pokemon.attachedEnergy.length <= 1 && deckHasEnergyForAttack(state, playerId, pokemon);
         });
-        const hasTwoEnergyInDiscard = player.discard.filter(
-          (c) => getDefinition(state, c.definitionId)?.supertype === "Energy",
-        ).length >= 2;
-        if (primaryNeedsEnergy && hasTwoEnergyInDiscard) {
-          score = 78; // Urgent energy acceleration — prioritise over draw supporters
-        } else if (primaryNeedsEnergy) {
-          score = 55; // Attacker needs energy but fewer than 2 in discard
-        } else {
-          score = 32;
-        }
+        if (primaryNeedsEnergy) score = 100;
+        else if (allInPlay.some((pokemon) => deckHasEnergyForAttack(state, playerId, pokemon))) score = 36;
+        else score = 12;
       } else if (name.includes("rosa")) {
         score = 28;
       } else if (name.includes("black belt's training")) {

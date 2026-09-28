@@ -7,6 +7,7 @@ import {
   drainAutoPending,
   isPlayStalled,
   pickAutoTrainerAction,
+  pickAttachForKnockout,
   pickComboAction,
   pickAutoToolAction,
   pickAutoAbilityAction,
@@ -179,6 +180,15 @@ export function captureSimulationFrames(
       if (drained.stalled || state.phase !== GamePhase.Active || state.winnerId) break;
       if (state.currentPlayerId !== beforePlayer || state.turnNumber > beforeTurn) turnCount += 1;
       continue;
+    }
+
+    if (!state.turnFlags.attacked && !state.turnFlags.energyAttached) {
+      const koAttach = pickAttachForKnockout(state, playerId);
+      if (koAttach) {
+        state = applyAction(state, koAttach, frames, "Attach energy", "energy");
+        actionCount += 1;
+        continue;
+      }
     }
 
     // 1. Trainers (supporters first, then items) — strategy-aware
