@@ -367,6 +367,51 @@ Energy : 2
     expect(state.pendingAction).toBeNull();
   });
 
+  it("Crispin does not offer an extra discard after attaching", () => {
+    const crispinDeck = buildPlaytestDeckFromCorpusText(
+      "Crispin no extra effect",
+      `Pokémon : 1
+1 Froakie CRI 20
+
+Trainer : 1
+1 Crispin SCR 133
+
+Energy : 2
+1 Water Energy MEE 3
+1 Darkness Energy MEE 5`,
+    );
+    const crispin = findDefinition(crispinDeck, "Crispin");
+    const froakie = findDefinition(crispinDeck, "Froakie");
+    const water = findDefinition(crispinDeck, "Water Energy");
+    const darkness = findDefinition(crispinDeck, "Darkness Energy");
+    let state = criTrainerScenarioState(crispinDeck, {
+      p1HandTrainer: crispin,
+      activeName: "Froakie",
+    });
+    getPlayer(state, PlayerId.P1).bench.push(createCardInstance(froakie.apiId, PlayerId.P1, Zone.Bench));
+    const deck = getPlayer(state, PlayerId.P1).deck;
+    deck.unshift(createCardInstance(darkness.apiId, PlayerId.P1, Zone.Deck));
+    deck.unshift(createCardInstance(water.apiId, PlayerId.P1, Zone.Deck));
+
+    const crispinCard = getPlayer(state, PlayerId.P1).hand[0]!;
+    state = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: crispinCard.instanceId });
+    const deckNow = getPlayer(state, PlayerId.P1).deck;
+    const waterCard = deckNow.find((card) => card.definitionId === water.apiId)!;
+    const darknessCard = deckNow.find((card) => card.definitionId === darkness.apiId)!;
+    state = gameReducer(state, { type: "SELECT_CRISPIN_ENERGY", playerId: PlayerId.P1, instanceId: waterCard.instanceId });
+    state = gameReducer(state, { type: "SELECT_CRISPIN_ENERGY", playerId: PlayerId.P1, instanceId: darknessCard.instanceId });
+    expect(state.pendingAction?.type).toBe("CRISPIN_ATTACH");
+    if (state.pendingAction?.type !== "CRISPIN_ATTACH") return;
+
+    const activeId = getPlayer(state, PlayerId.P1).active!.instanceId;
+    state = gameReducer(state, { type: "SELECT_CRISPIN_TARGET", playerId: PlayerId.P1, pokemonId: activeId });
+    const p1 = getPlayer(state, PlayerId.P1);
+    expect(state.pendingAction).toBeNull();
+    expect(p1.hand.filter((card) => card.definitionId === water.apiId)).toHaveLength(1);
+    expect(p1.active!.attachedEnergy.map((card) => card.definitionId)).toEqual([darkness.apiId]);
+    expect(state.log.join("\n")).not.toMatch(/discard 1 card to draw 2/i);
+  });
+
   it("Crispin fetches the colours a bench attacker needs (Dragapult: Fire+Psychic, not Darkness)", () => {
     // Dragapult deck runs Fire + Psychic + Darkness energy. Phantom Dive costs
     // Fire+Psychic. With Dreepy active and Dragapult ex on the bench, Crispin

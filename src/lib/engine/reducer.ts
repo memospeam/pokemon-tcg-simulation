@@ -1,4 +1,4 @@
-import { isBasicPokemon, isAceSpec, isCarmineCard, isItemTrainer, isProtonSupporter, isStadium, isSupporter, isTeamRocketPokemon, isTool } from "../models/definition";
+import { isBasicEnergy, isBasicPokemon, isAceSpec, isCarmineCard, isItemTrainer, isProtonSupporter, isStadium, isSupporter, isTeamRocketPokemon, isTool } from "../models/definition";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
 import type { CardInstance } from "../models/instance";
 import {
@@ -129,7 +129,6 @@ import {
   continueIonoHandBottom,
   continueNightStretcherPick,
   discardAttachedEnergy,
-  maybeCrispinOptionalDiscard,
   resolveDeckPick,
   resolveEnergySwitchPokemon,
   resolveEnhancedHammerEnergy,
@@ -1307,13 +1306,8 @@ function handleSelectCrispinTarget(state: EngineState, playerId: PlayerId, pokem
   attachEnergyToPokemon(state, playerId, state.heldCard, target);
   state.heldCard = null;
   state.pendingAction = null;
-  shuffleDeckAfterCrispin(state, playerId);
-  return state;
-}
-
-function shuffleDeckAfterCrispin(state: EngineState, playerId: PlayerId): void {
   shufflePlayerDeck(state, playerId);
-  maybeCrispinOptionalDiscard(state, playerId);
+  return state;
 }
 
 function energyTypeOf(state: EngineState, card: CardInstance): string {
@@ -2421,7 +2415,11 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       if (pending.step === "POKEMON") {
         const opponent = getPlayer(state, getOpponentId(current));
         for (const pokemon of allPokemonInPlay(opponent)) {
-          if (pokemon.attachedEnergy.length > 0) {
+          const hasSpecial = pokemon.attachedEnergy.some((energy) => {
+            const def = getDefinition(state, energy.definitionId);
+            return !!def && !isBasicEnergy(def);
+          });
+          if (hasSpecial) {
             actions.push({
               type: "SELECT_ENHANCED_HAMMER_POKEMON",
               playerId: current,

@@ -180,6 +180,7 @@ export function GameBoard() {
     highlight &&
     (boardGame.pendingAction?.type === "BOSS_ORDERS" ||
       boardGame.pendingAction?.type === "CRUSHING_HAMMER" ||
+      boardGame.pendingAction?.type === "ENHANCED_HAMMER" ||
       boardGame.pendingAction?.type === "CHOOSE_OPPONENT_POKEMON_DAMAGE" ||
       boardGame.pendingAction?.type === "DISTRIBUTE_BENCH_DAMAGE" ||
       boardGame.pendingAction?.type === "CHOOSE_BENCH_DAMAGE" ||

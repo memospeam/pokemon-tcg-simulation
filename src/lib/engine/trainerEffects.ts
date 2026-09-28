@@ -248,20 +248,22 @@ function canEnergySwitch(state: EngineState, playerId: PlayerId): boolean {
   );
 }
 
-function opponentEnergyTargets(state: EngineState, playerId: PlayerId): { pokemonId: string; energyId: string }[] {
+function specialEnergyOn(state: EngineState, pokemon: CardInstance): CardInstance[] {
+  return pokemon.attachedEnergy.filter((energy) => {
+    const def = getDefinition(state, energy.definitionId);
+    return !!def && !isBasicEnergy(def);
+  });
+}
+
+function opponentSpecialEnergyTargets(state: EngineState, playerId: PlayerId): { pokemonId: string; energyId: string }[] {
   const opponent = getPlayer(state, getOpponentId(playerId));
   const targets: { pokemonId: string; energyId: string }[] = [];
   for (const pokemon of allPokemonInPlay(opponent)) {
-    for (const energy of pokemon.attachedEnergy) {
+    for (const energy of specialEnergyOn(state, pokemon)) {
       targets.push({ pokemonId: pokemon.instanceId, energyId: energy.instanceId });
     }
   }
   return targets;
-}
-
-function opponentPokemonWithEnergy(state: EngineState, playerId: PlayerId): CardInstance[] {
-  const opponent = getPlayer(state, getOpponentId(playerId));
-  return allPokemonInPlay(opponent).filter((pokemon) => pokemon.attachedEnergy.length > 0);
 }
 
 function poffinMatches(state: EngineState, playerId: PlayerId): CardInstance[] {
@@ -337,8 +339,8 @@ function canPlayTrainerKind(
       }
       return { ok: true };
     case "trainer_enhanced_hammer":
-      if (opponentEnergyTargets(state, playerId).length === 0) {
-        return { ok: false, reason: "Enhanced Hammer: opponent has no Energy attached." };
+      if (opponentSpecialEnergyTargets(state, playerId).length === 0) {
+        return { ok: false, reason: "Enhanced Hammer: opponent has no Special Energy attached." };
       }
       return { ok: true };
     case "trainer_hilda":
@@ -745,8 +747,8 @@ function canPlayLegacyTrainerEffect(
   }
 
   if (matchesTrainer(def, "enhanced hammer")) {
-    if (opponentEnergyTargets(state, playerId).length === 0) {
-      return { ok: false, reason: "Enhanced Hammer: opponent has no Energy attached." };
+    if (opponentSpecialEnergyTargets(state, playerId).length === 0) {
+      return { ok: false, reason: "Enhanced Hammer: opponent has no Special Energy attached." };
     }
   }
 
@@ -1251,16 +1253,30 @@ function applyLegacyTrainerEffect(
 }
 
 function applyEnhancedHammer(state: EngineState, playerId: PlayerId): void {
-  const opponentId = getOpponentId(playerId);
-  const candidates = opponentPokemonWithEnergy(state, playerId);
-  if (candidates.length === 0) {
-    logMessage(state, "Enhanced Hammer: opponent has no Energy attached.");
+  const targets = opponentSpecialEnergyTargets(state, playerId);
+  if (targets.length === 0) {
+    logMessage(state, "Enhanced Hammer: opponent has no Special Energy attached.");
     return;
   }
 
-  if (candidates.length === 1) {
-    const pokemon = candidates[0]!;
-    discardEnhancedHammerEnergy(state, opponentId, pokemon.instanceId, 2);
+  if (targets.length === 1) {
+    const only = targets[0]!;
+    discardAttachedEnergy(state, getOpponentId(playerId), only.pokemonId, only.energyId);
+    logMessage(state, "Enhanced Hammer discarded 1 Special Energy.");
+    return;
+  }
+
+  const pokemonIds = [...new Set(targets.map((target) => target.pokemonId))];
+  if (pokemonIds.length === 1) {
+    state.pendingAction = {
+      type: "ENHANCED_HAMMER",
+      playerId,
+      step: "ENERGY",
+      pokemonId: pokemonIds[0],
+      discardRemaining: 1,
+      options: targets,
+    };
+    logMessage(state, "Enhanced Hammer: choose a Special Energy to discard.");
     return;
   }
 
@@ -1268,35 +1284,29 @@ function applyEnhancedHammer(state: EngineState, playerId: PlayerId): void {
     type: "ENHANCED_HAMMER",
     playerId,
     step: "POKEMON",
-    discardRemaining: 2,
+    discardRemaining: 1,
     options: [],
   };
-  logMessage(state, "Enhanced Hammer: choose an opponent's Pokémon.");
+  logMessage(state, "Enhanced Hammer: choose an opponent's Pokémon with Special Energy.");
 }
 
-function discardEnhancedHammerEnergy(
+function discardOneSpecialEnergy(
   state: EngineState,
   ownerId: PlayerId,
   pokemonId: string,
-  count: number,
-): void {
+  energyId?: string,
+): boolean {
   const player = getPlayer(state, ownerId);
   const pokemon =
     player.active?.instanceId === pokemonId
       ? player.active
       : player.bench.find((entry) => entry.instanceId === pokemonId);
-  if (!pokemon || pokemon.attachedEnergy.length === 0) {
-    state.pendingAction = null;
-    return;
-  }
-
-  const toDiscard = Math.min(count, pokemon.attachedEnergy.length);
-  for (let i = 0; i < toDiscard; i += 1) {
-    const energyId = pokemon.attachedEnergy[0]!.instanceId;
-    discardAttachedEnergy(state, ownerId, pokemonId, energyId, false);
-  }
-  state.pendingAction = null;
-  logMessage(state, `Enhanced Hammer discarded ${toDiscard} Energy.`);
+  if (!pokemon) return false;
+  const specials = specialEnergyOn(state, pokemon);
+  const chosen = energyId ? specials.find((energy) => energy.instanceId === energyId) : specials[0];
+  if (!chosen) return false;
+  discardAttachedEnergy(state, ownerId, pokemonId, chosen.instanceId, false);
+  return true;
 }
 
 export function resolveEnhancedHammerPokemon(
@@ -1315,10 +1325,13 @@ export function resolveEnhancedHammerPokemon(
     opponent.active?.instanceId === pokemonId
       ? opponent.active
       : opponent.bench.find((entry) => entry.instanceId === pokemonId);
-  if (!pokemon || pokemon.attachedEnergy.length === 0) return;
+  const specials = pokemon ? specialEnergyOn(state, pokemon) : [];
+  if (!pokemon || specials.length === 0) return;
 
-  if (pokemon.attachedEnergy.length === 1 || pending.discardRemaining === 1) {
-    discardEnhancedHammerEnergy(state, opponentId, pokemonId, pending.discardRemaining);
+  if (specials.length === 1) {
+    discardOneSpecialEnergy(state, opponentId, pokemonId, specials[0]!.instanceId);
+    state.pendingAction = null;
+    logMessage(state, "Enhanced Hammer discarded 1 Special Energy.");
     return;
   }
 
@@ -1327,13 +1340,13 @@ export function resolveEnhancedHammerPokemon(
     playerId,
     step: "ENERGY",
     pokemonId,
-    discardRemaining: pending.discardRemaining,
-    options: pokemon.attachedEnergy.map((energy) => ({
+    discardRemaining: 1,
+    options: specials.map((energy) => ({
       pokemonId,
       energyId: energy.instanceId,
     })),
   };
-  logMessage(state, "Enhanced Hammer: choose Energy to discard.");
+  logMessage(state, "Enhanced Hammer: choose a Special Energy to discard.");
 }
 
 export function resolveEnhancedHammerEnergy(
@@ -1353,38 +1366,9 @@ export function resolveEnhancedHammerEnergy(
   }
 
   const opponentId = getOpponentId(playerId);
-  discardAttachedEnergy(state, opponentId, pokemonId, energyId, false);
-  const remaining = pending.discardRemaining - 1;
-  if (remaining <= 0) {
-    state.pendingAction = null;
-    logMessage(state, "Enhanced Hammer finished discarding Energy.");
-    return;
-  }
-
-  const opponent = getPlayer(state, opponentId);
-  const pokemon =
-    opponent.active?.instanceId === pokemonId
-      ? opponent.active
-      : opponent.bench.find((entry) => entry.instanceId === pokemonId);
-  if (!pokemon || pokemon.attachedEnergy.length === 0) {
-    state.pendingAction = null;
-    return;
-  }
-
-  if (pokemon.attachedEnergy.length === 1) {
-    discardEnhancedHammerEnergy(state, opponentId, pokemonId, remaining);
-    return;
-  }
-
-  state.pendingAction = {
-    ...pending,
-    discardRemaining: remaining,
-    options: pokemon.attachedEnergy.map((energy) => ({
-      pokemonId,
-      energyId: energy.instanceId,
-    })),
-  };
-  logMessage(state, "Enhanced Hammer: choose another Energy to discard.");
+  if (!discardOneSpecialEnergy(state, opponentId, pokemonId, energyId)) return;
+  state.pendingAction = null;
+  logMessage(state, "Enhanced Hammer discarded 1 Special Energy.");
 }
 
 function findFirstBasicEnergy(state: EngineState, pokemon: CardInstance): CardInstance | null {
@@ -1544,7 +1528,6 @@ function applyCrispin(state: EngineState, playerId: PlayerId): void {
   if (energyIndex === -1) {
     shufflePlayerDeck(state, playerId);
     logMessage(state, "Crispin: no Basic Energy found in deck.");
-    maybeCrispinOptionalDiscard(state, playerId);
     return;
   }
 
@@ -1558,14 +1541,12 @@ function applyCrispin(state: EngineState, playerId: PlayerId): void {
     player.deck.push(energy);
     shufflePlayerDeck(state, playerId);
     logMessage(state, "Crispin: no Basic Pokémon in play to attach Energy.");
-    maybeCrispinOptionalDiscard(state, playerId);
     return;
   }
 
   if (basics.length === 1) {
     attachEnergyToPokemon(state, playerId, energy, basics[0]!);
     shufflePlayerDeck(state, playerId);
-    maybeCrispinOptionalDiscard(state, playerId);
     return;
   }
 
@@ -1577,13 +1558,6 @@ function applyCrispin(state: EngineState, playerId: PlayerId): void {
   };
   state.heldCard = energy;
   logMessage(state, "Crispin: choose a Basic Pokémon to attach the searched Energy.");
-}
-
-export function maybeCrispinOptionalDiscard(state: EngineState, playerId: PlayerId): void {
-  const player = getPlayer(state, playerId);
-  if (player.hand.length === 0) return;
-  state.pendingAction = { type: "CRISPIN_DISCARD", playerId };
-  logMessage(state, "Crispin: you may discard 1 card to draw 2 (optional).");
 }
 
 export function attachEnergyToPokemon(

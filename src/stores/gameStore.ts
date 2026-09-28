@@ -3,7 +3,7 @@ import type { BuiltDeck } from "@/lib/deck/builder";
 import { clearGameState, loadGameState, saveGameState } from "@/lib/deck/storage";
 import { beginGame, gameReducer, getLegalActions, startActiveGame, type EngineState, type GameAction } from "@/lib/engine";
 import { GamePhase, PlayerId } from "@/lib/models/enums";
-import { runAIOneStep, setupAiBoard, mulliganAi } from "@/lib/deck/metaGameRunner";
+import { aiContinuesAfterStep, runAIOneStep, setupAiBoard, mulliganAi } from "@/lib/deck/metaGameRunner";
 import { flipCoin, logMessage } from "@/lib/engine/helpers";
 import { buildStrategyContext, type StrategyContext } from "@/lib/deck/deckStrategy";
 import { getDefinition, getPlayer } from "@/lib/engine";
@@ -86,10 +86,10 @@ export const useGameStore = create<GameStore>((set, get) => {
   function isAiToMove(state: EngineState, humanPlayerId: PlayerId | null): boolean {
     if (!humanPlayerId) return false;
     const aiId = humanPlayerId === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
-    if (state.winnerId) return false;
-    if (state.currentPlayerId !== aiId) return false;
+    if (state.winnerId || state.phase !== GamePhase.Active) return false;
+    if (state.pendingAction?.playerId === aiId) return true;
     if (state.pendingAction && state.pendingAction.playerId !== aiId) return false;
-    return true;
+    return state.currentPlayerId === aiId;
   }
 
   function persist(state: EngineState): void {
@@ -139,11 +139,12 @@ export const useGameStore = create<GameStore>((set, get) => {
         return;
       }
       armAiActionLimit(humanPlayerId);
-      const { state: next, done } = runAIOneStep(state, buildAIContext(state), aiId);
+      const { state: next } = runAIOneStep(state, buildAIContext(state), aiId);
       next.viewingPlayerId = humanPlayerId;
       persist(next);
-      set({ ...withActions(next), humanPlayerId, isAIThinking: !done });
-      if (!done && !next.winnerId) aiStepTimer = setTimeout(tick, AI_STEP_MS);
+      const keepGoing = aiContinuesAfterStep(state, next, aiId);
+      set({ ...withActions(next), humanPlayerId, isAIThinking: keepGoing });
+      if (keepGoing) aiStepTimer = setTimeout(tick, AI_STEP_MS);
       else if (aiActionWatchdog != null) {
         clearTimeout(aiActionWatchdog);
         aiActionWatchdog = null;
@@ -157,9 +158,32 @@ export const useGameStore = create<GameStore>((set, get) => {
   /** LLM AI: run its turn asynchronously, showing the thinking state meanwhile. */
   async function runLlmAiTurn(): Promise<void> {
     const human = get().humanPlayerId;
-    const state = get().engineState;
+    let state = get().engineState;
     if (!state || human === null || !llmPolicy) return;
     if (!isAiToMove(state, human)) return;
+
+    const aiId = human === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
+    let guard = 0;
+    while (
+      state.pendingAction?.playerId === aiId &&
+      state.phase === GamePhase.Active &&
+      !state.winnerId &&
+      guard < 12
+    ) {
+      const step = runAIOneStep(state, buildAIContext(state), aiId);
+      if (step.state === state) break;
+      state = step.state;
+      guard += 1;
+    }
+    state.viewingPlayerId = human;
+    if (guard > 0) {
+      persist(state);
+      set({ ...withActions(state), humanPlayerId: human });
+    }
+    if (state.winnerId || state.pendingAction || state.currentPlayerId !== aiId) {
+      set({ isAIThinking: false });
+      return;
+    }
 
     set({ isAIThinking: true });
     try {

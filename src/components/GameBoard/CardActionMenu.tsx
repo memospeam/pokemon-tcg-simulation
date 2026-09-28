@@ -147,8 +147,14 @@ export function buildPokemonActions(
     if (legal.type === "SELECT_CRISPIN_TARGET" && legal.pokemonId === card.instanceId) {
       actions.push({ label: "Attach searched Energy (Crispin)", action: legal });
     }
+    if (legal.type === "SELECT_ENHANCED_HAMMER_POKEMON" && legal.pokemonId === card.instanceId) {
+      actions.push({ label: "Discard a Special Energy (Enhanced Hammer)", action: legal });
+    }
     if (legal.type === "DISCARD_OPPONENT_ENERGY" && legal.pokemonId === card.instanceId) {
-      actions.push({ label: "Discard attached Energy (Crushing Hammer)", action: legal });
+      const energy = card.attachedEnergy.find((entry) => entry.instanceId === legal.energyId);
+      const energyName = energy && game ? getDefinition(game, energy.definitionId)?.name : undefined;
+      const hammer = game?.pendingAction?.type === "ENHANCED_HAMMER" ? "Enhanced Hammer" : "Crushing Hammer";
+      actions.push({ label: `Discard ${energyName ?? "attached Energy"} (${hammer})`, action: legal });
     }
     if (legal.type === "ASSIGN_BENCH_DAMAGE" && legal.targetId === card.instanceId) {
       actions.push({ label: "Place 1 damage counter here", action: legal });

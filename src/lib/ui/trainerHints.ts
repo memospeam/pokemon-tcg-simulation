@@ -70,8 +70,8 @@ export function getPendingPrompt(pending: import("@/lib/engine").PendingAction):
       return "Crushing Hammer (heads): choose an Energy to discard.";
     case "ENHANCED_HAMMER":
       return pending.step === "POKEMON"
-        ? "Enhanced Hammer: choose an opponent's Pokémon."
-        : "Enhanced Hammer: choose Energy to discard.";
+        ? "Enhanced Hammer: choose an opponent's Pokémon with Special Energy."
+        : "Enhanced Hammer: choose a Special Energy to discard.";
     case "ENERGY_SWITCH":
       return pending.step === "SOURCE"
         ? "Energy Switch: choose a Pokémon to move Basic Energy from."

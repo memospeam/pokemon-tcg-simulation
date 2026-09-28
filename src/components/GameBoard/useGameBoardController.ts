@@ -252,6 +252,7 @@ export function useGameBoardController(
       "PROMOTE",
       "RARE_CANDY",
       "CRUSHING_HAMMER",
+      "ENHANCED_HAMMER",
       "CRISPIN_ATTACH",
       "DISTRIBUTE_BENCH_DAMAGE",
       "MOVE_DAMAGE",

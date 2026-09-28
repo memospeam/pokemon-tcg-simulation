@@ -38,6 +38,18 @@ function mockBasic(name: string, hp = "70"): CardDefinition {
   };
 }
 
+function mockSpecialEnergy(name: string): CardDefinition {
+  return {
+    apiId: name,
+    name,
+    supertype: "Energy",
+    subtypes: ["Special"],
+    set: { id: "test", name: "Test" },
+    number: "1",
+    images: { small: "", large: "" },
+  };
+}
+
 function mockEnergy(name = "Fire Energy"): CardDefinition {
   return {
     apiId: name,
@@ -599,5 +611,109 @@ describe("trainerEffects", () => {
     const next = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: crispinCard.instanceId });
     expect(next.pendingAction).toBeNull();
     expect(getPlayer(next, PlayerId.P1).hand).toHaveLength(0);
+  });
+
+  function enhancedHammerState(attached: { def: CardDefinition; on: "active" | "bench" }[]) {
+    const hammer = {
+      ...mockTrainer("Enhanced Hammer"),
+      rules: [
+        "Discard a Special Energy from 1 of your opponent's Pokémon. You may play any number of Item cards during your turn.",
+      ],
+    };
+    const dreepy = mockBasic("Dreepy", "70");
+    const cards = [
+      hammer,
+      dreepy,
+      ...attached.map((entry) => entry.def),
+      ...Array.from({ length: 50 }, (_, i) => mockEnergy(`Fill${i}`)),
+    ];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    state.turnNumber = 2;
+    const player = getPlayer(state, PlayerId.P1);
+    const opponent = getPlayer(state, PlayerId.P2);
+    const hammerCard = createCardInstance(hammer.apiId, PlayerId.P1, Zone.Hand);
+    player.hand = [hammerCard];
+    player.active = createCardInstance(dreepy.apiId, PlayerId.P1, Zone.Active);
+    const active = createCardInstance(dreepy.apiId, PlayerId.P2, Zone.Active);
+    const bench = createCardInstance(dreepy.apiId, PlayerId.P2, Zone.Bench);
+    opponent.active = active;
+    opponent.bench = [];
+    for (const entry of attached) {
+      const energy = createCardInstance(entry.def.apiId, PlayerId.P2, Zone.Attached);
+      if (entry.on === "active") active.attachedEnergy.push(energy);
+      else {
+        if (opponent.bench.length === 0) opponent.bench.push(bench);
+        bench.attachedEnergy.push(energy);
+      }
+    }
+    return { state, hammer, hammerCard };
+  }
+
+  it("Enhanced Hammer cannot discard Basic Energy", () => {
+    const fire = mockEnergy("Fire Energy");
+    const { state, hammer, hammerCard } = enhancedHammerState([{ def: fire, on: "active" }]);
+    const opponent = getPlayer(state, PlayerId.P2);
+
+    expect(canPlayTrainerEffect(state, PlayerId.P1, hammer).ok).toBe(false);
+    const next = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: hammerCard.instanceId });
+    expect(getPlayer(next, PlayerId.P1).hand.some((card) => card.instanceId === hammerCard.instanceId)).toBe(true);
+    expect(getPlayer(next, PlayerId.P2).active?.attachedEnergy.map((energy) => energy.definitionId)).toEqual(
+      opponent.active?.attachedEnergy.map((energy) => energy.definitionId),
+    );
+  });
+
+  it("Enhanced Hammer discards one Special Energy and leaves Basic Energy attached", () => {
+    const fire = mockEnergy("Fire Energy");
+    const mist = mockSpecialEnergy("Mist Energy");
+    const { state, hammerCard } = enhancedHammerState([
+      { def: fire, on: "active" },
+      { def: mist, on: "active" },
+    ]);
+
+    const next = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: hammerCard.instanceId });
+    const attached = getPlayer(next, PlayerId.P2).active?.attachedEnergy ?? [];
+    expect(next.pendingAction).toBeNull();
+    expect(attached.map((energy) => energy.definitionId)).toEqual(["Fire Energy"]);
+  });
+
+  it("Enhanced Hammer offers only Special Energy when several are attached", () => {
+    const fire = mockEnergy("Fire Energy");
+    const mist = mockSpecialEnergy("Mist Energy");
+    const jet = mockSpecialEnergy("Jet Energy");
+    const { state, hammerCard } = enhancedHammerState([
+      { def: fire, on: "active" },
+      { def: mist, on: "active" },
+      { def: jet, on: "active" },
+    ]);
+
+    const choosing = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: hammerCard.instanceId });
+    expect(choosing.pendingAction?.type).toBe("ENHANCED_HAMMER");
+    if (choosing.pendingAction?.type !== "ENHANCED_HAMMER") return;
+    expect(choosing.pendingAction.options.map((option) => option.energyId)).toHaveLength(2);
+    const optionIds = new Set(choosing.pendingAction.options.map((option) => option.energyId));
+    const attached = getPlayer(choosing, PlayerId.P2).active?.attachedEnergy ?? [];
+    expect(attached.filter((energy) => optionIds.has(energy.instanceId)).map((energy) => energy.definitionId).sort()).toEqual([
+      "Jet Energy",
+      "Mist Energy",
+    ]);
+
+    const mistId = attached.find((energy) => energy.definitionId === "Mist Energy")!.instanceId;
+    const pokemonId = getPlayer(choosing, PlayerId.P2).active!.instanceId;
+    const next = gameReducer(choosing, {
+      type: "DISCARD_OPPONENT_ENERGY",
+      playerId: PlayerId.P1,
+      pokemonId,
+      energyId: mistId,
+    });
+    expect(getPlayer(next, PlayerId.P2).active?.attachedEnergy.map((energy) => energy.definitionId).sort()).toEqual([
+      "Fire Energy",
+      "Jet Energy",
+    ]);
   });
 });

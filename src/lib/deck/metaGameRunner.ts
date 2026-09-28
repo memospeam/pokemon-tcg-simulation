@@ -522,6 +522,18 @@ function aiStepFinished(before: EngineState, after: EngineState, aiPlayerId: Pla
   return false;
 }
 
+/**
+ * Keep stepping when this decision changed the game and the AI still has the move.
+ * Promoting after the AI's Pokémon is Knocked Out ends the attacker's turn and
+ * starts the AI's turn in the same step, so `done` alone would stop the loop
+ * before the AI plays.
+ */
+export function aiContinuesAfterStep(before: EngineState, after: EngineState, aiPlayerId: PlayerId): boolean {
+  if (after === before || after.winnerId || after.phase !== GamePhase.Active) return false;
+  if (after.pendingAction) return after.pendingAction.playerId === aiPlayerId;
+  return after.currentPlayerId === aiPlayerId;
+}
+
 /** One AI decision: a single play, or one pending choice. `done` means the turn is over. */
 export function runAIOneStep(
   state: EngineState,
@@ -3576,7 +3588,12 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
         const mon = [
           ...(opponent.active ? [opponent.active] : []),
           ...opponent.bench,
-        ].find((p) => p.attachedEnergy.length > 0);
+        ].find((p) =>
+          p.attachedEnergy.some((energy) => {
+            const def = getDefinition(state, energy.definitionId);
+            return !!def && !isBasicEnergy(def);
+          }),
+        );
         if (!mon) return null;
         return gameReducer(state, { type: "SELECT_ENHANCED_HAMMER_POKEMON", playerId, pokemonId: mon.instanceId });
       }

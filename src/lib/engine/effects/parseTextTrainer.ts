@@ -72,6 +72,10 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_crushing_hammer" }),
   },
   {
+    test: /discard a special energy from 1 of your opponent's pok[ée]mon/,
+    build: () => ({ kind: "trainer_enhanced_hammer" }),
+  },
+  {
     test: /discard 2 energy from 1 of your opponent's pok[ée]mon/,
     build: () => ({ kind: "trainer_enhanced_hammer" }),
   },
