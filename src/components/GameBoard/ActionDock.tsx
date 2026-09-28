@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { GamePhase } from "@/lib/models/enums";
 import type { PlayerId } from "@/lib/models/enums";
+import { isSfxMuted, playSfx, setSfxMuted, unlockSfx } from "@/lib/ui/sfx";
 
 interface ActionDockProps {
   phase: GamePhase;
@@ -66,11 +68,36 @@ export function ActionDock({
         <span className="action-dock__hint">E · Esc · 1–9</span>
       </div>
 
+      <SoundToggle />
+
       <div className="action-dock__group">
         <button type="button" data-testid="concede" className="action-dock__danger" onClick={onConcede}>
           Concede
         </button>
       </div>
     </div>
+  );
+}
+
+function SoundToggle() {
+  const [muted, setMuted] = useState(isSfxMuted);
+
+  return (
+    <button
+      type="button"
+      className="action-dock__secondary"
+      data-testid="sound-toggle"
+      aria-pressed={!muted}
+      onClick={() => {
+        const next = !muted;
+        setSfxMuted(next);
+        setMuted(next);
+        void unlockSfx().then(() => {
+          if (!next) playSfx("coin");
+        });
+      }}
+    >
+      {muted ? "Sound off" : "Sound on"}
+    </button>
   );
 }

@@ -7,6 +7,7 @@ import { getTrainerCategory } from "@/lib/ui/trainerHints";
 import { useGameStore } from "@/stores/gameStore";
 import { MatchTable } from "@/components/Match/MatchTable";
 import { useMatchEventClass } from "@/components/Match/useMatchAnimations";
+import { useMatchSfx } from "@/components/Match/useMatchSfx";
 import { CoinFlipOverlay } from "@/components/Match/CoinFlipOverlay";
 import { useHandDragDrop } from "@/components/Match/useHandDragDrop";
 import { ActionDock } from "./ActionDock";
@@ -23,6 +24,7 @@ export function GameBoard() {
   const controller = useGameBoardController(engineState, dispatch);
   const [discardViewPlayerId, setDiscardViewPlayerId] = useState<PlayerId | null>(null);
   const eventClass = useMatchEventClass(engineState);
+  useMatchSfx(engineState);
 
   const handDrag = useHandDragDrop(
     controller.legalActions,
@@ -305,6 +307,8 @@ export function GameBoard() {
           const pt = boardGame.pendingAction?.type;
           if (pt === "ROTO_STICK") {
             controller.runAction({ type: "SELECT_ROTO_STICK", playerId: pid, instanceId });
+          } else if (pt === "CRISPIN_SELECT") {
+            controller.runAction({ type: "SELECT_CRISPIN_ENERGY", playerId: pid, instanceId });
           } else if (pt === "BUG_CATCHING_SET") {
             controller.runAction({ type: "SELECT_BUG_CATCHING", playerId: pid, instanceId });
           } else {

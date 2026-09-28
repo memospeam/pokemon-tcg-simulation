@@ -65,12 +65,19 @@ function buildAIContext(state: EngineState): StrategyContext {
 // so it lives outside the zustand state). Rebuilt per match in startMatch.
 let llmPolicy: TurnPolicy | null = null;
 let aiStepTimer: ReturnType<typeof setTimeout> | null = null;
+let aiActionWatchdog: ReturnType<typeof setTimeout> | null = null;
 const AI_STEP_MS = 800;
+/** One AI action — the decision plus the pause before the next — must finish within this. */
+const AI_ACTION_LIMIT_MS = 15_000;
 
 function cancelAiSteps(): void {
   if (aiStepTimer != null) {
     clearTimeout(aiStepTimer);
     aiStepTimer = null;
+  }
+  if (aiActionWatchdog != null) {
+    clearTimeout(aiActionWatchdog);
+    aiActionWatchdog = null;
   }
 }
 
@@ -89,6 +96,29 @@ export const useGameStore = create<GameStore>((set, get) => {
     saveGameState({ ...state, humanPlayerId: get().humanPlayerId });
   }
 
+  /** If this action is still unresolved after 15s, end the AI turn so the player is not stuck. */
+  function armAiActionLimit(humanPlayerId: PlayerId): void {
+    if (aiActionWatchdog != null) clearTimeout(aiActionWatchdog);
+    aiActionWatchdog = setTimeout(() => {
+      aiActionWatchdog = null;
+      const state = get().engineState;
+      if (!state || get().humanPlayerId !== humanPlayerId || get().aiKind !== "heuristic") return;
+      const aiId = humanPlayerId === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
+      if (state.winnerId || state.pendingAction || state.currentPlayerId !== aiId) {
+        set({ isAIThinking: false });
+        return;
+      }
+      if (aiStepTimer != null) {
+        clearTimeout(aiStepTimer);
+        aiStepTimer = null;
+      }
+      const ended = gameReducer(state, { type: "END_TURN" });
+      ended.viewingPlayerId = humanPlayerId;
+      persist(ended);
+      set({ ...withActions(ended), humanPlayerId, isAIThinking: false });
+    }, AI_ACTION_LIMIT_MS);
+  }
+
   /** Heuristic AI plays one action, then waits so the board can show it. */
   function queueAiSteps(humanPlayerId: PlayerId): void {
     cancelAiSteps();
@@ -101,16 +131,26 @@ export const useGameStore = create<GameStore>((set, get) => {
       const aiPending = state.pendingAction?.playerId === aiId;
       const aiTurn = !state.pendingAction && state.currentPlayerId === aiId;
       if (state.winnerId || (!aiPending && !aiTurn)) {
+        if (aiActionWatchdog != null) {
+          clearTimeout(aiActionWatchdog);
+          aiActionWatchdog = null;
+        }
         set({ isAIThinking: false });
         return;
       }
+      armAiActionLimit(humanPlayerId);
       const { state: next, done } = runAIOneStep(state, buildAIContext(state), aiId);
       next.viewingPlayerId = humanPlayerId;
       persist(next);
       set({ ...withActions(next), humanPlayerId, isAIThinking: !done });
       if (!done && !next.winnerId) aiStepTimer = setTimeout(tick, AI_STEP_MS);
+      else if (aiActionWatchdog != null) {
+        clearTimeout(aiActionWatchdog);
+        aiActionWatchdog = null;
+      }
     };
     set({ isAIThinking: true });
+    armAiActionLimit(humanPlayerId);
     aiStepTimer = setTimeout(tick, AI_STEP_MS);
   }
 

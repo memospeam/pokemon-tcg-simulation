@@ -21,7 +21,7 @@ export function createBrowserLlmPolicy(): TurnPolicy {
   const baseUrl = env.VITE_LLM_BASE_URL ?? "http://localhost:11434/v1";
   const model = env.VITE_LLM_MODEL ?? "llama3.2:3b";
   const apiKey = env.VITE_LLM_API_KEY || undefined;
-  const complete = createOpenAICompatibleComplete({ baseUrl, model, apiKey, timeoutMs: 60000 });
+  const complete = createOpenAICompatibleComplete({ baseUrl, model, apiKey, timeoutMs: 15_000 });
   // Interactive play: effectively no call cap (one game, human-paced).
   return new LlmPolicy(complete, { maxCalls: 100000 });
 }

@@ -3,6 +3,7 @@ import type { CardDefinition } from "../models/definition";
 import { createCardInstance } from "../models/instance";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
 import { gameReducer } from "../engine/reducer";
+import { drainAutoPending } from "./metaGameRunner";
 import { getDefinitionSafe } from "../engine/rules";
 import { parseTrainerText } from "../engine/effects/trainerText";
 import { emptyTurnFlags, getPlayer, type EngineState } from "../engine/types";
@@ -343,15 +344,26 @@ Energy : 2
 
     const crispinCard = getPlayer(state, PlayerId.P1).hand[0]!;
     state = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: crispinCard.instanceId });
+    expect(state.pendingAction?.type).toBe("CRISPIN_SELECT");
+    if (state.pendingAction?.type !== "CRISPIN_SELECT") return;
+
+    const deckNow = getPlayer(state, PlayerId.P1).deck;
+    const waterCard = deckNow.find((card) => card.definitionId === water.apiId)!;
+    const darknessCard = deckNow.find((card) => card.definitionId === darkness.apiId)!;
+    state = gameReducer(state, {
+      type: "SELECT_CRISPIN_ENERGY",
+      playerId: PlayerId.P1,
+      instanceId: waterCard.instanceId,
+    });
+    state = gameReducer(state, {
+      type: "SELECT_CRISPIN_ENERGY",
+      playerId: PlayerId.P1,
+      instanceId: darknessCard.instanceId,
+    });
 
     const p1 = getPlayer(state, PlayerId.P1);
-    // One energy must be in hand
-    const energyInHand = p1.hand.filter(
-      (card) => card.definitionId === water.apiId || card.definitionId === darkness.apiId,
-    );
-    expect(energyInHand).toHaveLength(1);
-    // One energy must be attached to Active
-    expect(p1.active!.attachedEnergy).toHaveLength(1);
+    expect(p1.hand.filter((card) => card.definitionId === water.apiId)).toHaveLength(1);
+    expect(p1.active!.attachedEnergy.map((card) => card.definitionId)).toEqual([darkness.apiId]);
     expect(state.pendingAction).toBeNull();
   });
 
@@ -392,6 +404,8 @@ Energy : 3
 
     const crispinCard = getPlayer(state, PlayerId.P1).hand[0]!;
     state = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: crispinCard.instanceId });
+    expect(state.pendingAction?.type).toBe("CRISPIN_SELECT");
+    state = drainAutoPending(state).state;
 
     const p1 = getPlayer(state, PlayerId.P1);
     const benchDrag = p1.bench.find((c) => c.instanceId === dragapultInPlay.instanceId)!;

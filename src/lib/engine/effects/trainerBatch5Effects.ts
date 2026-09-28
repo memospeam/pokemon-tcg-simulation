@@ -348,15 +348,6 @@ export function canPlayTrainerBatch5Kind(
   switch (kind) {
     case "trainer_pokegear":
     case "trainer_roto_stick":
-      if (player.deck.length === 0) {
-        return {
-          ok: false,
-          reason:
-            kind === "trainer_pokegear"
-              ? "Pokégear 3.0: your deck is empty."
-              : "Roto-Stick: your deck is empty.",
-        };
-      }
       return { ok: true };
     case "trainer_miracle_headset":
       if (!player.discard.some((card) => isSupporter(getDefinitionSafe(state, card.definitionId)))) {
@@ -377,9 +368,6 @@ export function canPlayTrainerBatch5Kind(
       }
       return { ok: true };
     case "trainer_bug_catching_set":
-      if (player.deck.length === 0) {
-        return { ok: false, reason: "Bug Catching Set: your deck is empty." };
-      }
       return { ok: true };
     default:
       return { ok: true };

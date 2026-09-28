@@ -275,19 +275,25 @@ function applyAttackDamagePhaseWithDefinition(
     logMessage(state, `${attackerDef.name} used ${attack.name}.`);
   }
 
+  let knockedOut = false;
   if (opponent.active && isKnockedOutWithPassives(state, opponent.active)) {
     if (!trySurviveKnockout(state, opponent.active, defenderHpBefore)) {
-      return "knockout";
+      knockedOut = true;
     }
   }
 
-  return applyPostAttackEffects(
+  // Bench effects (Phantom Dive's counters) still happen when the Active is Knocked Out.
+  // The KO is resolved after the player finishes placing them.
+  const effectResult = applyPostAttackEffects(
     state,
     playerId,
     festivalAttackName,
     postDamageEffects,
     damageApplied,
   );
+  if (effectResult === "pending") return "pending";
+  if (knockedOut) return "knockout";
+  return effectResult;
 }
 
 function handBasicEnergyOfType(

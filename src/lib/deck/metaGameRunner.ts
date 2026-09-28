@@ -27,6 +27,7 @@ import {
   canUseSurfingBeach,
 } from "../engine/effects/stadiumOptionalEffects";
 import { canUseGrandTree, getGrandTreeEligibleBasics, getGrandTreeStage1Options } from "../engine/effects/grandTreeEffects";
+import { planCrispinEnergies } from "../engine/effects/trainerBatch10Effects";
 import { listDevolveEligibleTyped } from "../engine/effects/devolutionEffects";
 import { isBasicEnergy, isBasicPokemon, isStage2, isSupporter } from "../models/definition";
 import type { CardInstance } from "../models/instance";
@@ -1833,6 +1834,23 @@ function knocksOut(state: EngineState, damage: number, defender: CardInstance): 
   return damage > 0 && damage >= remainingHpWithPassives(state, defender);
 }
 
+/** Prizes from the best bench gust the Active can KO right now. 0 if the Active is already a KO or no gust KO exists. */
+function gustKoPrizes(state: EngineState, playerId: PlayerId): number {
+  const player = getPlayer(state, playerId);
+  const opponent = getPlayer(state, getOpponentId(playerId));
+  if (!player.active || !opponent.active || opponent.bench.length === 0) return 0;
+  if (knocksOut(state, bestAffordableDamageInto(state, playerId, player.active, opponent.active), opponent.active)) {
+    return 0;
+  }
+  let best = 0;
+  for (const bench of opponent.bench) {
+    if (!knocksOut(state, bestAffordableDamageInto(state, playerId, player.active, bench), bench)) continue;
+    const def = getDefinition(state, bench.definitionId);
+    best = Math.max(best, def ? countPrizeCards(def) : 1);
+  }
+  return best;
+}
+
 export function pickBestAttack(
   state: EngineState,
   playerId: PlayerId,
@@ -2413,16 +2431,14 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext,
         if (opponent.bench.length === 0) {
           score = -1;
         } else {
-          // Use estimated attack damage (includes variable-damage attacks like Night Joker)
-          const activeDef = player.active ? getDefinition(state, player.active.definitionId) : undefined;
-          const maxAtkDmg = (activeDef?.attacks ?? []).reduce((best, atk) => {
-            const est = estimateAttackDamage(state, playerId, atk.name, atk.damage);
-            return Math.max(best, est);
-          }, 0);
-          const hasKOTarget = maxAtkDmg > 0 && opponent.bench.some((b) => remainingHp(state, b) <= maxAtkDmg);
-          // Prize rush: in late game, always Boss to pull the easiest target
-          const prizeRush = opponent.prizes.length <= 2;
-          score = hasKOTarget ? 72 : prizeRush ? 60 : (opponent.prizes.length <= 3 ? 48 : 35);
+          const prizes = gustKoPrizes(state, playerId);
+          if (prizes > 0) {
+            // A gust KO this turn beats a hand refresh (Lillie's Determination is ~95).
+            score = 120 + prizes * 5;
+          } else {
+            const prizeRush = opponent.prizes.length <= 2;
+            score = prizeRush ? 60 : opponent.prizes.length <= 3 ? 48 : 35;
+          }
         }
       } else if (name.includes("crispin") && (player.bench.length > 0 || player.active)) {
         // Crispin: attach 2 Basic Energy from discard to any Basic Pokémon (or evolve into one).
@@ -3238,10 +3254,17 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
         targetId: validBasic.instanceId,
       });
     }
+    case "CRISPIN_SELECT": {
+      const plan = planCrispinEnergies(state, playerId, pending.options);
+      const chosen = pending.step === "HAND" ? plan.handId : plan.attachId;
+      if (!chosen) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      return gameReducer(state, { type: "SELECT_CRISPIN_ENERGY", playerId, instanceId: chosen });
+    }
     case "CRISPIN_ATTACH": {
       const player = getPlayer(state, playerId);
       if (pending.targets.length === 0) return null;
-      // Pick the best energy target: prefer primary attacker (by archetype), then one-away from attacking
+      // Pick the best energy target: prefer primary attacker (by archetype), then the
+      // biggest attack (Dragapult ex over Dreepy), then one already holding energy.
       const allOwn = [...(player.active ? [player.active] : []), ...player.bench];
       const bestCrispin = [...pending.targets].sort((a, b) => {
         const aMon = allOwn.find((p) => p.instanceId === a);
@@ -3253,7 +3276,9 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
         const aArchPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, aName) : 0;
         const bArchPrio = ctx ? getArchetypeEnergyPriority(ctx.archetype, bName) : 0;
         if (aArchPrio !== bArchPrio) return bArchPrio - aArchPrio;
-        // Tie-break: Pokémon already with some energy (closer to attacking)
+        const aDmg = Math.max(0, ...(aDef?.attacks ?? []).map((atk) => parseInt(atk.damage, 10) || 0));
+        const bDmg = Math.max(0, ...(bDef?.attacks ?? []).map((atk) => parseInt(atk.damage, 10) || 0));
+        if (aDmg !== bDmg) return bDmg - aDmg;
         const aEnergy = aMon?.attachedEnergy.length ?? 0;
         const bEnergy = bMon?.attachedEnergy.length ?? 0;
         return bEnergy - aEnergy;

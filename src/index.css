@@ -1302,6 +1302,7 @@ button {
 .pending-panel__peek {
   opacity: 0.55;
   cursor: default;
+  pointer-events: none;
 }
 
 .pending-panel__skip {

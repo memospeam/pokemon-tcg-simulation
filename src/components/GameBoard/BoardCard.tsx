@@ -64,6 +64,8 @@ interface BoardCardProps {
   animateSwitch?: boolean;
   size?: BoardCardSize;
   showName?: boolean;
+  /** False when a parent button already handles the click, or the card is only shown. */
+  interactive?: boolean;
 }
 
 export function BoardCard({
@@ -81,12 +83,53 @@ export function BoardCard({
   animateSwitch = false,
   size = "bench",
   showName = true,
+  interactive = true,
 }: BoardCardProps) {
   const def = getDefinition(state, card.definitionId);
   if (!def) return null;
 
   const isPokemonDrop = def.supertype === "Pokémon" && Boolean(onHandDrop);
   const showDrop = isPokemonDrop && (dropHighlight || Boolean(dropKind));
+  const faceClass = [
+    "board-card",
+    `board-card--${def.supertype.toLowerCase()}`,
+    `board-card--${size}`,
+    selected ? "board-card--selected" : "",
+    highlight ? "board-card--highlight" : "",
+    animateEvolve ? "board-card--evolve" : "",
+    animateKo ? "board-card--ko" : "",
+    animatePromote ? "board-card--promote" : "",
+    animateSwitch ? "board-card--switch" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const face = (
+    <>
+      <CardImage def={def} className="board-card__image" />
+      {showName && size !== "hand" && <span className="board-card__name">{def.name}</span>}
+      {def.supertype === "Pokémon" && size !== "hand" && (
+        <span className="board-card__hp">
+          {remainingHpWithPassives(state, card)}/{maxHpWithPassives(state, card)}
+          {card.attachedEnergy.length > 0 ? ` · ⚡${card.attachedEnergy.length}` : ""}
+        </span>
+      )}
+      {card.attachedEnergy.length > 0 && (
+        <div className="board-card__energy-row">
+          {card.attachedEnergy.map((energy) => {
+            const energyDef = getDefinition(state, energy.definitionId);
+            return energyDef ? (
+              <CardImage
+                key={energy.instanceId}
+                def={energyDef}
+                className="board-card__energy-icon"
+                title={energyDef.name}
+              />
+            ) : null;
+          })}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div
@@ -117,48 +160,18 @@ export function BoardCard({
           : undefined
       }
     >
-    <button
-      type="button"
-      data-hand-drop-target={isPokemonDrop ? card.instanceId : undefined}
-      className={[
-        "board-card",
-        `board-card--${def.supertype.toLowerCase()}`,
-        `board-card--${size}`,
-        selected ? "board-card--selected" : "",
-        highlight ? "board-card--highlight" : "",
-        animateEvolve ? "board-card--evolve" : "",
-        animateKo ? "board-card--ko" : "",
-        animatePromote ? "board-card--promote" : "",
-        animateSwitch ? "board-card--switch" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      onClick={() => onSelect?.(card)}
-    >
-      <CardImage def={def} className="board-card__image" />
-      {showName && size !== "hand" && <span className="board-card__name">{def.name}</span>}
-      {def.supertype === "Pokémon" && size !== "hand" && (
-        <span className="board-card__hp">
-          {remainingHpWithPassives(state, card)}/{maxHpWithPassives(state, card)}
-          {card.attachedEnergy.length > 0 ? ` · ⚡${card.attachedEnergy.length}` : ""}
-        </span>
-      )}
-      {card.attachedEnergy.length > 0 && (
-        <div className="board-card__energy-row">
-          {card.attachedEnergy.map((energy) => {
-            const energyDef = getDefinition(state, energy.definitionId);
-            return energyDef ? (
-              <CardImage
-                key={energy.instanceId}
-                def={energyDef}
-                className="board-card__energy-icon"
-                title={energyDef.name}
-              />
-            ) : null;
-          })}
-        </div>
-      )}
-    </button>
+    {interactive ? (
+      <button
+        type="button"
+        data-hand-drop-target={isPokemonDrop ? card.instanceId : undefined}
+        className={faceClass}
+        onClick={() => onSelect?.(card)}
+      >
+        {face}
+      </button>
+    ) : (
+      <div className={faceClass}>{face}</div>
+    )}
     </div>
   );
 }

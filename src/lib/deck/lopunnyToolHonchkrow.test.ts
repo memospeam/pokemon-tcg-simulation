@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CardDefinition } from "../models/definition";
 import { createCardInstance } from "../models/instance";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
-import { pickAutoToolAction, pickBestAttack, pickRetreatAction, runAIOneStep } from "./metaGameRunner";
+import { pickAutoToolAction, pickAutoTrainerAction, pickBestAttack, pickRetreatAction, runAIOneStep } from "./metaGameRunner";
 import { buildStrategyContext } from "./deckStrategy";
 import { emptyTurnFlags, type EngineState } from "../engine/types";
 
@@ -279,5 +279,67 @@ describe("AI skill — weakness, prizes, and taking the KO", () => {
     const next = runAIOneStep(state, ctx, PlayerId.P1).state;
     expect(next.log.some((line) => line.includes("Knocked Out"))).toBe(true);
     expect(next.players[PlayerId.P1].hand.some((card) => card.instanceId === bossCard.instanceId)).toBe(true);
+  });
+
+  it("gusts a bench KO before refreshing the hand", () => {
+    const attacker = mockPokemon("Striker", {
+      hp: "200",
+      types: ["Fighting"],
+      attacks: [hit("Smash", "110")],
+    });
+    const wall = mockPokemon("Wall", { hp: "300" });
+    const ex = mockPokemon("Absol ex", { hp: "200", types: ["Darkness"], subtypes: ["Basic", "ex"] });
+    ex.weaknesses = [{ type: "Fighting", value: "×2" }];
+    const boss: CardDefinition = {
+      apiId: "boss",
+      name: "Boss's Orders",
+      supertype: "Trainer",
+      subtypes: ["Supporter"],
+      set: { id: "t", name: "T" },
+      number: "1",
+      images: { small: "", large: "" },
+    };
+    const lillie: CardDefinition = {
+      apiId: "lillie",
+      name: "Lillie's Determination",
+      supertype: "Trainer",
+      subtypes: ["Supporter"],
+      set: { id: "t", name: "T" },
+      number: "2",
+      images: { small: "", large: "" },
+    };
+    const active = createCardInstance("striker", PlayerId.P1, Zone.Active);
+    active.attachedEnergy = [attachColorless(PlayerId.P1)];
+    const bossCard = createCardInstance("boss", PlayerId.P1, Zone.Hand);
+    const lillieCard = createCardInstance("lillie", PlayerId.P1, Zone.Hand);
+    const oppActive = createCardInstance("wall", PlayerId.P2, Zone.Active);
+    const oppEx = createCardInstance("ex", PlayerId.P2, Zone.Bench);
+    const state = baseState(
+      {
+        striker: attacker,
+        wall,
+        ex,
+        boss,
+        lillie,
+        "colorless-energy": colorlessEnergy(),
+      },
+      {
+        active,
+        hand: [
+          bossCard,
+          lillieCard,
+          createCardInstance("colorless-energy", PlayerId.P1, Zone.Hand),
+          createCardInstance("colorless-energy", PlayerId.P1, Zone.Hand),
+        ],
+      },
+      oppActive,
+    );
+    state.players[PlayerId.P2].bench = [oppEx];
+    for (const id of [PlayerId.P1, PlayerId.P2]) {
+      state.players[id].prizes = [0, 1, 2, 3].map((n) => createCardInstance(`prize-${id}-${n}`, id, Zone.Prizes));
+    }
+
+    const action = pickAutoTrainerAction(state, buildStrategyContext(["Rattata"]));
+    expect(action?.instanceId).toBe(bossCard.instanceId);
   });
 });

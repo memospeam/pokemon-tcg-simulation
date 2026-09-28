@@ -31,7 +31,7 @@ import {
   type PendingAction,
 } from "./types";
 import type { ParsedEffect } from "./effects/types";
-import { applyRiskyRuinsOnBenchPlay, canPlayAngeFloetteStadium } from "./effects/stadiumEffects";
+import { applyRiskyRuinsOnBenchPlay, canPlayAngeFloetteStadium, getMaxBenchSize } from "./effects/stadiumEffects";
 import { transferPokemonStateOntoEvolution } from "./effects/toolEffects";
 import {
   applyTrainerMetaKind,
@@ -264,6 +264,10 @@ function opponentPokemonWithEnergy(state: EngineState, playerId: PlayerId): Card
   return allPokemonInPlay(opponent).filter((pokemon) => pokemon.attachedEnergy.length > 0);
 }
 
+function poffinMatches(state: EngineState, playerId: PlayerId): CardInstance[] {
+  return deckPokemonMatching(state, playerId, (entry) => isBasicPokemon(entry) && getHp(entry) <= 70);
+}
+
 function canPlayTrainerKind(
   state: EngineState,
   playerId: PlayerId,
@@ -303,17 +307,9 @@ function canPlayTrainerKind(
       }
       return { ok: true };
     case "trainer_search_no_rule_box":
-      if (deckPokemonMatching(state, playerId, isPokemonWithoutRuleBox).length === 0) {
-        return { ok: false, reason: "No Pokémon without a Rule Box found in your deck." };
-      }
       return { ok: true };
     case "trainer_poffin":
-      if (
-        deckPokemonMatching(state, playerId, (entry) => isBasicPokemon(entry) && getHp(entry) <= 70)
-          .length === 0
-      ) {
-        return { ok: false, reason: "No Basic Pokémon with 70 HP or less found in deck." };
-      }
+    case "trainer_crispin":
       return { ok: true };
     case "trainer_unfair_stamp":
       if (!state.ownPokemonKnockedOutOpponentLastTurn[playerId]) {
@@ -454,6 +450,11 @@ function applyTrainerByKind(state: EngineState, playerId: PlayerId, effect: Pars
         playerId,
         (entry) => isBasicPokemon(entry) && getHp(entry) <= effect.maxHp,
       );
+      if (matches.length === 0 || getPlayer(state, playerId).bench.length >= getMaxBenchSize(state, playerId)) {
+        shufflePlayerDeck(state, playerId);
+        logMessage(state, "Buddy-Buddy Poffin: no Basic Pokémon with 70 HP or less can be placed on your Bench.");
+        return;
+      }
       state.pendingAction = {
         type: "SEARCH_DECK",
         playerId,
@@ -718,20 +719,6 @@ function canPlayLegacyTrainerEffect(
     }
   }
 
-  if (matchesTrainer(def, "poké pad", "poke pad")) {
-    if (deckPokemonMatching(state, playerId, isPokemonWithoutRuleBox).length === 0) {
-      return { ok: false, reason: "No Pokémon without a Rule Box found in your deck." };
-    }
-  }
-
-  if (matchesTrainer(def, "buddy-buddy poffin", "poffin")) {
-    if (
-      deckPokemonMatching(state, playerId, (entry) => isBasicPokemon(entry) && getHp(entry) <= 70).length === 0
-    ) {
-      return { ok: false, reason: "No Basic Pokémon with 70 HP or less found in deck." };
-    }
-  }
-
   if (matchesTrainer(def, "unfair stamp")) {
     if (!state.ownPokemonKnockedOutOpponentLastTurn[playerId]) {
       return { ok: false, reason: "Unfair Stamp: none of your Pokémon were Knocked Out during your opponent's last turn." };
@@ -826,7 +813,12 @@ export function resolveDeckPick(
   const def = getDefinitionSafe(state, card.definitionId);
 
   if (filter === "POFFIN") {
-    if (player.bench.length >= 5) {
+    if (!isBasicPokemon(def) || getHp(def) > 70) {
+      player.deck.unshift(card);
+      logMessage(state, `${def.name} doesn't match Buddy-Buddy Poffin.`);
+      return;
+    }
+    if (player.bench.length >= getMaxBenchSize(state, playerId)) {
       player.deck.unshift(card);
       logMessage(state, "Bench is full — cannot place more Pokémon from Buddy-Buddy Poffin.");
       shufflePlayerDeck(state, playerId);
@@ -1125,11 +1117,12 @@ function applyLegacyTrainerEffect(
   }
 
   if (matchesTrainer(def, "buddy-buddy poffin", "poffin")) {
-    const matches = deckPokemonMatching(
-      state,
-      playerId,
-      (entry) => isBasicPokemon(entry) && getHp(entry) <= 70,
-    );
+    const matches = poffinMatches(state, playerId);
+    if (matches.length === 0 || player.bench.length >= getMaxBenchSize(state, playerId)) {
+      shufflePlayerDeck(state, playerId);
+      logMessage(state, "Buddy-Buddy Poffin: no Basic Pokémon with 70 HP or less can be placed on your Bench.");
+      return;
+    }
     state.pendingAction = {
       type: "SEARCH_DECK",
       playerId,

@@ -9,6 +9,7 @@ import {
   canPlayTrainerEffect,
   continueNightStretcherPick,
 } from "./trainerEffects";
+import { gameReducer } from "./reducer";
 import { createInitialGame } from "./rules";
 import { getPlayer } from "./types";
 
@@ -461,5 +462,142 @@ describe("trainerEffects", () => {
     applyRareCandy(state, PlayerId.P1, player.active!.instanceId);
     expect(player.active?.definitionId).toBe(dragapult.apiId);
     expect(player.hand).toHaveLength(0);
+  });
+
+  it("Buddy-Buddy Poffin can be played when the deck has no Basic Pokémon with 70 HP or less", () => {
+    const poffin = {
+      ...mockTrainer("Buddy-Buddy Poffin"),
+      rules: [
+        "Search your deck for up to 2 Basic Pokémon with 70 HP or less and put them onto your Bench. Then, shuffle your deck.",
+      ],
+    };
+    const fez = mockBasic("Fezandipiti ex", "210");
+    const cards = [poffin, fez, ...Array.from({ length: 58 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    state.turnNumber = 2;
+    const player = getPlayer(state, PlayerId.P1);
+    const poffinCard = createCardInstance(poffin.apiId, PlayerId.P1, Zone.Hand);
+    player.hand = [poffinCard];
+    player.deck = [createCardInstance(fez.apiId, PlayerId.P1, Zone.Deck)];
+    player.active = createCardInstance(fez.apiId, PlayerId.P1, Zone.Active);
+
+    expect(canPlayTrainerEffect(state, PlayerId.P1, poffin).ok).toBe(true);
+    const next = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: poffinCard.instanceId });
+    expect(getPlayer(next, PlayerId.P1).hand.some((card) => card.instanceId === poffinCard.instanceId)).toBe(false);
+    expect(next.pendingAction).toBeNull();
+    expect(getPlayer(next, PlayerId.P1).bench).toHaveLength(0);
+  });
+
+  it("Buddy-Buddy Poffin can be played when the Bench is full", () => {
+    const poffin = mockTrainer("Buddy-Buddy Poffin");
+    const dreepy = mockBasic("Dreepy", "70");
+    const cards = [poffin, dreepy, ...Array.from({ length: 58 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    state.turnNumber = 2;
+    const player = getPlayer(state, PlayerId.P1);
+    player.active = createCardInstance(dreepy.apiId, PlayerId.P1, Zone.Active);
+    player.bench = Array.from({ length: 5 }, () => createCardInstance(dreepy.apiId, PlayerId.P1, Zone.Bench));
+    player.deck = [createCardInstance(dreepy.apiId, PlayerId.P1, Zone.Deck)];
+    const poffinCard = createCardInstance(poffin.apiId, PlayerId.P1, Zone.Hand);
+    player.hand = [poffinCard];
+
+    expect(canPlayTrainerEffect(state, PlayerId.P1, poffin).ok).toBe(true);
+    const next = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: poffinCard.instanceId });
+    expect(next.pendingAction).toBeNull();
+    expect(getPlayer(next, PlayerId.P1).bench).toHaveLength(5);
+  });
+
+  it("Buddy-Buddy Poffin does not bench a Pokémon over 70 HP", () => {
+    const fez = mockBasic("Fezandipiti ex", "210");
+    const cards = [fez, ...Array.from({ length: 59 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    const player = getPlayer(state, PlayerId.P1);
+    const deckCard = createCardInstance(fez.apiId, PlayerId.P1, Zone.Deck);
+    player.deck = [deckCard];
+    player.active = createCardInstance(fez.apiId, PlayerId.P1, Zone.Active);
+    state.pendingAction = {
+      type: "SEARCH_DECK",
+      playerId: PlayerId.P1,
+      filter: "POFFIN",
+      options: [deckCard.instanceId],
+      slotsRemaining: 2,
+    };
+
+    const next = gameReducer(state, {
+      type: "PICK_DECK_CARD",
+      playerId: PlayerId.P1,
+      instanceId: deckCard.instanceId,
+    });
+    expect(getPlayer(next, PlayerId.P1).bench).toHaveLength(0);
+    expect(getPlayer(next, PlayerId.P1).deck.some((card) => card.instanceId === deckCard.instanceId)).toBe(true);
+  });
+
+  it("Ultra Ball can be played when the deck has no Pokémon", () => {
+    const ultraBall = mockTrainer("Ultra Ball");
+    const energy = mockEnergy("Fire Energy");
+    const cards = [ultraBall, energy, ...Array.from({ length: 58 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    const player = getPlayer(state, PlayerId.P1);
+    player.hand = [
+      createCardInstance(ultraBall.apiId, PlayerId.P1, Zone.Hand),
+      createCardInstance(energy.apiId, PlayerId.P1, Zone.Hand),
+      createCardInstance(energy.apiId, PlayerId.P1, Zone.Hand),
+    ];
+    player.deck = [createCardInstance(energy.apiId, PlayerId.P1, Zone.Deck)];
+
+    expect(canPlayTrainerEffect(state, PlayerId.P1, ultraBall).ok).toBe(true);
+  });
+
+  it("Crispin can be played when the deck has no Basic Energy", () => {
+    const crispin = {
+      ...mockTrainer("Crispin", ["Supporter"]),
+      rules: [
+        "Search your deck for up to 2 Basic Energy cards of different types, reveal them, and put 1 of them into your hand. Attach the other to 1 of your Pokémon.",
+      ],
+    };
+    const dreepy = mockBasic("Dreepy", "70");
+    const cards = [crispin, dreepy, ...Array.from({ length: 58 }, (_, i) => mockEnergy(`E${i}`))];
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: cards,
+      player2Cards: cards,
+    });
+    state.phase = GamePhase.Active;
+    state.turnNumber = 2;
+    const player = getPlayer(state, PlayerId.P1);
+    player.active = createCardInstance(dreepy.apiId, PlayerId.P1, Zone.Active);
+    player.hand = [createCardInstance(crispin.apiId, PlayerId.P1, Zone.Hand)];
+    player.deck = [createCardInstance(dreepy.apiId, PlayerId.P1, Zone.Deck)];
+
+    expect(canPlayTrainerEffect(state, PlayerId.P1, crispin).ok).toBe(true);
+    const crispinCard = getPlayer(state, PlayerId.P1).hand[0]!;
+    const next = gameReducer(state, { type: "PLAY_TRAINER", playerId: PlayerId.P1, instanceId: crispinCard.instanceId });
+    expect(next.pendingAction).toBeNull();
+    expect(getPlayer(next, PlayerId.P1).hand).toHaveLength(0);
   });
 });

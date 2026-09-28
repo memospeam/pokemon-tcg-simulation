@@ -241,6 +241,62 @@ describe("meta deck playtests", () => {
     expect(getPlayer(state, PlayerId.P2).bench[0]?.damageCounters).toBe(60);
   });
 
+  it("Phantom Dive still places 60 bench damage when the Active is Knocked Out", () => {
+    const dragapultDef = mockBasic("Dragapult ex", "330", ["Psychic"], [
+      {
+        name: "Phantom Dive",
+        cost: ["Psychic", "Psychic"],
+        convertedEnergyCost: 2,
+        damage: "200",
+        text: "Put 6 damage counters on your opponent's Benched Pokémon in any way you like.",
+      },
+    ]);
+    const psychic = mockEnergy("Psychic Energy", ["Psychic"]);
+    const dragapult = createCardInstance("dragapult", PlayerId.P1, Zone.Active);
+    const energy1 = createCardInstance("energy-1", PlayerId.P1, Zone.Active);
+    const energy2 = createCardInstance("energy-2", PlayerId.P1, Zone.Active);
+    const bench1 = createCardInstance("p2-bench-1", PlayerId.P2, Zone.Bench);
+    const base = activeBattleState();
+
+    let state = activeBattleState({
+      definitions: {
+        ...base.definitions,
+        dragapult: dragapultDef,
+        "p2-active": mockBasic("Defender", "60", ["Colorless"]),
+        "p2-bench-1": mockBasic("Bench One", "100", ["Colorless"]),
+        "energy-1": psychic,
+        "energy-2": psychic,
+      },
+      players: {
+        ...base.players,
+        [PlayerId.P1]: {
+          ...base.players[PlayerId.P1],
+          active: dragapult,
+        },
+        [PlayerId.P2]: {
+          ...base.players[PlayerId.P2],
+          bench: [bench1],
+        },
+      },
+    });
+    dragapult.attachedEnergy = [energy1, energy2];
+
+    state = gameReducer(state, { type: "ATTACK", playerId: PlayerId.P1, attackName: "Phantom Dive" });
+    expect(state.pendingAction?.type).toBe("DISTRIBUTE_BENCH_DAMAGE");
+    expect(getPlayer(state, PlayerId.P2).active).not.toBeNull();
+
+    for (let i = 0; i < 6; i += 1) {
+      state = gameReducer(state, {
+        type: "ASSIGN_BENCH_DAMAGE",
+        playerId: PlayerId.P1,
+        targetId: bench1.instanceId,
+      });
+    }
+
+    expect(getPlayer(state, PlayerId.P2).bench[0]?.damageCounters).toBe(60);
+    expect(state.pendingAction?.type).toBe("PROMOTE");
+  });
+
   it("Hydrapple Ripening Charge heals after attaching Grass Energy", () => {
     const hydrappleDef = mockBasic("Hydrapple ex", "330", ["Grass"]);
     hydrappleDef.abilities = [

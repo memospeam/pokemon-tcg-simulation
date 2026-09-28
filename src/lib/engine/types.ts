@@ -106,6 +106,7 @@ export type GameAction =
   | { type: "PICK_DISCARD_POKEMON"; playerId: PlayerId; instanceId: string }
   | { type: "SELECT_RARE_CANDY_BASIC"; playerId: PlayerId; targetId: string }
   | { type: "SELECT_CRISPIN_TARGET"; playerId: PlayerId; pokemonId: string }
+  | { type: "SELECT_CRISPIN_ENERGY"; playerId: PlayerId; instanceId: string }
   | { type: "DISCARD_OPPONENT_ENERGY"; playerId: PlayerId; pokemonId: string; energyId: string }
   | { type: "CRISPIN_OPTIONAL_DISCARD"; playerId: PlayerId; instanceId: string }
   | { type: "SKIP_OPTIONAL"; playerId: PlayerId }
@@ -345,6 +346,7 @@ export type PendingAction =
   | { type: "RARE_CANDY"; playerId: PlayerId }
   | { type: "CRUSHING_HAMMER"; playerId: PlayerId; options: { pokemonId: string; energyId: string }[] }
   | { type: "CRISPIN_ATTACH"; playerId: PlayerId; energyId: string; targets: string[] }
+  | { type: "CRISPIN_SELECT"; playerId: PlayerId; step: "HAND" | "ATTACH"; options: string[] }
   | { type: "CRISPIN_DISCARD"; playerId: PlayerId }
   | {
       type: "ERI_DISCARD";

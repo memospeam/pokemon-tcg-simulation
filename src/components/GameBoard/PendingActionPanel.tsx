@@ -84,7 +84,7 @@ function DeckBrowse({
             className="pending-panel__pick"
             onClick={() => onPick(card.instanceId)}
           >
-            <BoardCard state={game} card={card} size="hand" showName={false} />
+            <BoardCard state={game} card={card} size="hand" showName={false} interactive={false} />
             <span>{cardLabel(game, card)}</span>
           </button>
         ))}
@@ -94,8 +94,8 @@ function DeckBrowse({
           <p className="pending-panel__section-label">Rest of your deck ({rest.length})</p>
           <div className="pending-panel__cards">
             {rest.map((card) => (
-              <div key={card.instanceId} className="pending-panel__peek">
-                <BoardCard state={game} card={card} size="hand" showName={false} />
+              <div key={card.instanceId} className="pending-panel__peek" aria-hidden="true">
+                <BoardCard state={game} card={card} size="hand" showName={false} interactive={false} />
                 <span>{cardLabel(game, card)}</span>
               </div>
             ))}
@@ -174,6 +174,43 @@ export function PendingActionPanel({
     return (
       <div className="pending-panel pending-panel--deck">
         <h4>Recon Directive — top of deck</h4>
+        <div className="pending-panel__cards pending-panel__cards--scroll">
+          {cards.map((card) => {
+            const def = getDefinition(game, card.definitionId);
+            return (
+              <button
+                key={card.instanceId}
+                type="button"
+                className="pending-panel__pick"
+                onClick={() => onPickDeck(card.instanceId)}
+              >
+                <BoardCard state={game} card={card} size="hand" showName={false} />
+                <span>{def?.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (pending.type === "CRISPIN_SELECT") {
+    const player = getPlayer(game, pending.playerId);
+    const cards = pending.options
+      .map((id) => player.deck.find((entry) => entry.instanceId === id) ?? null)
+      .filter((card): card is CardInstance => card !== null);
+    const heading =
+      pending.step === "HAND"
+        ? "Crispin — choose a Basic Energy to put into your hand"
+        : "Crispin — choose a different Basic Energy to attach";
+    return (
+      <div className="pending-panel pending-panel--deck">
+        <div className="pending-panel__header">
+          <h4>{heading}</h4>
+          <button type="button" className="pending-panel__skip" onClick={onSkipOptional}>
+            {pending.step === "HAND" ? "Take none" : "Don't attach"}
+          </button>
+        </div>
         <div className="pending-panel__cards pending-panel__cards--scroll">
           {cards.map((card) => {
             const def = getDefinition(game, card.definitionId);

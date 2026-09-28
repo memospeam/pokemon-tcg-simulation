@@ -692,50 +692,52 @@ function crispinMaxDamage(state: EngineState, mon: CardInstance): number {
   return Math.max(0, ...(def.attacks ?? []).map((a) => parseInt(a.damage ?? "", 10) || 0));
 }
 
-function applyCrispinSV(state: EngineState, playerId: PlayerId): void {
+function crispinEnergyOptions(state: EngineState, playerId: PlayerId): CardInstance[] {
   const player = getPlayer(state, playerId);
-
-  // Collect basic energy cards from deck grouped by type.
-  const energyByType = new Map<string, CardInstance>();
+  const seen = new Set<string>();
+  const options: CardInstance[] = [];
   for (const card of player.deck) {
-    const def = getDefinitionSafe(state, card.definitionId);
-    if (!isBasicEnergy(def)) continue;
+    const def = getDefinition(state, card.definitionId);
+    if (!def || !isBasicEnergy(def)) continue;
     const type = def.types?.[0] ?? "Colorless";
+    if (seen.has(type)) continue;
+    seen.add(type);
+    options.push(card);
+  }
+  return options;
+}
+
+/**
+ * Which of the offered Basic Energies the deck should put in hand vs attach.
+ * The attach colour is the one the biggest attacker still needs; the hand
+ * colour is a different type, preferring that attacker's other missing colour.
+ */
+export function planCrispinEnergies(
+  state: EngineState,
+  playerId: PlayerId,
+  optionIds: string[],
+): { handId: string | null; attachId: string | null } {
+  const player = getPlayer(state, playerId);
+  const energyByType = new Map<string, CardInstance>();
+  for (const id of optionIds) {
+    const card = player.deck.find((entry) => entry.instanceId === id);
+    if (!card) continue;
+    const type = getDefinitionSafe(state, card.definitionId).types?.[0] ?? "Colorless";
     if (!energyByType.has(type)) energyByType.set(type, card);
   }
-
   const availableTypes = [...energyByType.keys()];
-  if (availableTypes.length === 0) {
-    shufflePlayerDeck(state, playerId);
-    logMessage(state, "Crispin: no Basic Energy found in deck.");
-    return;
-  }
+  if (availableTypes.length === 0) return { handId: null, attachId: null };
 
-  // Choose the attach target + which two energy TYPES to fetch. Prefer giving
-  // the biggest real attacker (e.g. bench Dragapult ex needing Fire+Psychic) a
-  // colour it still needs, so it gets closer to attacking THIS turn — the
-  // second searched Energy goes to hand and can be attached during the normal
-  // energy step to complete a multi-type cost the same turn. This replaces the
-  // old "first energy in deck order → active" behaviour that wasted Crispin on
-  // the wrong Pokémon and the wrong colours.
-  let target: CardInstance | null = null;
   let attachType: string | null = null;
   let handType: string | null = null;
   let bestScore = -1;
   for (const mon of allPokemonInPlay(player)) {
     const needs = crispinColorNeeds(state, mon).filter((t) => energyByType.has(t));
     if (needs.length === 0) continue;
-    // Prefer the biggest-damage attacker (the win condition, e.g. Dragapult ex's
-    // 200 over Dreepy's chip damage); tie-break toward the active, which can
-    // swing this turn.
     const score = crispinMaxDamage(state, mon) + (mon.instanceId === player.active?.instanceId ? 1 : 0);
     if (score <= bestScore) continue;
     bestScore = score;
-    target = mon;
     attachType = needs[0]!;
-    // The hand energy must be a DIFFERENT type. Prefer a second colour the
-    // target also needs (to finish its cost), then any colour in its attacks,
-    // then any other available type.
     const colors = crispinAttackColors(state, mon);
     handType =
       needs.find((t) => t !== attachType) ??
@@ -744,47 +746,30 @@ function applyCrispinSV(state: EngineState, playerId: PlayerId): void {
       null;
   }
 
-  // Fallback: no Pokémon in play needs a colour we can supply → old behaviour
-  // (attach to the active / first bench, fetch the first two available types).
-  if (!target) {
-    target = player.active ?? player.bench[0] ?? null;
+  if (!attachType) {
     attachType = availableTypes[0]!;
     handType = availableTypes.find((t) => t !== attachType) ?? null;
   }
 
-  // Put the "other" searched energy into hand (Crispin fetches up to 2 of
-  // different types). Skipped when only one energy type exists in the deck.
-  if (handType) {
-    const handEnergy = energyByType.get(handType)!;
-    const handIdx = player.deck.indexOf(handEnergy);
-    if (handIdx >= 0) {
-      player.deck.splice(handIdx, 1);
-      handEnergy.zone = Zone.Hand;
-      player.hand.push(handEnergy);
-      logMessage(state, `Crispin: put ${getDefinitionSafe(state, handEnergy.definitionId).name} into hand.`);
-    }
+  return {
+    handId: handType ? energyByType.get(handType)!.instanceId : null,
+    attachId: attachType ? energyByType.get(attachType)!.instanceId : null,
+  };
+}
+
+function applyCrispinSV(state: EngineState, playerId: PlayerId): void {
+  const options = crispinEnergyOptions(state, playerId);
+  if (options.length === 0) {
+    shufflePlayerDeck(state, playerId);
+    logMessage(state, "Crispin: no Basic Energy found in deck.");
+    return;
   }
 
-  // Attach the chosen energy to the chosen target.
-  const attachEnergy = attachType ? energyByType.get(attachType)! : null;
-  if (attachEnergy) {
-    const attachIdx = player.deck.indexOf(attachEnergy);
-    if (attachIdx >= 0) {
-      player.deck.splice(attachIdx, 1);
-      if (target) {
-        attachEnergyToPokemon(state, playerId, attachEnergy, target);
-        logMessage(
-          state,
-          `Crispin: attached ${getDefinitionSafe(state, attachEnergy.definitionId).name} to ${getDefinitionSafe(state, target.definitionId).name}.`,
-        );
-      } else {
-        // No Pokémon in play — put it in hand instead.
-        attachEnergy.zone = Zone.Hand;
-        player.hand.push(attachEnergy);
-        logMessage(state, "Crispin: no Pokémon in play — energy added to hand.");
-      }
-    }
-  }
-
-  shufflePlayerDeck(state, playerId);
+  state.pendingAction = {
+    type: "CRISPIN_SELECT",
+    playerId,
+    step: "HAND",
+    options: options.map((card) => card.instanceId),
+  };
+  logMessage(state, "Crispin: choose a Basic Energy to put into your hand.");
 }

@@ -78,8 +78,12 @@ export function getPendingPrompt(pending: import("@/lib/engine").PendingAction):
         : "Energy Switch: choose a Pokémon to move Basic Energy to.";
     case "WALLYS_COMPASSION":
       return "Wally's Compassion: choose a Pokémon to heal and shuffle into your deck.";
+    case "CRISPIN_SELECT":
+      return pending.step === "HAND"
+        ? "Crispin: choose a Basic Energy to put into your hand."
+        : "Crispin: choose a different Basic Energy to attach, or skip.";
     case "CRISPIN_ATTACH":
-      return "Crispin: choose a Basic Pokémon to attach the Energy.";
+      return "Crispin: choose a Pokémon to attach the Energy.";
     case "CRISPIN_DISCARD":
       return "Crispin (optional): discard 1 card to draw 2, or skip.";
     case "DRAW_UNTIL_HAND":

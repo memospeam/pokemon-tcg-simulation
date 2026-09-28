@@ -1316,6 +1316,64 @@ function shuffleDeckAfterCrispin(state: EngineState, playerId: PlayerId): void {
   maybeCrispinOptionalDiscard(state, playerId);
 }
 
+function energyTypeOf(state: EngineState, card: CardInstance): string {
+  return getDefinitionSafe(state, card.definitionId).types?.[0] ?? "Colorless";
+}
+
+function handleSelectCrispinEnergy(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "CRISPIN_SELECT" || pending.playerId !== playerId) return state;
+  if (!pending.options.includes(instanceId)) return state;
+
+  const player = getPlayer(state, playerId);
+  const index = player.deck.findIndex((card) => card.instanceId === instanceId);
+  if (index < 0) return state;
+  const energy = player.deck.splice(index, 1)[0]!;
+  const energyName = getDefinitionSafe(state, energy.definitionId).name;
+
+  if (pending.step === "HAND") {
+    energy.zone = Zone.Hand;
+    player.hand.push(energy);
+    log(state, `Crispin: put ${energyName} into hand.`);
+    const chosenType = energyTypeOf(state, energy);
+    const rest = pending.options.filter((id) => {
+      if (id === instanceId) return false;
+      const card = player.deck.find((entry) => entry.instanceId === id);
+      return card ? energyTypeOf(state, card) !== chosenType : false;
+    });
+    if (rest.length === 0) {
+      shufflePlayerDeck(state, playerId);
+      state.pendingAction = null;
+      log(state, "Crispin: no other Energy type to attach.");
+      return state;
+    }
+    state.pendingAction = { type: "CRISPIN_SELECT", playerId, step: "ATTACH", options: rest };
+    log(state, "Crispin: choose a Basic Energy of a different type to attach.");
+    return state;
+  }
+
+  const targets = allPokemonInPlay(player).map((pokemon) => pokemon.instanceId);
+  if (targets.length === 0) {
+    energy.zone = Zone.Hand;
+    player.hand.push(energy);
+    shufflePlayerDeck(state, playerId);
+    state.pendingAction = null;
+    log(state, "Crispin: no Pokémon in play — energy added to hand.");
+    return state;
+  }
+  if (targets.length === 1) {
+    const only = allPokemonInPlay(player)[0]!;
+    attachEnergyToPokemon(state, playerId, energy, only);
+    shufflePlayerDeck(state, playerId);
+    state.pendingAction = null;
+    return state;
+  }
+  state.heldCard = energy;
+  state.pendingAction = { type: "CRISPIN_ATTACH", playerId, energyId: energy.instanceId, targets };
+  log(state, "Crispin: choose a Pokémon to attach the Energy.");
+  return state;
+}
+
 function handleCrispinOptionalDiscard(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
   const pending = state.pendingAction;
   if (pending?.type !== "CRISPIN_DISCARD" || pending.playerId !== playerId) return state;
@@ -1401,6 +1459,18 @@ function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState
 
   const pending = state.pendingAction;
   if (!pending || pending.playerId !== playerId) return state;
+
+  if (pending.type === "CRISPIN_SELECT") {
+    shufflePlayerDeck(state, playerId);
+    state.pendingAction = null;
+    log(
+      state,
+      pending.step === "HAND"
+        ? "Crispin: took no Energy."
+        : "Crispin: did not attach the other Energy.",
+    );
+    return state;
+  }
 
   if (pending.type === "CRISPIN_DISCARD") {
     state.pendingAction = null;
@@ -1954,6 +2024,8 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleSelectRareCandyBasic(nextState, action.playerId, action.targetId);
     case "SELECT_CRISPIN_TARGET":
       return handleSelectCrispinTarget(nextState, action.playerId, action.pokemonId);
+    case "SELECT_CRISPIN_ENERGY":
+      return handleSelectCrispinEnergy(nextState, action.playerId, action.instanceId);
     case "DISCARD_OPPONENT_ENERGY":
       return handleDiscardOpponentEnergy(nextState, action.playerId, action.pokemonId, action.energyId);
     case "SELECT_ENHANCED_HAMMER_POKEMON":
@@ -2626,6 +2698,14 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       for (const pokemonId of pending.targets) {
         actions.push({ type: "SELECT_CRISPIN_TARGET", playerId: current, pokemonId });
       }
+      break;
+    }
+    case "CRISPIN_SELECT": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_CRISPIN_ENERGY", playerId: current, instanceId });
+      }
+      actions.push({ type: "SKIP_OPTIONAL", playerId: current });
       break;
     }
     case "CRISPIN_DISCARD": {
