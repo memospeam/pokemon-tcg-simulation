@@ -511,6 +511,9 @@ function applyTrainerByKind(state: EngineState, playerId: PlayerId, effect: Pars
       state.pendingAction = { type: "SWITCH_WITH_BENCH", playerId };
       logMessage(state, "Switch: choose a Benched Pokémon to swap with your Active Pokémon.");
       return;
+    case "trainer_gwynn":
+      applyGwynn(state, playerId, effect.maxDiscard, effect.drawPerCard);
+      return;
     default:
       applyTrainerBatch10Kind(state, playerId, effect);
       applyTrainerBatch9Kind(state, playerId, effect);
@@ -651,6 +654,75 @@ function applyWallysCompassionEffect(state: EngineState, playerId: PlayerId): vo
     options: options.map((entry) => entry.instanceId),
   };
   logMessage(state, "Wally's Compassion: choose a Mega Evolution Pokémon ex to heal all damage from.");
+}
+
+function applyGwynn(
+  state: EngineState,
+  playerId: PlayerId,
+  maxDiscard: number,
+  drawPerCard: number,
+): void {
+  const player = getPlayer(state, playerId);
+  const options = player.hand.filter((card) => {
+    const def = getDefinition(state, card.definitionId);
+    return !!def && isPokemonWithoutRuleBox(def);
+  });
+  if (options.length === 0) {
+    logMessage(state, "Gwynn: no Pokémon without a Rule Box in hand.");
+    return;
+  }
+  state.pendingAction = {
+    type: "GWYNN",
+    playerId,
+    pickedIds: [],
+    options: options.map((card) => card.instanceId),
+    maxDiscard,
+    drawPerCard,
+  };
+  logMessage(
+    state,
+    `Gwynn: discard up to ${maxDiscard} Pokémon without a Rule Box, then draw ${drawPerCard} cards for each.`,
+  );
+}
+
+export function resolveGwynnDiscard(state: EngineState, playerId: PlayerId, instanceId: string): void {
+  const pending = state.pendingAction;
+  if (pending?.type !== "GWYNN" || pending.playerId !== playerId) return;
+  if (!pending.options.includes(instanceId) || pending.pickedIds.includes(instanceId)) return;
+  const player = getPlayer(state, playerId);
+  const card = removeFromHand(player, instanceId);
+  if (!card) return;
+  moveToDiscard(player, card);
+  pending.pickedIds.push(instanceId);
+  const def = getDefinitionSafe(state, card.definitionId);
+  logMessage(state, `${player.name} discarded ${def.name} (Gwynn).`);
+  const remaining = player.hand.filter((entry) => {
+    const entryDef = getDefinition(state, entry.definitionId);
+    return !!entryDef && isPokemonWithoutRuleBox(entryDef);
+  });
+  if (pending.pickedIds.length >= pending.maxDiscard || remaining.length === 0) {
+    finishGwynn(state, playerId);
+    return;
+  }
+  state.pendingAction = {
+    ...pending,
+    options: remaining.map((entry) => entry.instanceId),
+  };
+}
+
+export function finishGwynn(state: EngineState, playerId: PlayerId): void {
+  const pending = state.pendingAction;
+  if (pending?.type !== "GWYNN" || pending.playerId !== playerId) return;
+  const discarded = pending.pickedIds.length;
+  const draw = discarded * pending.drawPerCard;
+  state.pendingAction = null;
+  if (draw > 0) drawCards(state, playerId, draw);
+  logMessage(
+    state,
+    draw > 0
+      ? `Gwynn: discarded ${discarded} Pokémon and drew ${draw} cards.`
+      : "Gwynn: discarded nothing.",
+  );
 }
 
 function executeParsedTrainerEffects(

@@ -63,6 +63,9 @@ export function buildHandActions(
       if (legal.type === "PLACE_BENCH" || legal.type === "PLAY_BASIC_TO_BENCH") {
         actions.push({ label: "Place on Bench", action: legal });
       }
+      if (legal.type === "SELECT_HAND_DISCARD" && game?.pendingAction?.type === "GWYNN") {
+        actions.push({ label: "Discard for Gwynn", action: legal });
+      }
       if (legal.type === "PLAY_TRAINER") {
         const hint = getTrainerHint(definition);
         actions.push({

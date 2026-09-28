@@ -35,7 +35,8 @@ export function isDeckDrainingTrainerName(nameLower: string): boolean {
     nameLower.includes("pokegear") ||
     nameLower.includes("crispin") ||
     nameLower.includes("dawn") ||
-    nameLower.includes("colress")
+    nameLower.includes("colress") ||
+    nameLower.includes("gwynn")
   );
 }
 

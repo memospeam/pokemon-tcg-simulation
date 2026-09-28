@@ -109,6 +109,10 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
     build: () => ({ kind: "trainer_pokegear" }),
   },
   {
+    test: /you can use this card only if you go second, and only during your first turn\.\s*search your deck for a supporter card, reveal it, and put it into your hand\. then, shuffle your deck/,
+    build: () => ({ kind: "trainer_call_bell" }),
+  },
+  {
     test: /search your deck for a supporter card, reveal it, and put it into your hand\. then, shuffle your deck/,
     build: () => ({ kind: "trainer_search_supporter" }),
   },
@@ -298,6 +302,14 @@ const FULL_TEXT_PATTERNS: TrainerPattern[] = [
   {
     test: /put up to 3 in any combination of pok[ée]mon that don't have a rule box and basic energy cards from your discard pile into your hand/,
     build: () => ({ kind: "trainer_lanas_aid", count: 3 }),
+  },
+  {
+    test: /discard up to (\d+) pok[ée]mon that don't have a rule box from your hand, and draw (\d+) cards for each card you discarded in this way/,
+    build: (match) => ({
+      kind: "trainer_gwynn",
+      maxDiscard: parseInt(match[1]!, 10),
+      drawPerCard: parseInt(match[2]!, 10),
+    }),
   },
   {
     test: /search your deck for up to 2 basic pok[ée]mon or 1 evolution pok[ée]mon, reveal them, and put them into your hand\. then, shuffle your deck/,

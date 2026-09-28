@@ -133,6 +133,8 @@ import {
   resolveEnergySwitchPokemon,
   resolveEnhancedHammerEnergy,
   resolveEnhancedHammerPokemon,
+  finishGwynn,
+  resolveGwynnDiscard,
   resolveHildaPick,
 } from "./trainerEffects";
 import {
@@ -1178,6 +1180,11 @@ function handleSelectHandDiscard(state: EngineState, playerId: PlayerId, instanc
     return finishAbilityExecution(state, playerId, pokemon, pending.abilityName);
   }
 
+  if (pending?.type === "GWYNN" && pending.playerId === playerId) {
+    resolveGwynnDiscard(state, playerId, instanceId);
+    return state;
+  }
+
   if (pending?.type !== "ULTRA_BALL_DISCARD" || pending.playerId !== playerId) return state;
   if (pending.selectedIds.includes(instanceId)) return state;
 
@@ -1600,6 +1607,11 @@ function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState
 
   if (pending.type === "BUG_CATCHING_SET") {
     finishBugCatchingSet(state, playerId);
+    return state;
+  }
+
+  if (pending.type === "GWYNN") {
+    finishGwynn(state, playerId);
     return state;
   }
 
@@ -2510,6 +2522,14 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
       if (pending.pickedIds.length < 3) {
         actions.push({ type: "SKIP_OPTIONAL", playerId: current });
       }
+      break;
+    }
+    case "GWYNN": {
+      if (pending.playerId !== current) break;
+      for (const instanceId of pending.options) {
+        actions.push({ type: "SELECT_HAND_DISCARD", playerId: current, instanceId });
+      }
+      actions.push({ type: "SKIP_OPTIONAL", playerId: current });
       break;
     }
     case "BROCKS_SCOUTING": {

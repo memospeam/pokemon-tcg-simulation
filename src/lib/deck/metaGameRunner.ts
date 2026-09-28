@@ -29,7 +29,7 @@ import {
 import { canUseGrandTree, getGrandTreeEligibleBasics, getGrandTreeStage1Options } from "../engine/effects/grandTreeEffects";
 import { planCrispinEnergies } from "../engine/effects/trainerBatch10Effects";
 import { listDevolveEligibleTyped } from "../engine/effects/devolutionEffects";
-import { isBasicEnergy, isBasicPokemon, isStage2, isSupporter } from "../models/definition";
+import { isBasicEnergy, isBasicPokemon, isPokemonWithoutRuleBox, isStage2, isSupporter } from "../models/definition";
 import type { CardInstance } from "../models/instance";
 import { GamePhase, PlayerId } from "../models/enums";
 import {
@@ -2460,6 +2460,12 @@ export function pickAutoTrainerAction(state: EngineState, ctx?: StrategyContext,
         score = handSize >= 3 ? 88 : 45;
       } else if (name.includes("hilda")) {
         score = 85;
+      } else if (name.includes("gwynn")) {
+        const eligible = player.hand.filter((card) => {
+          const cardDef = getDefinition(state, card.definitionId);
+          return !!cardDef && isPokemonWithoutRuleBox(cardDef);
+        }).length;
+        score = eligible >= 2 ? 82 : eligible === 1 ? 55 : -1;
       } else if (name.includes("dawn")) {
         // Dawn: attach 2 Basic Psychic Energy from deck to a Psychic Pokémon.
         // Critical for Alakazam — energy acceleration to power Powerful Hand attacker.
@@ -4142,6 +4148,26 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
         benchPokemonId: bestOpt.benchPokemonId,
         attackName: bestOpt.attackName,
       });
+    }
+    case "GWYNN": {
+      const player = getPlayer(state, playerId);
+      const options = pending.options
+        .map((id) => player.hand.find((card) => card.instanceId === id))
+        .filter((card): card is CardInstance => !!card)
+        .sort((a, b) => {
+          const aDef = getDefinition(state, a.definitionId);
+          const bDef = getDefinition(state, b.definitionId);
+          const rank = (def: ReturnType<typeof getDefinition>): number => {
+            if (!def) return 0;
+            if (isBasicPokemon(def)) return 2;
+            if (def.subtypes.includes("Stage 1")) return 1;
+            return 0;
+          };
+          return rank(bDef) - rank(aDef);
+        });
+      const pick = options[0];
+      if (!pick) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
+      return gameReducer(state, { type: "SELECT_HAND_DISCARD", playerId, instanceId: pick.instanceId });
     }
     case "ABILITY_DISCARD_HAND": {
       // Discard least valuable card (for Trade, N's Zoroark ex, etc.)

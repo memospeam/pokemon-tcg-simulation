@@ -661,6 +661,21 @@ export function PendingActionPanel({
     );
   }
 
+  if (pending.type === "GWYNN") {
+    const left = pending.maxDiscard - pending.pickedIds.length;
+    return (
+      <div className="pending-panel pending-panel--compact">
+        <p>
+          Discard up to {left} more Pokémon without a Rule Box from your hand. Gwynn draws{" "}
+          {pending.drawPerCard} cards for each one you discard ({pending.pickedIds.length} discarded).
+        </p>
+        <button type="button" className="pending-panel__skip" onClick={onSkipOptional}>
+          Done
+        </button>
+      </div>
+    );
+  }
+
   if (pending.type === "DRAW_UNTIL_HAND") {
     return (
       <div className="pending-panel pending-panel--compact">

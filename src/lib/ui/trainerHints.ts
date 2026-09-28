@@ -28,6 +28,10 @@ export function getPendingPrompt(pending: import("@/lib/engine").PendingAction):
   switch (pending.type) {
     case "ULTRA_BALL_DISCARD":
       return `Ultra Ball: choose ${2 - pending.selectedIds.length} more card(s) to discard from your hand.`;
+    case "GWYNN": {
+      const left = pending.maxDiscard - pending.pickedIds.length;
+      return `Gwynn: discard up to ${left} more Pokémon without a Rule Box (${pending.drawPerCard} cards drawn per discard), or press Done.`;
+    }
     case "SEARCH_DECK":
       if (pending.filter === "POFFIN") {
         return "Buddy-Buddy Poffin: choose a Pokémon to put on your Bench.";

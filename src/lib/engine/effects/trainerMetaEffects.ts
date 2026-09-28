@@ -183,6 +183,43 @@ export function applyProton(state: EngineState, playerId: PlayerId, count: numbe
   logMessage(state, `Team Rocket's Proton: choose up to ${count} Basic Team Rocket's Pokémon.`);
 }
 
+function searchDeckForSupporter(state: EngineState, playerId: PlayerId, label: string): void {
+  const matches = deckMatching(state, playerId, isSupporter);
+  if (matches.length === 0) {
+    shufflePlayerDeck(state, playerId);
+    logMessage(state, `${label}: no Supporter cards in your deck.`);
+    return;
+  }
+  if (matches.length === 1) {
+    addFromDeckToHand(state, playerId, matches[0]!.instanceId, label, "revealed");
+    shufflePlayerDeck(state, playerId);
+    return;
+  }
+  state.pendingAction = {
+    type: "SEARCH_DECK",
+    playerId,
+    filter: "SUPPORTER_HAND",
+    options: matches.map((entry) => entry.instanceId),
+  };
+  logMessage(state, `${label}: choose a Supporter from your deck.`);
+}
+
+export function canUseCallBell(state: EngineState, playerId: PlayerId): boolean {
+  return playerId !== state.firstPlayerId && state.turnNumber === 2;
+}
+
+export function applyCallBell(state: EngineState, playerId: PlayerId): void {
+  if (!canUseCallBell(state, playerId)) {
+    logMessage(state, "Call Bell: only during your first turn, and only if you go second.");
+    return;
+  }
+  searchDeckForSupporter(state, playerId, "Call Bell");
+}
+
+export function applySearchSupporter(state: EngineState, playerId: PlayerId): void {
+  searchDeckForSupporter(state, playerId, "Supporter search");
+}
+
 export function applyPetrel(state: EngineState, playerId: PlayerId): void {
   const matches = deckMatching(state, playerId, (def) => def.supertype === "Trainer");
   if (matches.length === 0) {
@@ -597,6 +634,19 @@ export function canPlayTrainerMetaKind(
         return { ok: false, reason: "Petrel: no Trainer cards in deck." };
       }
       return { ok: true };
+    case "trainer_search_supporter":
+      if (deckMatching(state, playerId, isSupporter).length === 0) {
+        return { ok: false, reason: "No Supporter cards in your deck." };
+      }
+      return { ok: true };
+    case "trainer_call_bell":
+      if (!canUseCallBell(state, playerId)) {
+        return { ok: false, reason: "Call Bell: only during your first turn, and only if you go second." };
+      }
+      if (deckMatching(state, playerId, isSupporter).length === 0) {
+        return { ok: false, reason: "Call Bell: no Supporter cards in your deck." };
+      }
+      return { ok: true };
     case "trainer_cyrano":
       if (deckMatching(state, playerId, isPokemonEx).length === 0) {
         return { ok: false, reason: "Cyrano: no Pokémon ex in deck." };
@@ -658,6 +708,12 @@ export function applyTrainerMetaKind(state: EngineState, playerId: PlayerId, eff
       return;
     case "trainer_petrel":
       applyPetrel(state, playerId);
+      return;
+    case "trainer_search_supporter":
+      applySearchSupporter(state, playerId);
+      return;
+    case "trainer_call_bell":
+      applyCallBell(state, playerId);
       return;
     case "trainer_cyrano":
       applyCyrano(state, playerId, effect.count);

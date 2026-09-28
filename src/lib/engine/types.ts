@@ -312,6 +312,14 @@ export type PendingAction =
   | { type: "CIPHERMANIAC"; playerId: PlayerId; pickedIds: string[]; options: string[] }
   | { type: "FIGHTING_GONG"; playerId: PlayerId; options: string[] }
   | { type: "LANAS_AID"; playerId: PlayerId; pickedIds: string[]; options: string[] }
+  | {
+      type: "GWYNN";
+      playerId: PlayerId;
+      pickedIds: string[];
+      options: string[];
+      maxDiscard: number;
+      drawPerCard: number;
+    }
   | { type: "BROCKS_SCOUTING"; playerId: PlayerId; step: "MODE" | "BASIC" | "EVOLUTION"; pickedIds?: string[]; options: string[] }
   | { type: "ROSAS_ENCOURAGEMENT"; playerId: PlayerId; step: "TARGET" | "ENERGY"; targetId?: string; pickedEnergyIds?: string[]; options: string[] }
   | { type: "SURFER"; playerId: PlayerId; options: string[] }

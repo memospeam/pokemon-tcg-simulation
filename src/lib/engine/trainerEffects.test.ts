@@ -716,4 +716,97 @@ describe("trainerEffects", () => {
       "Jet Energy",
     ]);
   });
+
+  it("Gwynn discards only Pokémon without a Rule Box and draws 3 cards for each", () => {
+    const abra = mockBasic("Abra");
+    const duskull = mockBasic("Duskull");
+    const fez = mockBasic("Fezandipiti ex");
+    fez.subtypes = ["Basic", "ex"];
+    const energy = mockEnergy("Fire Energy");
+    const gwynn = mockTrainer("Gwynn", ["Supporter"]);
+    gwynn.rules = [
+      "Discard up to 2 Pokémon that don't have a Rule Box from your hand, and draw 3 cards for each card you discarded in this way. (Pokémon ex, Pokémon V, etc. have Rule Boxes.)",
+    ];
+    const fillers = Array.from({ length: 55 }, (_, i) => mockEnergy(`E${i}`));
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: [abra, duskull, fez, energy, gwynn, ...fillers],
+      player2Cards: [abra, duskull, fez, energy, gwynn, ...fillers],
+    });
+    state.phase = GamePhase.Active;
+    state.currentPlayerId = PlayerId.P1;
+    const player = getPlayer(state, PlayerId.P1);
+    const handAbra = createCardInstance(abra.apiId, PlayerId.P1, Zone.Hand);
+    const handDuskull = createCardInstance(duskull.apiId, PlayerId.P1, Zone.Hand);
+    const handFez = createCardInstance(fez.apiId, PlayerId.P1, Zone.Hand);
+    const handEnergy = createCardInstance(energy.apiId, PlayerId.P1, Zone.Hand);
+    player.hand = [handAbra, handDuskull, handFez, handEnergy];
+    player.deck = Array.from({ length: 10 }, () => createCardInstance(energy.apiId, PlayerId.P1, Zone.Deck));
+
+    applyTrainerEffect(state, PlayerId.P1, gwynn);
+    expect(state.pendingAction?.type).toBe("GWYNN");
+    if (state.pendingAction?.type !== "GWYNN") return;
+    expect(state.pendingAction.options.sort()).toEqual([handAbra.instanceId, handDuskull.instanceId].sort());
+
+    const afterFirst = gameReducer(state, {
+      type: "SELECT_HAND_DISCARD",
+      playerId: PlayerId.P1,
+      instanceId: handAbra.instanceId,
+    });
+    expect(afterFirst.pendingAction?.type).toBe("GWYNN");
+    const afterSecond = gameReducer(afterFirst, {
+      type: "SELECT_HAND_DISCARD",
+      playerId: PlayerId.P1,
+      instanceId: handFez.instanceId,
+    });
+    expect(afterSecond.pendingAction?.type).toBe("GWYNN");
+    const done = gameReducer(afterSecond, {
+      type: "SELECT_HAND_DISCARD",
+      playerId: PlayerId.P1,
+      instanceId: handDuskull.instanceId,
+    });
+    const donePlayer = getPlayer(done, PlayerId.P1);
+    expect(done.pendingAction).toBeNull();
+    expect(donePlayer.discard.map((card) => card.definitionId).sort()).toEqual(["Abra", "Duskull"]);
+    expect(donePlayer.hand.some((card) => card.definitionId === "Fezandipiti ex")).toBe(true);
+    expect(donePlayer.hand.filter((card) => card.definitionId === "Fire Energy")).toHaveLength(7);
+    expect(donePlayer.deck).toHaveLength(4);
+  });
+
+  it("Gwynn can stop after discarding one Pokémon and still draws 3", () => {
+    const abra = mockBasic("Abra");
+    const duskull = mockBasic("Duskull");
+    const energy = mockEnergy("Fire Energy");
+    const gwynn = mockTrainer("Gwynn", ["Supporter"]);
+    gwynn.rules = [
+      "Discard up to 2 Pokémon that don't have a Rule Box from your hand, and draw 3 cards for each card you discarded in this way.",
+    ];
+    const fillers = Array.from({ length: 56 }, (_, i) => mockEnergy(`E${i}`));
+    const state = createInitialGame({
+      player1Name: "A",
+      player2Name: "B",
+      player1Cards: [abra, duskull, energy, gwynn, ...fillers],
+      player2Cards: [abra, duskull, energy, gwynn, ...fillers],
+    });
+    state.phase = GamePhase.Active;
+    const player = getPlayer(state, PlayerId.P1);
+    const handAbra = createCardInstance(abra.apiId, PlayerId.P1, Zone.Hand);
+    const handDuskull = createCardInstance(duskull.apiId, PlayerId.P1, Zone.Hand);
+    player.hand = [handAbra, handDuskull];
+    player.deck = Array.from({ length: 6 }, () => createCardInstance(energy.apiId, PlayerId.P1, Zone.Deck));
+
+    applyTrainerEffect(state, PlayerId.P1, gwynn);
+    const afterDiscard = gameReducer(state, {
+      type: "SELECT_HAND_DISCARD",
+      playerId: PlayerId.P1,
+      instanceId: handAbra.instanceId,
+    });
+    const done = gameReducer(afterDiscard, { type: "SKIP_OPTIONAL", playerId: PlayerId.P1 });
+    const donePlayer = getPlayer(done, PlayerId.P1);
+    expect(done.pendingAction).toBeNull();
+    expect(donePlayer.discard.map((card) => card.definitionId)).toEqual(["Abra"]);
+    expect(donePlayer.hand.filter((card) => card.definitionId === "Duskull")).toHaveLength(1);
+    expect(donePlayer.hand.filter((card) => card.definitionId === "Fire Energy")).toHaveLength(3);
+  });
 });

@@ -69,6 +69,9 @@ export function useGameBoardController(
         if (game.pendingAction?.type === "ULTRA_BALL_DISCARD") {
           return getPendingPrompt(game.pendingAction) ?? "Ultra Ball: choose cards to discard.";
         }
+        if (game.pendingAction?.type === "GWYNN") {
+          return getPendingPrompt(game.pendingAction) ?? "Gwynn: discard Pokémon without a Rule Box.";
+        }
         if (game.pendingAction?.type === "RARE_CANDY") {
           return "Rare Candy: click an eligible Basic Pokémon in play.";
         }
@@ -134,7 +137,10 @@ export function useGameBoardController(
   }
 
   function handleHandSelect(card: CardInstance) {
-    if (engineState?.pendingAction?.type === "ULTRA_BALL_DISCARD") {
+    if (
+      engineState?.pendingAction?.type === "ULTRA_BALL_DISCARD" ||
+      engineState?.pendingAction?.type === "GWYNN"
+    ) {
       const action = legalActions.find(
         (entry) => entry.type === "SELECT_HAND_DISCARD" && entry.instanceId === card.instanceId,
       );

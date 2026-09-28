@@ -410,4 +410,15 @@ describe("parseTrainerText", () => {
       ).effects[0],
     ).toEqual({ kind: "stadium_ns_castle" });
   });
+
+  it("parses Gwynn as discarding up to 2 Pokémon without a Rule Box and drawing 3 per discard", () => {
+    const parsed = parseTrainerText(
+      mockTrainer("Gwynn", [
+        "Discard up to 2 Pokémon that don't have a Rule Box from your hand, and draw 3 cards for each card you discarded in this way. (Pokémon ex, Pokémon V, etc. have Rule Boxes.)",
+        "You may play only 1 Supporter card during your turn.",
+      ]),
+    );
+    expect(parsed.effects).toEqual([{ kind: "trainer_gwynn", maxDiscard: 2, drawPerCard: 3 }]);
+    expect(parsed.implementationCoverage).toBe("implemented");
+  });
 });

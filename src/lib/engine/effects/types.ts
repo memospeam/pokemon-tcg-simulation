@@ -472,6 +472,7 @@ export type ParsedEffect =
   | { kind: "trainer_hilda" }
   | { kind: "trainer_pokegear" }
   | { kind: "trainer_search_supporter" }
+  | { kind: "trainer_call_bell" }
   | { kind: "trainer_wallys_compassion" }
   | { kind: "trainer_energy_switch" }
   | { kind: "trainer_switch_active_bench" }
@@ -499,6 +500,7 @@ export type ParsedEffect =
   | { kind: "trainer_devolve_own_typed"; pokemonType: string }
   | { kind: "trainer_extra_prizes_if_team"; names: string[]; prizes: number }
   | { kind: "trainer_lanas_aid"; count: number }
+  | { kind: "trainer_gwynn"; maxDiscard: number; drawPerCard: number }
   | { kind: "trainer_brocks_scouting" }
   | { kind: "trainer_rosas_encouragement"; count: number }
   | { kind: "trainer_briar" }
