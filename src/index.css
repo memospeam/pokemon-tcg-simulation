@@ -17,10 +17,16 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 button,
@@ -539,6 +545,8 @@ button {
 }
 
 .player-mat {
+  width: 100%;
+  min-width: 0;
   padding: 0.75rem;
   border-radius: 1rem;
   border: 1px solid rgba(148, 163, 184, 0.15);
@@ -559,8 +567,9 @@ button {
 
 .player-mat__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.35rem 0.75rem;
   margin-bottom: 0.5rem;
 }
 
@@ -585,7 +594,7 @@ button {
 
 .player-mat__layout {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 0.75rem;
   align-items: center;
 }
@@ -612,6 +621,8 @@ button {
   flex-direction: column;
   gap: 0.5rem;
   align-items: center;
+  min-width: 0;
+  width: 100%;
 }
 
 /* Self: active toward center line, bench toward your hand. */
@@ -636,16 +647,38 @@ button {
   display: flex;
   gap: 0.35rem;
   justify-content: center;
+  width: 100%;
+  min-width: 0;
 }
 
 .player-mat--opponent .player-mat__bench {
   flex-direction: row-reverse;
 }
 
-.player-mat__bench-slot,
-.player-mat__empty-slot {
-  width: 72px;
-  height: 100px;
+.player-mat__bench-slot {
+  flex: 1 1 0;
+  width: 0;
+  max-width: 78px;
+  min-width: 0;
+  aspect-ratio: 63 / 88;
+  height: auto;
+}
+
+.player-mat__bench-slot > .board-card,
+.player-mat__bench-slot > .player-mat__empty-slot {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.player-mat__bench-slot .board-card__image {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  max-width: 100%;
+  aspect-ratio: auto;
+  object-fit: cover;
 }
 
 .player-mat__empty-slot {
@@ -821,8 +854,10 @@ button {
   box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.35);
 }
 
-.board-card:hover {
-  transform: translateY(-2px);
+@media (hover: hover) {
+  .board-card:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .board-card--hand {
@@ -830,7 +865,7 @@ button {
 }
 
 .board-card--bench {
-  width: 72px;
+  width: 100%;
 }
 
 .board-card--active {
@@ -1134,7 +1169,7 @@ button {
 .action-dock {
   position: fixed;
   left: 50%;
-  bottom: 0.75rem;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
   transform: translateX(-50%);
   display: flex;
   flex-wrap: wrap;
@@ -1333,19 +1368,6 @@ button {
 }
 
 @media (max-width: 720px) {
-  .player-mat__layout {
-    grid-template-columns: 1fr;
-    justify-items: center;
-  }
-
-  .player-mat--opponent .player-mat__layout {
-    direction: ltr;
-  }
-
-  .player-mat--opponent .player-mat__bench {
-    flex-direction: row;
-  }
-
   .card-preview {
     right: 0.5rem;
     left: 0.5rem;
@@ -2284,13 +2306,13 @@ button {
   }
 
   .action-dock button {
+    min-height: 44px;
     padding: 0.45rem 0.75rem;
     font-size: 0.78rem;
   }
 
   .action-dock__hints {
-    flex: 1 1 100%;
-    justify-content: center;
+    display: none;
   }
 
   .action-dock__hint {
@@ -2331,9 +2353,14 @@ button {
     overflow-y: auto;
   }
 
+  .hand-bar {
+    padding: 0.45rem 0.5rem 0.25rem;
+  }
+
   .hand-bar__cards {
     justify-content: flex-start;
     scroll-snap-type: x proximity;
+    min-height: 108px;
     padding-bottom: 0.35rem;
   }
 
@@ -2342,9 +2369,63 @@ button {
     flex: 0 0 auto;
   }
 
+  .board-card--hand {
+    width: 72px;
+  }
+
+  .board-card__energy-icon {
+    width: 18px;
+    height: 25px;
+  }
+
+  .panel {
+    padding: 1rem;
+  }
+
+  .panel__actions,
+  .field,
+  .field input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .deck-summary button,
+  .panel__actions button {
+    flex: 1 1 auto;
+  }
+
+  .card-grid,
+  .card-grid--compact {
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  }
+
+  .saved-decks li {
+    flex-wrap: wrap;
+  }
+
+  .saved-decks li button:first-child {
+    flex: 1 1 auto;
+  }
+
+  .play-screen {
+    min-height: calc(100dvh - 4.5rem);
+    padding-bottom: max(9rem, calc(8rem + env(safe-area-inset-bottom)));
+  }
+
   .ai-thinking-banner {
     top: 3.5rem;
     max-width: calc(100vw - 1rem);
     text-align: center;
+  }
+}
+
+/* Landscape phones are wider than 768px but shorter than the dock. */
+@media (max-height: 520px) {
+  .action-dock__hints {
+    display: none;
+  }
+
+  .play-screen {
+    padding-bottom: max(8.5rem, calc(7.5rem + env(safe-area-inset-bottom)));
   }
 }
