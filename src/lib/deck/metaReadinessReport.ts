@@ -1,3 +1,4 @@
+import { getStandardExpansionByPtcgoCode } from "../format/standardExpansions";
 import { summarizeFocusExpansion } from "../format/standardFocus";
 import {
   analyzeCriDeck,
@@ -45,7 +46,9 @@ export function buildCriMetaReadinessReport(
   const analyses = presets.map((preset) => analyzeCriDeck(preset));
   const analysis = summarizeCriPlaytestAnalysis(analyses);
   const trainerCoverage = summarizeCriTrainerCoverage(presets);
-  const focusExpansion = summarizeFocusExpansion();
+  const cri = getStandardExpansionByPtcgoCode("CRI");
+  if (!cri) throw new Error("Chaos Rising is missing from the Standard expansion list");
+  const focusExpansion = summarizeFocusExpansion(cri);
 
   const simHealth = options.includeSimHealth === false
     ? {

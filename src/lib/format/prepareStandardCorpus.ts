@@ -385,7 +385,8 @@ export function buildCorpus(
     };
 
     for (const attack of card.attacks ?? []) {
-      const id = textId("attack", attack.text);
+      const text = attack.text ?? "";
+      const id = textId("attack", text);
       // Preserve the authoritative cost and converted cost from the API.
       // These were dropped in earlier index builds, forcing corpusDeckBuilder
       // to invent a 1-of-primary-type fallback (see knownAttackCosts.ts).
@@ -395,13 +396,13 @@ export function buildCorpus(
       entry.attacks.push({
         name: attack.name,
         damage: attack.damage,
-        text: attack.text,
+        text,
         textId: id,
         cost: attack.cost,
         convertedEnergyCost: attack.convertedEnergyCost,
       });
 
-      const parsedEffects = parseAttackText(attack.text);
+      const parsedEffects = parseAttackText(text);
       const { parseCoverage, unknownClauses, stubClauses, implementationCoverage } =
         analyzeParsedEffects(parsedEffects);
       const existing = attackMap.get(id);
@@ -414,7 +415,7 @@ export function buildCorpus(
         attackMap.set(id, {
           id,
           kind: "attack",
-          text: attack.text,
+          text,
           coverage: parseCoverage,
           parsedEffects,
           unknownClauses,
@@ -427,10 +428,11 @@ export function buildCorpus(
     }
 
     for (const ability of card.abilities ?? []) {
-      const id = textId("ability", ability.text);
-      entry.abilities.push({ name: ability.name, text: ability.text, textId: id });
+      const text = ability.text ?? "";
+      const id = textId("ability", text);
+      entry.abilities.push({ name: ability.name, text, textId: id });
 
-      const parsedAbility = parseAbilityText(ability);
+      const parsedAbility = parseAbilityText({ ...ability, text });
       const { parseCoverage, unknownClauses, stubClauses, implementationCoverage } =
         analyzeParsedEffects(parsedAbility.effects);
       const existing = abilityMap.get(id);
@@ -443,7 +445,7 @@ export function buildCorpus(
         abilityMap.set(id, {
           id,
           kind: "ability",
-          text: ability.text,
+          text,
           coverage: parseCoverage,
           parsedEffects: parsedAbility.effects,
           parsedAbility,

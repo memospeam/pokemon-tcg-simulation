@@ -13,7 +13,8 @@ export default defineConfig({
     exclude: [
       "**/node_modules/**",
       "e2e/**",
-      "scripts/prepare-standard-effects.test.ts",
+      "scripts/patch-standard-expansions.test.ts",
+      "scripts/patch-30th-celebration.test.ts",
       "scripts/fetchAttackCosts.test.ts",
       "scripts/report-invariants.test.ts",
       "scripts/report-llm-invariants.test.ts",

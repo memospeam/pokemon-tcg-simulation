@@ -164,32 +164,6 @@
     ]
   },
   {
-    "id": "trainer-2dbb5f83",
-    "kind": "trainer",
-    "text": "Once during each player's turn, that player may discard 2 cards from their hand in order to draw a card.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, that player may discard 2 cards from their hand in order to draw a card."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Prism Tower"
-    ]
-  },
-  {
-    "id": "trainer-f546d7e1",
-    "kind": "trainer",
-    "text": "You can use this card only if your opponent has 3 or fewer Prize cards remaining.\n\nYour opponent shuffles their hand and puts it on the bottom of their deck. If they put any cards on the bottom of their deck in this way, they draw 3 cards.",
-    "coverage": "partial",
-    "unknownClauses": [
-      "you can use this card only if your opponent has 3 or fewer prize cards remaining."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Special Red Card"
-    ]
-  },
-  {
     "id": "trainer-14b648fe",
     "kind": "trainer",
     "text": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can't draw any cards in this way, you can't use this card.)",
@@ -257,19 +231,6 @@
     ]
   },
   {
-    "id": "trainer-70a562e1",
-    "kind": "trainer",
-    "text": "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have Psychic Pokémon in play. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have Psychic Pokémon in play. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Mystery Garden"
-    ]
-  },
-  {
     "id": "trainer-70819fc4",
     "kind": "trainer",
     "text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards.",
@@ -296,19 +257,6 @@
     "cardCount": 2,
     "exampleCards": [
       "Team Rocket's Great Ball"
-    ]
-  },
-  {
-    "id": "trainer-61efbcf4",
-    "kind": "trainer",
-    "text": "Once during each player's turn, that player may put up to 2 Basic Lightning Energy cards from their discard pile into their hand. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, that player may put up to 2 Basic Lightning Energy cards from their discard pile into their hand. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 2,
-    "exampleCards": [
-      "Levincia"
     ]
   },
   {
@@ -435,32 +383,6 @@
     ]
   },
   {
-    "id": "trainer-f0995192",
-    "kind": "trainer",
-    "text": "You can put this card into play only if you discard a Prism Tower in play, and you can put this card into play during the same turn you play Prism Tower.\nEach Mega Floette ex in play (both yours and your opponent's) gets +150 HP.",
-    "coverage": "none",
-    "unknownClauses": [
-      "You can put this card into play only if you discard a Prism Tower in play, and you can put this card into play during the same turn you play Prism Tower.\nEach Mega Floette ex in play (both yours and your opponent's) gets +150 HP."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Ange Floette"
-    ]
-  },
-  {
-    "id": "trainer-9c59b5a7",
-    "kind": "trainer",
-    "text": "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Surfing Beach"
-    ]
-  },
-  {
     "id": "trainer-2d34b9c8",
     "kind": "trainer",
     "text": "Search your deck for a Basic Energy card, reveal it, and put it into your hand. Then, shuffle your deck. You may play any number of Item cards during your turn.",
@@ -513,19 +435,6 @@
     ]
   },
   {
-    "id": "trainer-ddf287f4",
-    "kind": "trainer",
-    "text": "Confused Pokémon (both yours and your opponent's) don't recover from that Special Condition when they evolve or devolve. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Confused Pokémon (both yours and your opponent's) don't recover from that Special Condition when they evolve or devolve. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Dizzying Valley"
-    ]
-  },
-  {
     "id": "trainer-69c2bff6",
     "kind": "trainer",
     "text": "Each player's Grass Pokémon can evolve into Grass Pokémon during the turn they play those Pokémon, except during their first turn. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
@@ -565,19 +474,6 @@
     ]
   },
   {
-    "id": "trainer-227a0a8a",
-    "kind": "trainer",
-    "text": "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, that player may switch their Active Water Pokémon with 1 of their Benched Water Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Surfing Beach"
-    ]
-  },
-  {
     "id": "trainer-2b7caed9",
     "kind": "trainer",
     "text": "Heal 30 damage from your Active Pokémon. If that Pokémon is an Arven's Pokémon, heal 100 damage from it instead. You may play any number of Item cards during your turn.",
@@ -588,32 +484,6 @@
     "cardCount": 1,
     "exampleCards": [
       "Arven's Sandwich"
-    ]
-  },
-  {
-    "id": "trainer-d710cb04",
-    "kind": "trainer",
-    "text": "Steven's Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Steven's Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Granite Cave"
-    ]
-  },
-  {
-    "id": "trainer-2fd94c01",
-    "kind": "trainer",
-    "text": "Once during each player's turn, that player may search their deck for a Marnie's Pokémon, reveal it, and put it into their hand. Then, that player shuffles their deck. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, that player may search their deck for a Marnie's Pokémon, reveal it, and put it into their hand. Then, that player shuffles their deck. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Spikemuth Gym"
     ]
   },
   {
@@ -672,19 +542,6 @@
     ]
   },
   {
-    "id": "trainer-7e9dba9d",
-    "kind": "trainer",
-    "text": "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Jamming Tower"
-    ]
-  },
-  {
     "id": "trainer-94ccb127",
     "kind": "trainer",
     "text": "Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
@@ -708,19 +565,6 @@
     "cardCount": 1,
     "exampleCards": [
       "Max Rod"
-    ]
-  },
-  {
-    "id": "trainer-5399d736",
-    "kind": "trainer",
-    "text": "Once during each player's turn, that player may put a card from their hand on top of their deck. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, that player may put a card from their hand on top of their deck. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Academy at Night"
     ]
   },
   {
@@ -750,19 +594,6 @@
     ]
   },
   {
-    "id": "trainer-dc9da026",
-    "kind": "trainer",
-    "text": "Once during each player's turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Community Center"
-    ]
-  },
-  {
     "id": "trainer-791a95b1",
     "kind": "trainer",
     "text": "Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
@@ -786,19 +617,6 @@
     "cardCount": 1,
     "exampleCards": [
       "Hyper Aroma"
-    ]
-  },
-  {
-    "id": "trainer-de14effb",
-    "kind": "trainer",
-    "text": "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Jamming Tower"
     ]
   },
   {
@@ -855,32 +673,6 @@
     ]
   },
   {
-    "id": "trainer-b01c7354",
-    "kind": "trainer",
-    "text": "Metal Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Metal Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Full Metal Lab"
-    ]
-  },
-  {
-    "id": "trainer-856a8bd",
-    "kind": "trainer",
-    "text": "During Pokémon Checkup, put 2 more damage counters on each Poisoned non-Darkness Pokémon (both yours and your opponent's). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "During Pokémon Checkup, put 2 more damage counters on each Poisoned non-Darkness Pokémon (both yours and your opponent's). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Perilous Jungle"
-    ]
-  },
-  {
     "id": "trainer-9414b3fc",
     "kind": "trainer",
     "text": "Attach a Basic Energy card from your discard pile to each of your Future Pokémon. You may play any number of Item cards during your turn.",
@@ -907,45 +699,6 @@
     ]
   },
   {
-    "id": "trainer-c64b27d3",
-    "kind": "trainer",
-    "text": "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have Psychic Pokémon in play. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have Psychic Pokémon in play. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Mystery Garden"
-    ]
-  },
-  {
-    "id": "trainer-7da027e6",
-    "kind": "trainer",
-    "text": "Attacks used by each Tera Pokémon in play (both yours and your opponent's) cost Colorless more. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Attacks used by each Tera Pokémon in play (both yours and your opponent's) cost Colorless more. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Nighttime Mine"
-    ]
-  },
-  {
-    "id": "trainer-d4437f8f",
-    "kind": "trainer",
-    "text": "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect. You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can’t be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Jamming Tower"
-    ]
-  },
-  {
     "id": "trainer-b0a56e5d",
     "kind": "trainer",
     "text": "Draw 2 cards. Then, if you have 10 or more cards in your hand, draw 2 more cards.",
@@ -969,19 +722,6 @@
     "cardCount": 1,
     "exampleCards": [
       "Hop's Bag"
-    ]
-  },
-  {
-    "id": "trainer-590f6d86",
-    "kind": "trainer",
-    "text": "Attacks used by Hop's Pokémon (both yours and your opponent's) do 30 more damage to the opponent's Active Pokémon (before applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Attacks used by Hop's Pokémon (both yours and your opponent's) do 30 more damage to the opponent's Active Pokémon (before applying Weakness and Resistance). You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Postwick"
     ]
   },
   {
@@ -1077,19 +817,6 @@
     "cardCount": 1,
     "exampleCards": [
       "Energy Search Pro"
-    ]
-  },
-  {
-    "id": "trainer-d2df67d0",
-    "kind": "trainer",
-    "text": "Each Basic Pokémon in play (both yours and your opponent's) gets +30 HP. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played.",
-    "coverage": "none",
-    "unknownClauses": [
-      "Each Basic Pokémon in play (both yours and your opponent's) gets +30 HP. You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
-    ],
-    "cardCount": 1,
-    "exampleCards": [
-      "Lively Stadium"
     ]
   },
   {

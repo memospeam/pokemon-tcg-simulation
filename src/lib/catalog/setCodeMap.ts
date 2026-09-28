@@ -1,5 +1,7 @@
 /** Limitless/PTCGO set codes mapped to pokemontcg.io set.ptcgoCode values. */
 const SET_CODE_MAP: Record<string, string> = {
+  "30C": "30C",
+  ME55: "30C",
   ASC: "ASC",
   BLK: "BLK",
   CRI: "CRI",

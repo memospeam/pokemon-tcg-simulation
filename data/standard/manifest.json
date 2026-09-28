@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-03T10:10:18.549Z",
+  "generatedAt": "2026-09-25T08:45:58.567Z",
   "format": {
     "name": "Standard",
     "season": "2025-26 / 2026 rotation",
     "effectiveFrom": "2026-04-10",
     "focusExpansion": {
-      "id": "me4",
-      "ptcgoCode": "CRI",
-      "name": "Chaos Rising",
+      "id": "me55",
+      "ptcgoCode": "30C",
+      "name": "30th Celebration",
       "series": "Mega Evolution",
-      "releaseDate": "2026-05-22"
+      "releaseDate": "2026-09-16"
     },
     "regulationMarks": [
       "H",
@@ -20,32 +20,32 @@
     "trainerQuery": "supertype:Trainer (regulationMark:H OR regulationMark:I OR regulationMark:J)",
     "energyQuery": "supertype:Energy (regulationMark:H OR regulationMark:I OR regulationMark:J)"
   },
-  "totalPokemonCards": 2304,
-  "totalTrainerCards": 379,
+  "totalPokemonCards": 2462,
+  "totalTrainerCards": 374,
   "totalEnergyCards": 23,
-  "totalCards": 2304,
-  "cardsWithAttacks": 2304,
-  "cardsWithAbilities": 506,
-  "cardsWithTrainerRules": 371,
-  "uniqueAttackTexts": 821,
-  "uniqueAbilityTexts": 238,
+  "totalCards": 2462,
+  "cardsWithAttacks": 2462,
+  "cardsWithAbilities": 529,
+  "cardsWithTrainerRules": 374,
+  "uniqueAttackTexts": 869,
+  "uniqueAbilityTexts": 253,
   "uniqueTrainerTexts": 188,
   "attackCoverage": {
-    "full": 813,
+    "full": 861,
     "partial": 0,
     "none": 0,
     "empty": 8
   },
   "abilityCoverage": {
-    "full": 237,
+    "full": 252,
     "partial": 0,
     "none": 0,
     "empty": 1
   },
   "trainerCoverage": {
-    "full": 102,
-    "partial": 60,
-    "none": 26,
+    "full": 123,
+    "partial": 59,
+    "none": 6,
     "empty": 0
   }
 }

@@ -14,6 +14,7 @@ export interface StandardExpansion {
  * Ordered newest first — use the head of this list for implementation priority.
  */
 export const STANDARD_EXPANSIONS: StandardExpansion[] = [
+  { id: "me55", ptcgoCode: "30C", name: "30th Celebration", series: "Mega Evolution", releaseDate: "2026-09-16" },
   { id: "me4", ptcgoCode: "CRI", name: "Chaos Rising", series: "Mega Evolution", releaseDate: "2026-05-22" },
   { id: "me3", ptcgoCode: "POR", name: "Perfect Order", series: "Mega Evolution", releaseDate: "2026-03-27" },
   { id: "me2pt5", ptcgoCode: "ASC", name: "Ascended Heroes", series: "Mega Evolution", releaseDate: "2026-01-30" },

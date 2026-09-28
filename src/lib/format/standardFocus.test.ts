@@ -11,15 +11,26 @@ import {
   countStandardCardsBySet,
   getStandardCardsBySet,
   getStandardEffectText,
+  getStandardExpansionByPtcgoCode,
   isStandardRegulationMark,
   summarizeFocusExpansion,
 } from "./index";
 
-describe("Standard format focus — Chaos Rising", () => {
-  it("declares Chaos Rising as the focus expansion", () => {
-    expect(STANDARD_FORMAT.focusExpansion.ptcgoCode).toBe("CRI");
-    expect(STANDARD_FORMAT.focusExpansion.name).toBe("Chaos Rising");
-    expect(FOCUS_EXPANSION.releaseDate).toBe("2026-05-22");
+describe("Standard format focus — 30th Celebration", () => {
+  it("declares 30th Celebration as the focus expansion", () => {
+    expect(STANDARD_FORMAT.focusExpansion.ptcgoCode).toBe("30C");
+    expect(STANDARD_FORMAT.focusExpansion.name).toBe("30th Celebration");
+    expect(FOCUS_EXPANSION.releaseDate).toBe("2026-09-16");
+  });
+
+  it("indexes the 30th Celebration set from pokemontcg.io", () => {
+    const cards = getStandardCardsBySet("30C");
+    expect(cards).toHaveLength(161);
+    const marked = cards.filter((card) => card.regulationMark);
+    expect(marked.length).toBe(cards.length);
+    expect(marked.every((card) => isStandardRegulationMark(card.regulationMark))).toBe(true);
+    expect(findCorpusCard("30C", "66", "Mew ex")?.name).toBe("Mew ex");
+    expect(findCorpusCard("ME55", "1", "Exeggcute")?.name).toBe("Exeggcute");
   });
 
   it("maps Limitless set codes CRI and ME4 to Chaos Rising", () => {
@@ -59,7 +70,9 @@ describe("Standard format focus — Chaos Rising", () => {
   });
 
   it("implements Mortal Shuriken in the engine (no longer a focus gap)", () => {
-    const summary = summarizeFocusExpansion();
+    const cri = getStandardExpansionByPtcgoCode("CRI");
+    expect(cri).toBeDefined();
+    const summary = summarizeFocusExpansion(cri!);
     expect(summary.expansion.ptcgoCode).toBe("CRI");
     const mortal = summary.signatureGaps.find((gap) => gap.effectName === "Mortal Shuriken");
     expect(mortal).toBeUndefined();
