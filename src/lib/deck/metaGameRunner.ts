@@ -8,7 +8,8 @@ import {
 } from "./deckOutAwareness";
 import type { TournamentDeckPreset } from "./tournamentPresets";
 import { canAffordAttack, canAffordRetreat } from "../engine/energy";
-import { applyWeaknessAndResistance, canRareCandyEvolveInto, canEvolveInto, checkMulliganNeeded, parseDamage } from "../engine/rules";
+import { applyWeaknessAndResistance, canAttackThisTurn, canRareCandyEvolveInto, canEvolveInto, checkMulliganNeeded, countPrizeCards, parseDamage } from "../engine/rules";
+import { applyWeaknessAndResistanceForPokemon, remainingHpWithPassives } from "../engine/effects/passiveRules";
 import { beginGame, gameReducer, getLegalActions, startActiveGame } from "../engine/reducer";
 import { getDefinitionSafe } from "../engine/rules";
 import {
@@ -538,6 +539,15 @@ export function runAIOneStep(
   if (state.currentPlayerId !== aiPlayerId) return { state, done: true };
 
   const player = getPlayer(state, aiPlayerId);
+
+  // Take a lethal attack (weakness included) before draw or search spends the turn.
+  if (!state.turnFlags.attacked) {
+    const comboAction = pickComboAction(state, aiPlayerId, ctx);
+    if (comboAction) {
+      const next = gameReducer(state, comboAction);
+      return { state: next, done: aiStepFinished(state, next, aiPlayerId) };
+    }
+  }
 
   if (!state.turnFlags.attacked) {
     const trainerAction = pickAutoTrainerAction(state, ctx);
@@ -1231,6 +1241,21 @@ export function pickRetreatAction(
         score = 40; // Promote a high-priority attacker that is ready
       }
 
+      // The Active cannot KO, but this benched attacker can. Switch and take the prize.
+      if (
+        canAttackThisTurn(state) &&
+        opponent.active &&
+        player.active &&
+        !knocksOut(
+          state,
+          bestAffordableDamageInto(state, playerId, player.active, opponent.active),
+          opponent.active,
+        ) &&
+        knocksOut(state, bestAffordableDamageInto(state, playerId, bench, opponent.active), opponent.active)
+      ) {
+        score = Math.max(score, 220);
+      }
+
       return { bench, score };
     })
     .filter((c) => c.score > 0)
@@ -1773,6 +1798,41 @@ export function pickAutoAbilityAction(
  * - Gates strategy-specific attacks (Rocket Feathers, Gale Thrust) on preconditions
  * - Boosts the archetype's signature attack
  */
+/** Damage this attack deals to one defender after weakness and resistance. */
+function modifiedAttackDamage(
+  state: EngineState,
+  playerId: PlayerId,
+  attacker: CardInstance,
+  attack: { name: string; damage: string },
+  defender: CardInstance,
+): number {
+  const estimated = estimateAttackDamage(state, playerId, attack.name, attack.damage);
+  if (estimated <= 0) return 0;
+  // Mirage Barrage's estimate is the value of hitting two Pokémon, not one target.
+  if (attack.name.toLowerCase().includes("mirage barrage")) return estimated;
+  const attackerTypes = getDefinition(state, attacker.definitionId)?.types;
+  return applyWeaknessAndResistanceForPokemon(state, estimated, attackerTypes, defender);
+}
+
+function bestAffordableDamageInto(
+  state: EngineState,
+  playerId: PlayerId,
+  attacker: CardInstance,
+  defender: CardInstance,
+): number {
+  const def = getDefinition(state, attacker.definitionId);
+  let best = 0;
+  for (const attack of def?.attacks ?? []) {
+    if (!canAffordAttack(state, attacker, attack)) continue;
+    best = Math.max(best, modifiedAttackDamage(state, playerId, attacker, attack, defender));
+  }
+  return best;
+}
+
+function knocksOut(state: EngineState, damage: number, defender: CardInstance): boolean {
+  return damage > 0 && damage >= remainingHpWithPassives(state, defender);
+}
+
 export function pickBestAttack(
   state: EngineState,
   playerId: PlayerId,
@@ -1792,16 +1852,20 @@ export function pickBestAttack(
   );
   if (affordableAttacks.length === 0) return null;
 
-  const opponentHp = opponent.active ? remainingHp(state, opponent.active) : 9999;
+  const opponentHp = opponent.active ? remainingHpWithPassives(state, opponent.active) : 9999;
   const signatureAttack = ctx?.profile.signatureAttack?.toLowerCase();
 
   const scored = affordableAttacks.map((attack) => {
     let dmg = estimateAttackDamage(state, playerId, attack.name, attack.damage);
+    let countsAsDamage = dmg > 0;
     // Fallback: some attacks have damage:""  but list a number in the text
     // e.g. "This attack does 120 damage to 2 of your opponent's Pokémon."
     if (dmg === 0 && attack.text) {
       const textMatch = attack.text.match(/\b(\d{2,3})\s*damage\b/i);
-      if (textMatch) dmg = parseInt(textMatch[1]!, 10);
+      if (textMatch) {
+        dmg = parseInt(textMatch[1]!, 10);
+        countsAsDamage = true;
+      }
     }
 
     // Setup attacks: 0-damage attacks with search/bench effects that move the game forward.
@@ -1831,7 +1895,15 @@ export function pickBestAttack(
       }
     }
 
-    const isKo = dmg >= opponentHp && dmg > 0;
+    if (
+      countsAsDamage &&
+      opponent.active &&
+      !attack.name.toLowerCase().includes("mirage barrage")
+    ) {
+      dmg = applyWeaknessAndResistanceForPokemon(state, dmg, def.types, opponent.active);
+    }
+
+    const isKo = countsAsDamage && dmg >= opponentHp && dmg > 0;
     const isSignature = signatureAttack && attack.name.toLowerCase().includes(signatureAttack);
 
     // Lopunny special case: Gale Thrust is the signature BUT only gives +170 bonus when Lopunny
@@ -3075,14 +3147,8 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
       // If opponent has no active (e.g. Dudunsparce just shuffled itself to deck via Run Away Draw),
       // skip Boss's Orders — the switch can't legally complete, causing a stall.
       if (!opponent.active) return gameReducer(state, { type: "SKIP_OPTIONAL", playerId });
-      // Estimate our active Pokémon's best attack damage for KO evaluation
+      // Target scoring: a real KO (weakness included) > more prizes > archetype > lowest HP
       const selfPlayer = getPlayer(state, playerId);
-      const selfActiveDef = selfPlayer.active ? getDefinition(state, selfPlayer.active.definitionId) : undefined;
-      const ourMaxDmg = (selfActiveDef?.attacks ?? []).reduce((best, atk) => {
-        const est = estimateAttackDamage(state, playerId, atk.name, atk.damage);
-        return Math.max(best, est);
-      }, 0);
-      // Target scoring: KO target > archetype priority > lowest HP
       const target = [...opponent.bench].sort((a, b) => {
         const aDef = getDefinition(state, a.definitionId);
         const bDef = getDefinition(state, b.definitionId);
@@ -3092,10 +3158,19 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
         const bArchPrio = ctx ? getArchetypeBossPriority(ctx.archetype, bNameLower) : 0;
         const aHp = remainingHp(state, a);
         const bHp = remainingHp(state, b);
-        const aKo = ourMaxDmg > 0 && aHp <= ourMaxDmg ? 1 : 0;
-        const bKo = ourMaxDmg > 0 && bHp <= ourMaxDmg ? 1 : 0;
-        // 1. KO target first; 2. archetype priority; 3. lowest remaining HP
+        const aDmg = selfPlayer.active
+          ? bestAffordableDamageInto(state, playerId, selfPlayer.active, a)
+          : 0;
+        const bDmg = selfPlayer.active
+          ? bestAffordableDamageInto(state, playerId, selfPlayer.active, b)
+          : 0;
+        const aKo = knocksOut(state, aDmg, a) ? 1 : 0;
+        const bKo = knocksOut(state, bDmg, b) ? 1 : 0;
         if (aKo !== bKo) return bKo - aKo;
+        if (aKo && bKo && aDef && bDef) {
+          const prizeDiff = countPrizeCards(bDef) - countPrizeCards(aDef);
+          if (prizeDiff !== 0) return prizeDiff;
+        }
         if (aArchPrio !== bArchPrio) return bArchPrio - aArchPrio;
         return aHp - bHp;
       })[0];
