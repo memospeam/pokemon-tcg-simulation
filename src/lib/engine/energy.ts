@@ -164,10 +164,11 @@ export function canAffordAttack(
   return canPayCost(pool, getEffectiveAttackCost(state, pokemon, attack));
 }
 
-export function canAffordRetreat(state: EngineState, pokemon: CardInstance): boolean {
-  if (hasFreeRetreat(state, pokemon)) return true;
+/** Retreat symbols still owed after free-retreat, extra cost, and tool/stadium reductions. */
+export function retreatCostSymbols(state: EngineState, pokemon: CardInstance): string[] | null {
+  if (hasFreeRetreat(state, pokemon)) return [];
   const def = getDefinition(state, pokemon.definitionId);
-  if (!def) return false;
+  if (!def) return null;
   const cost = [...(def.retreatCost ?? [])];
   const extra = getExtraRetreatCost(state, pokemon);
   for (let i = 0; i < extra; i += 1) cost.push("Colorless");
@@ -177,6 +178,101 @@ export function canAffordRetreat(state: EngineState, pokemon: CardInstance): boo
     if (colorlessIndex >= 0) cost.splice(colorlessIndex, 1);
     else cost.pop();
   }
+  return cost;
+}
+
+function nextRetreatSymbol(cost: string[]): string {
+  return cost.find((symbol) => symbol !== "Colorless") ?? "Colorless";
+}
+
+export function energyPaysRetreatSymbol(
+  state: EngineState,
+  pokemon: CardInstance,
+  energy: CardInstance,
+  requirement: string,
+): boolean {
+  const contribution = getEnergyContribution(state, pokemon, energy);
+  if (requirement === "Colorless") {
+    return (
+      contribution.rainbow > 0 ||
+      contribution.flexPsychicDark > 0 ||
+      Object.values(contribution.colors).some((count) => count > 0)
+    );
+  }
+  if ((contribution.colors[requirement] ?? 0) > 0) return true;
+  if ((requirement === "Psychic" || requirement === "Darkness") && contribution.flexPsychicDark > 0) {
+    return true;
+  }
+  return contribution.rainbow > 0;
+}
+
+/** Discarding this whole Energy card spends as much of `cost` as it can pay. */
+export function applyEnergyToRetreatCost(
+  state: EngineState,
+  pokemon: CardInstance,
+  energy: CardInstance,
+  cost: string[],
+): string[] {
+  const contribution = getEnergyContribution(state, pokemon, energy);
+  const remaining = [...cost];
+  const spend = (symbol: string): boolean => {
+    const index = remaining.indexOf(symbol);
+    if (index < 0) return false;
+    remaining.splice(index, 1);
+    return true;
+  };
+  for (const [type, count] of Object.entries(contribution.colors)) {
+    for (let i = 0; i < count; i += 1) {
+      if (!spend(type)) spend("Colorless");
+    }
+  }
+  for (let i = 0; i < contribution.flexPsychicDark; i += 1) {
+    if (!spend("Psychic") && !spend("Darkness")) spend("Colorless");
+  }
+  for (let i = 0; i < contribution.rainbow; i += 1) {
+    const typed = remaining.find((symbol) => symbol !== "Colorless");
+    if (typed) spend(typed);
+    else spend("Colorless");
+  }
+  return remaining;
+}
+
+export function retreatEnergyOptions(
+  state: EngineState,
+  pokemon: CardInstance,
+  cost: string[],
+): string[] {
+  if (cost.length === 0) return [];
+  const requirement = nextRetreatSymbol(cost);
+  return pokemon.attachedEnergy
+    .filter((energy) => energyPaysRetreatSymbol(state, pokemon, energy, requirement))
+    .map((energy) => energy.instanceId);
+}
+
+/** True when more than one attached Energy can pay some unpaid retreat symbol. */
+export function retreatHasEnergyChoice(state: EngineState, pokemon: CardInstance): boolean {
+  const initial = retreatCostSymbols(state, pokemon);
+  if (!initial || initial.length === 0) return false;
+  const attached = [...pokemon.attachedEnergy];
+  let remaining = initial;
+  while (remaining.length > 0) {
+    const options = attached.filter((energy) =>
+      energyPaysRetreatSymbol(state, pokemon, energy, nextRetreatSymbol(remaining)),
+    );
+    if (options.length !== 1) return options.length > 1;
+    const only = options[0]!;
+    const index = attached.findIndex((energy) => energy.instanceId === only.instanceId);
+    if (index >= 0) attached.splice(index, 1);
+    const next = applyEnergyToRetreatCost(state, pokemon, only, remaining);
+    if (next.length >= remaining.length) return false;
+    remaining = next;
+  }
+  return false;
+}
+
+export function canAffordRetreat(state: EngineState, pokemon: CardInstance): boolean {
+  const cost = retreatCostSymbols(state, pokemon);
+  if (!cost) return false;
   if (cost.length === 0) return true;
   return canPayCost(getAttachedEnergyPool(state, pokemon), cost);
 }
@@ -187,17 +283,9 @@ export function payRetreatCost(
   pokemon: CardInstance,
 ): boolean {
   if (hasFreeRetreat(state, pokemon)) return true;
-  const def = getDefinition(state, pokemon.definitionId);
-  if (!def) return false;
-  let cost = [...(def.retreatCost ?? [])];
-  const extra = getExtraRetreatCost(state, pokemon);
-  for (let i = 0; i < extra; i += 1) cost.push("Colorless");
-  const reduction = getToolRetreatReduction(state, pokemon) + getStadiumRetreatReduction(state, pokemon);
-  for (let i = 0; i < reduction && cost.length > 0; i += 1) {
-    const colorlessIndex = cost.lastIndexOf("Colorless");
-    if (colorlessIndex >= 0) cost.splice(colorlessIndex, 1);
-    else cost.pop();
-  }
+  const symbols = retreatCostSymbols(state, pokemon);
+  if (!symbols) return false;
+  const cost = [...symbols];
   if (cost.length === 0) return true;
   if (!canAffordRetreat(state, pokemon)) return false;
 

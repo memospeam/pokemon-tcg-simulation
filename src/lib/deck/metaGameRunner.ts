@@ -468,7 +468,7 @@ export function runEngineAutoPlay(
         // affordability/payment mismatch leaves turnFlags.retreated false),
         // do NOT `continue` — retrying the identical retreat would loop until
         // maxActions and draw the game. Fall through to attack / END_TURN.
-        if (state.turnFlags.retreated) {
+        if (state.turnFlags.retreated || state.pendingAction?.type === "RETREAT_ENERGY") {
           continue;
         }
       }
@@ -4227,6 +4227,26 @@ function tryResolveAutoPending(state: EngineState, ctx?: StrategyContext): Engin
     case "CHOOSE_BLOCKED_ATTACK": {
       if (pending.options.length === 0) return null;
       return gameReducer(state, { type: "CHOOSE_BLOCKED_ATTACK", playerId, attackName: pending.options[0]! });
+    }
+    case "RETREAT_ENERGY": {
+      const player = getPlayer(state, playerId);
+      const active = player.active;
+      if (!active || pending.options.length === 0) return null;
+      const needed = new Set(
+        (getDefinition(state, active.definitionId)?.attacks ?? []).flatMap((attack) => attack.cost),
+      );
+      const energyId = [...pending.options].sort((left, right) => {
+        const score = (id: string): number => {
+          const energy = active.attachedEnergy.find((card) => card.instanceId === id);
+          const def = energy ? getDefinition(state, energy.definitionId) : undefined;
+          const type = def?.types?.[0] ?? "";
+          let value = def && isBasicEnergy(def) ? 1 : 0;
+          if (type && needed.has(type)) value -= 5;
+          return value;
+        };
+        return score(right) - score(left);
+      })[0]!;
+      return gameReducer(state, { type: "DISCARD_RETREAT_ENERGY", playerId, energyId });
     }
     default:
       return null;

@@ -138,7 +138,11 @@ export async function runPolicyMatch(
 
     // No-op guard: a RETREAT that didn't take (affordability/payment mismatch)
     // must not be retried forever — the policy would keep returning it.
-    if (action.type === "RETREAT" && state.turnFlags.retreated === beforeRetreated) {
+    if (
+      action.type === "RETREAT" &&
+      state.turnFlags.retreated === beforeRetreated &&
+      state.pendingAction?.type !== "RETREAT_ENERGY"
+    ) {
       const beforeT = state.turnNumber;
       state = gameReducer(state, { type: "END_TURN" });
       actionCount += 1;
@@ -202,7 +206,11 @@ export async function runPolicyTurn(
     }
     const beforeRetreated = cur.turnFlags.retreated;
     cur = gameReducer(cur, action);
-    if (action.type === "RETREAT" && cur.turnFlags.retreated === beforeRetreated) {
+    if (
+      action.type === "RETREAT" &&
+      cur.turnFlags.retreated === beforeRetreated &&
+      cur.pendingAction?.type !== "RETREAT_ENERGY"
+    ) {
       cur = gameReducer(cur, { type: "END_TURN" }); // no-op retreat guard
     }
   }

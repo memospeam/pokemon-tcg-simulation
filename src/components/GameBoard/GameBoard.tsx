@@ -344,6 +344,13 @@ export function GameBoard() {
             playerId: boardGame.pendingAction?.playerId ?? viewingId,
           })
         }
+        onDiscardRetreatEnergy={(energyId) =>
+          controller.runAction({
+            type: "DISCARD_RETREAT_ENERGY",
+            playerId: boardGame.pendingAction?.playerId ?? viewingId,
+            energyId,
+          })
+        }
         onConfirmDrawUntil={() =>
           controller.runAction({
             type: "CONFIRM_DRAW_UNTIL_HAND",

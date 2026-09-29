@@ -472,7 +472,11 @@ export async function capturePolicyFrames(
     await yieldToUi();
 
     // No-op retreat guard (mirrors runPolicyMatch).
-    if (action.type === "RETREAT" && state.turnFlags.retreated === beforeRetreated) {
+    if (
+      action.type === "RETREAT" &&
+      state.turnFlags.retreated === beforeRetreated &&
+      state.pendingAction?.type !== "RETREAT_ENERGY"
+    ) {
       const beforeT = state.turnNumber;
       state = applyAction(state, { type: "END_TURN" }, frames, "End turn", "endturn", onFrame);
       actionCount += 1;

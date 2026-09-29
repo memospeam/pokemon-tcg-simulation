@@ -195,7 +195,15 @@ import {
 } from "./effects/specialEnergyEffects";
 import { canReceiveBenchAttackDamage } from "./effects/pokemonRules";
 import { isTeraPokemon } from "../models/definition";
-import { canAffordAttack, canAffordRetreat, payRetreatCost } from "./energy";
+import {
+  applyEnergyToRetreatCost,
+  canAffordAttack,
+  canAffordRetreat,
+  payRetreatCost,
+  retreatCostSymbols,
+  retreatEnergyOptions,
+  retreatHasEnergyChoice,
+} from "./energy";
 import { createRng } from "./rng";
 import {
   allPokemonInPlay,
@@ -845,6 +853,133 @@ function finishAbilitySelfKnockOut(
   }
 }
 
+function finishRetreatSwitch(
+  state: EngineState,
+  playerId: PlayerId,
+  benchInstanceId: string,
+): EngineState {
+  const player = getPlayer(state, playerId);
+  if (!player.active) return state;
+  const benchIndex = player.bench.findIndex((card) => card.instanceId === benchInstanceId);
+  if (benchIndex === -1) return state;
+
+  const incoming = player.bench.splice(benchIndex, 1)[0]!;
+  const outgoing = player.active;
+  outgoing.zone = Zone.Bench;
+  player.bench.push(outgoing);
+  incoming.zone = Zone.Active;
+  player.active = incoming;
+  state.turnFlags.retreated = true;
+  markMovedFromBenchToActive(state, incoming.instanceId);
+
+  log(
+    state,
+    `${player.name} retreated ${getDefinitionSafe(state, outgoing.definitionId).name} and sent out ${getDefinitionSafe(state, incoming.definitionId).name}.`,
+  );
+  onRetreat(state, playerId, outgoing);
+  return state;
+}
+
+function detachAttachedEnergy(pokemon: CardInstance, energyId: string): CardInstance | null {
+  const index = pokemon.attachedEnergy.findIndex((card) => card.instanceId === energyId);
+  if (index === -1) return null;
+  return pokemon.attachedEnergy.splice(index, 1)[0] ?? null;
+}
+
+function restoreRetreatEnergy(state: EngineState, playerId: PlayerId, discardedIds: string[]): void {
+  const player = getPlayer(state, playerId);
+  const active = player.active;
+  if (!active) return;
+  for (const instanceId of discardedIds) {
+    const index = player.discard.findIndex((card) => card.instanceId === instanceId);
+    if (index === -1) continue;
+    const energy = player.discard.splice(index, 1)[0];
+    if (!energy) continue;
+    energy.zone = Zone.Active;
+    active.attachedEnergy.push(energy);
+  }
+}
+
+/** Auto-discard Energy that is the only way to pay the next symbol, then ask or switch. */
+function settleRetreatPayment(state: EngineState, playerId: PlayerId): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "RETREAT_ENERGY" || pending.playerId !== playerId) return state;
+  const player = getPlayer(state, playerId);
+  const active = player.active;
+  if (!active) {
+    state.pendingAction = null;
+    return state;
+  }
+
+  let cost = [...pending.remainingCost];
+  const discardedIds = [...pending.discardedIds];
+  while (cost.length > 0) {
+    const options = retreatEnergyOptions(state, active, cost);
+    if (options.length === 0) {
+      restoreRetreatEnergy(state, playerId, discardedIds);
+      state.pendingAction = null;
+      log(state, "Retreat cancelled: not enough Energy.");
+      return state;
+    }
+    if (options.length > 1) {
+      state.pendingAction = { ...pending, options, remainingCost: cost, discardedIds };
+      log(state, `Choose which Energy to discard for retreat (${cost.length} left).`);
+      return state;
+    }
+    const energy = detachAttachedEnergy(active, options[0]!);
+    if (!energy) break;
+    const nextCost = applyEnergyToRetreatCost(state, active, energy, cost);
+    if (nextCost.length >= cost.length) {
+      active.attachedEnergy.push(energy);
+      restoreRetreatEnergy(state, playerId, discardedIds);
+      state.pendingAction = null;
+      log(state, "Retreat cancelled: that Energy can't pay the retreat cost.");
+      return state;
+    }
+    moveToDiscard(player, energy);
+    discardedIds.push(energy.instanceId);
+    log(state, `Discarded ${getDefinitionSafe(state, energy.definitionId).name} for retreat.`);
+    cost = nextCost;
+  }
+
+  state.pendingAction = null;
+  if (cost.length > 0) {
+    restoreRetreatEnergy(state, playerId, discardedIds);
+    return state;
+  }
+  return finishRetreatSwitch(state, playerId, pending.benchInstanceId);
+}
+
+function handleDiscardRetreatEnergy(
+  state: EngineState,
+  playerId: PlayerId,
+  energyId: string,
+): EngineState {
+  const pending = state.pendingAction;
+  if (pending?.type !== "RETREAT_ENERGY" || pending.playerId !== playerId) return state;
+  if (!pending.options.includes(energyId)) return state;
+  const player = getPlayer(state, playerId);
+  const active = player.active;
+  if (!active) return state;
+
+  const energy = detachAttachedEnergy(active, energyId);
+  if (!energy) return state;
+  const nextCost = applyEnergyToRetreatCost(state, active, energy, pending.remainingCost);
+  if (nextCost.length >= pending.remainingCost.length) {
+    active.attachedEnergy.push(energy);
+    return state;
+  }
+  moveToDiscard(player, energy);
+  log(state, `Discarded ${getDefinitionSafe(state, energy.definitionId).name} for retreat.`);
+  state.pendingAction = {
+    ...pending,
+    remainingCost: nextCost,
+    discardedIds: [...pending.discardedIds, energy.instanceId],
+    options: [],
+  };
+  return settleRetreatPayment(state, playerId);
+}
+
 function handleRetreat(
   state: EngineState,
   playerId: PlayerId,
@@ -864,23 +999,22 @@ function handleRetreat(
   if (benchIndex === -1) return state;
   if (!canAffordRetreat(state, player.active)) return state;
 
-  if (!payRetreatCost(state, player, player.active)) return state;
+  if (!retreatHasEnergyChoice(state, player.active)) {
+    if (!payRetreatCost(state, player, player.active)) return state;
+    return finishRetreatSwitch(state, playerId, benchInstanceId);
+  }
 
-  const incoming = player.bench.splice(benchIndex, 1)[0]!;
-  const outgoing = player.active;
-  outgoing.zone = Zone.Bench;
-  player.bench.push(outgoing);
-  incoming.zone = Zone.Active;
-  player.active = incoming;
-  state.turnFlags.retreated = true;
-  markMovedFromBenchToActive(state, incoming.instanceId);
-
-  log(
-    state,
-    `${player.name} retreated ${getDefinitionSafe(state, outgoing.definitionId).name} and sent out ${getDefinitionSafe(state, incoming.definitionId).name}.`,
-  );
-  onRetreat(state, playerId, outgoing);
-  return state;
+  const cost = retreatCostSymbols(state, player.active);
+  if (!cost || cost.length === 0) return finishRetreatSwitch(state, playerId, benchInstanceId);
+  state.pendingAction = {
+    type: "RETREAT_ENERGY",
+    playerId,
+    benchInstanceId,
+    options: [],
+    remainingCost: cost,
+    discardedIds: [],
+  };
+  return settleRetreatPayment(state, playerId);
 }
 
 function handlePromoteBench(state: EngineState, playerId: PlayerId, instanceId: string): EngineState {
@@ -1461,6 +1595,13 @@ function handleSkipOptional(state: EngineState, playerId: PlayerId): EngineState
   const pending = state.pendingAction;
   if (!pending || pending.playerId !== playerId) return state;
 
+  if (pending.type === "RETREAT_ENERGY") {
+    restoreRetreatEnergy(state, playerId, pending.discardedIds);
+    state.pendingAction = null;
+    log(state, "Retreat cancelled.");
+    return state;
+  }
+
   if (pending.type === "CRISPIN_SELECT") {
     shufflePlayerDeck(state, playerId);
     state.pendingAction = null;
@@ -2008,6 +2149,8 @@ export function gameReducer(state: EngineState, action: GameAction): EngineState
       return handleAttack(nextState, action.playerId, action.attackName);
     case "RETREAT":
       return handleRetreat(nextState, action.playerId, action.benchInstanceId);
+    case "DISCARD_RETREAT_ENERGY":
+      return handleDiscardRetreatEnergy(nextState, action.playerId, action.energyId);
     case "PROMOTE_BENCH":
       return handlePromoteBench(nextState, action.playerId, action.instanceId);
     case "SWITCH_OPPONENT_ACTIVE":
@@ -3003,6 +3146,14 @@ function appendPendingActions(state: EngineState, actions: GameAction[], current
         if (!handCardMatchesBasicEnergyType(state, card, pending.energyType)) continue;
         actions.push({ type: "SELECT_HAND_DISCARD", playerId: current, instanceId: card.instanceId });
       }
+      break;
+    }
+    case "RETREAT_ENERGY": {
+      if (pending.playerId !== current) break;
+      for (const energyId of pending.options) {
+        actions.push({ type: "DISCARD_RETREAT_ENERGY", playerId: current, energyId });
+      }
+      actions.push({ type: "SKIP_OPTIONAL", playerId: current });
       break;
     }
   }

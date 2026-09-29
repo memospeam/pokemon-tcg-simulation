@@ -86,6 +86,7 @@ export type GameAction =
   | { type: "EVOLVE"; playerId: PlayerId; evolutionId: string; targetId: string }
   | { type: "ATTACK"; playerId: PlayerId; attackName: string }
   | { type: "RETREAT"; playerId: PlayerId; benchInstanceId: string }
+  | { type: "DISCARD_RETREAT_ENERGY"; playerId: PlayerId; energyId: string }
   | { type: "PROMOTE_BENCH"; playerId: PlayerId; instanceId: string }
   | { type: "END_TURN" }
   | { type: "CONCEDE"; playerId: PlayerId }
@@ -173,6 +174,15 @@ export type PendingAction =
   | { type: "IONO_HAND_BOTTOM"; playerId: PlayerId }
   | { type: "PROMOTE"; playerId: PlayerId }
   | { type: "SWITCH_WITH_BENCH"; playerId: PlayerId; optional?: boolean }
+  | {
+      type: "RETREAT_ENERGY";
+      playerId: PlayerId;
+      benchInstanceId: string;
+      /** Attached Energy that can pay the next unpaid retreat symbol. */
+      options: string[];
+      remainingCost: string[];
+      discardedIds: string[];
+    }
   | { type: "MOVE_ENERGY_TO_BENCH"; playerId: PlayerId; sourceId: string }
   | { type: "DAMAGE_TWO_OPPONENT"; playerId: PlayerId; amount: number; picksRemaining: number; pickedIds: string[] }
   | {

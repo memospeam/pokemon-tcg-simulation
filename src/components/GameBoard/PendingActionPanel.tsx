@@ -11,6 +11,7 @@ interface PendingActionPanelProps {
   onDiscardHandCard: (instanceId: string) => void;
   onChooseBenchAttack: (benchPokemonId: string, attackName: string) => void;
   onSkipOptional: () => void;
+  onDiscardRetreatEnergy?: (energyId: string) => void;
   onConfirmDrawUntil: () => void;
   onSelectGrandTreeBasic?: (targetId: string) => void;
   onSelectGrandTreeDeck?: (instanceId: string) => void;
@@ -113,6 +114,7 @@ export function PendingActionPanel({
   onDiscardHandCard,
   onChooseBenchAttack,
   onSkipOptional,
+  onDiscardRetreatEnergy,
   onConfirmDrawUntil,
   onSelectGrandTreeBasic,
   onSelectGrandTreeDeck,
@@ -657,6 +659,32 @@ export function PendingActionPanel({
           deck={player.deck}
           onPick={(instanceId) => onSelectGrandTreeDeck?.(instanceId)}
         />
+      </div>
+    );
+  }
+
+  if (pending.type === "RETREAT_ENERGY") {
+    const active = getPlayer(game, pending.playerId).active;
+    const choices =
+      active?.attachedEnergy.filter((energy) => pending.options.includes(energy.instanceId)) ?? [];
+    return (
+      <div className="pending-panel pending-panel--compact">
+        <p>Choose which Energy to discard for retreat ({pending.remainingCost.length} left).</p>
+        <div className="pending-panel__actions">
+          {choices.map((energy) => (
+            <button
+              key={energy.instanceId}
+              type="button"
+              className="pending-panel__pick"
+              onClick={() => onDiscardRetreatEnergy?.(energy.instanceId)}
+            >
+              Discard {getDefinition(game, energy.definitionId)?.name ?? "Energy"}
+            </button>
+          ))}
+          <button type="button" className="pending-panel__skip" onClick={onSkipOptional}>
+            Cancel
+          </button>
+        </div>
       </div>
     );
   }

@@ -153,6 +153,13 @@ export function buildPokemonActions(
     if (legal.type === "SELECT_ENHANCED_HAMMER_POKEMON" && legal.pokemonId === card.instanceId) {
       actions.push({ label: "Discard a Special Energy (Enhanced Hammer)", action: legal });
     }
+    if (legal.type === "DISCARD_RETREAT_ENERGY") {
+      const energy = card.attachedEnergy.find((entry) => entry.instanceId === legal.energyId);
+      if (energy) {
+        const energyName = game ? getDefinition(game, energy.definitionId)?.name : undefined;
+        actions.push({ label: `Discard ${energyName ?? "Energy"} for retreat`, action: legal });
+      }
+    }
     if (legal.type === "DISCARD_OPPONENT_ENERGY" && legal.pokemonId === card.instanceId) {
       const energy = card.attachedEnergy.find((entry) => entry.instanceId === legal.energyId);
       const energyName = energy && game ? getDefinition(game, energy.definitionId)?.name : undefined;

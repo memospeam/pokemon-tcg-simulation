@@ -72,6 +72,8 @@ export function getPendingPrompt(pending: import("@/lib/engine").PendingAction):
       return "Rare Candy: choose a Basic Pokémon in play to evolve.";
     case "CRUSHING_HAMMER":
       return "Crushing Hammer (heads): choose an Energy to discard.";
+    case "RETREAT_ENERGY":
+      return `Retreat: choose an Energy to discard (${pending.remainingCost.length} left).`;
     case "ENHANCED_HAMMER":
       return pending.step === "POKEMON"
         ? "Enhanced Hammer: choose an opponent's Pokémon with Special Energy."

@@ -78,6 +78,9 @@ export function useGameBoardController(
         if (game.pendingAction?.type === "CRUSHING_HAMMER") {
           return "Crushing Hammer: click an Energy on your opponent's Pokémon to discard.";
         }
+        if (game.pendingAction?.type === "RETREAT_ENERGY") {
+          return getPendingPrompt(game.pendingAction) ?? "Retreat: choose which Energy to discard.";
+        }
         if (game.pendingAction?.type === "DISTRIBUTE_BENCH_DAMAGE") {
           return `Place ${game.pendingAction.countersRemaining} more damage counter(s) on opponent's Bench (click a Benched Pokémon).`;
         }
@@ -258,6 +261,7 @@ export function useGameBoardController(
       "PROMOTE",
       "RARE_CANDY",
       "CRUSHING_HAMMER",
+      "RETREAT_ENERGY",
       "ENHANCED_HAMMER",
       "CRISPIN_ATTACH",
       "DISTRIBUTE_BENCH_DAMAGE",
