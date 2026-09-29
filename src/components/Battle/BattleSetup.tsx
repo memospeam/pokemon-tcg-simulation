@@ -124,6 +124,7 @@ export function BattleSetup({ onBattleReady }: BattleSetupProps) {
             >
               <strong>{matchup.title}</strong>
               <span>{matchup.detail}</span>
+              <span className="matchup-card__go">Play</span>
             </button>
           ))}
         </div>

@@ -210,6 +210,24 @@
   margin-bottom: 0.35rem;
 }
 
+.battle-setup__ai-kind label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(2, 6, 23, 0.4);
+  cursor: pointer;
+}
+
+.battle-setup__ai-kind label:has(input:checked) {
+  border-color: rgba(56, 189, 248, 0.7);
+  background: rgba(56, 189, 248, 0.12);
+  color: #e0f2fe;
+}
+
 .battle-setup__footer {
   justify-content: space-between;
 }
@@ -234,17 +252,44 @@
 
 .matchup-card {
   display: grid;
-  gap: 0.25rem;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 0.75rem;
+  row-gap: 0.25rem;
   text-align: left;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 1rem;
   padding: 1rem 1.1rem;
-  background: rgba(2, 6, 23, 0.45);
+  min-height: 5.5rem;
+  background: rgba(2, 6, 23, 0.55);
   color: inherit;
+  cursor: pointer;
+}
+
+.matchup-card__go {
+  grid-row: 1 / span 2;
+  align-self: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fbbf24, #f97316);
+  color: #111827;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .matchup-card strong {
+  grid-column: 1;
   font-size: 1.05rem;
+}
+
+.matchup-card > span:not(.matchup-card__go) {
+  grid-column: 1;
+}
+
+.matchup-card__go {
+  grid-column: 2;
 }
 
 .matchup-card span {
@@ -254,6 +299,8 @@
 
 .matchup-card:hover:not(:disabled) {
   border-color: rgba(251, 191, 36, 0.75);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 
 .matchup-card:disabled {
