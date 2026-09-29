@@ -249,16 +249,18 @@ export function captureSimulationFrames(
           const targetMon = [...(player.active ? [player.active] : []), ...player.bench]
             .find((p) => p.instanceId === energyTarget);
           const energy = targetMon
-            ? (pickBestEnergyForTarget(state, energiesInHand, targetMon) ?? energiesInHand[0]!)
-            : energiesInHand[0]!;
-          state = applyAction(
-            state,
-            { type: "ATTACH_ENERGY", playerId, energyId: energy.instanceId, targetId: energyTarget },
-            frames,
-            "Attach energy",
-            "energy",
-          );
-          actionCount += 1;
+            ? pickBestEnergyForTarget(state, energiesInHand, targetMon)
+            : null;
+          if (energy) {
+            state = applyAction(
+              state,
+              { type: "ATTACH_ENERGY", playerId, energyId: energy.instanceId, targetId: energyTarget },
+              frames,
+              "Attach energy",
+              "energy",
+            );
+            actionCount += 1;
+          }
         }
       }
     }

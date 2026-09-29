@@ -7,7 +7,7 @@ import {
   isDeckDrainingTrainerName,
 } from "./deckOutAwareness";
 import type { TournamentDeckPreset } from "./tournamentPresets";
-import { canAffordAttack, canAffordRetreat } from "../engine/energy";
+import { canAffordAttack, canAffordRetreat, energyPaysRetreatSymbol, retreatCostSymbols } from "../engine/energy";
 import { applyWeaknessAndResistance, canAttackThisTurn, canRareCandyEvolveInto, canEvolveInto, checkMulliganNeeded, countPrizeCards, parseDamage } from "../engine/rules";
 import { applyWeaknessAndResistanceForPokemon, remainingHpWithPassives } from "../engine/effects/passiveRules";
 import { beginGame, gameReducer, getLegalActions, startActiveGame } from "../engine/reducer";
@@ -431,7 +431,7 @@ export function runEngineAutoPlay(
         // Pokémon's own type — see pickBestEnergyForTarget for why).
         const bestEnergyForTarget = targetMon
           ? pickBestEnergyForTarget(state, energiesInHand, targetMon)
-          : energiesInHand[0];
+          : null;
 
         if (bestEnergyForTarget) {
           state = gameReducer(state, {
@@ -632,7 +632,7 @@ export function runAIOneStep(
       );
       const bestEnergy = targetMon
         ? pickBestEnergyForTarget(state, energiesInHand, targetMon)
-        : energiesInHand[0];
+        : null;
       if (bestEnergy) {
         const next = gameReducer(state, {
           type: "ATTACH_ENERGY",
@@ -2057,78 +2057,98 @@ export function pickBestAttack(
  * Returns the chosen energy CardInstance, or `null` if there are no
  * energies in the player's hand.
  */
+/** Attack-cost match. Anything below this is not worth attaching for an attack. */
+const ATTACK_ENERGY_SCORE = 40;
+/** Off-color energy that pays an unpaid retreat cost, and nothing else. */
+const RETREAT_ENERGY_SCORE = 25;
+
+function energyTypesOf(state: EngineState, energy: CardInstance): string[] {
+  const def = getDefinitionSafe(state, energy.definitionId);
+  return def.types && def.types.length > 0 ? def.types : ["Colorless"];
+}
+
+/** True when this Energy pays a retreat symbol the Pokémon cannot already pay. */
+function energyPaysUnpaidRetreat(state: EngineState, pokemon: CardInstance, energy: CardInstance): boolean {
+  if (canAffordRetreat(state, pokemon)) return false;
+  const cost = retreatCostSymbols(state, pokemon);
+  if (!cost || cost.length === 0) return false;
+  return cost.some((symbol) => energyPaysRetreatSymbol(state, pokemon, energy, symbol));
+}
+
+/**
+ * How useful this Energy is on this Pokémon.
+ * Matching an unpaid attack cost scores highest. An off-color Energy scores
+ * only when the Pokémon still cannot retreat. Otherwise the score is negative
+ * and the Energy stays in hand.
+ */
+function energyAttachmentValue(state: EngineState, target: CardInstance, energy: CardInstance): number {
+  const def = getDefinitionSafe(state, target.definitionId);
+  const attacks = def.attacks ?? [];
+  const need: Record<string, number> = {};
+  const have: Record<string, number> = {};
+
+  for (const attached of target.attachedEnergy) {
+    const type = energyTypesOf(state, attached)[0] ?? "Colorless";
+    have[type] = (have[type] ?? 0) + 1;
+  }
+
+  let colorlessNeed = 0;
+  for (const attack of attacks) {
+    const cost = attack.cost ?? [];
+    if (cost.length === 0) continue;
+    const remaining: Record<string, number> = { ...have };
+    let colorlessSlots = 0;
+    for (const symbol of cost) {
+      if (symbol === "Colorless") {
+        colorlessSlots += 1;
+      } else if ((remaining[symbol] ?? 0) > 0) {
+        remaining[symbol]! -= 1;
+      } else {
+        need[symbol] = (need[symbol] ?? 0) + 1;
+      }
+    }
+    const leftover = Object.values(remaining).reduce((sum, count) => sum + count, 0);
+    colorlessNeed += Math.max(0, colorlessSlots - leftover);
+  }
+
+  const types = energyTypesOf(state, energy);
+  let score = -100;
+  for (const type of types) {
+    if ((need[type] ?? 0) > 0 && type !== "Colorless") {
+      score = Math.max(score, 100 + need[type]! * 20);
+    } else if (colorlessNeed > 0 && (type === "Colorless" || (need[type] ?? 0) === 0)) {
+      // A Colorless attack symbol is paid by any Energy. That is still an attack attach.
+      score = Math.max(score, ATTACK_ENERGY_SCORE);
+    }
+  }
+
+  const scalesWithOwnEnergy = attacks.some((attack) =>
+    /for each .*energy attached to this/i.test(attack.text ?? ""),
+  );
+  if (scalesWithOwnEnergy) {
+    const attackTypes = new Set(attacks.flatMap((attack) => attack.cost ?? []));
+    const fits = types.some((type) => type === "Colorless" || attackTypes.has(type) || attackTypes.has("Colorless"));
+    if (fits) score = Math.max(score, 50);
+  }
+
+  if (score < ATTACK_ENERGY_SCORE && energyPaysUnpaidRetreat(state, target, energy)) {
+    score = Math.max(score, RETREAT_ENERGY_SCORE);
+  }
+  return score;
+}
+
 export function pickBestEnergyForTarget(
   state: EngineState,
   energiesInHand: CardInstance[],
   target: CardInstance,
 ): CardInstance | null {
   if (energiesInHand.length === 0) return null;
-  if (energiesInHand.length === 1) return energiesInHand[0]!;
 
-  const def = getDefinitionSafe(state, target.definitionId);
-  const attacks = def.attacks ?? [];
+  const scored = energiesInHand
+    .map((energy) => ({ energy, score: energyAttachmentValue(state, target, energy) }))
+    .sort((a, b) => b.score - a.score);
 
-  // Count what types of energy the target needs ACROSS ALL its attacks,
-  // weighted by attack cost (bigger attacks matter more). Subtract what's
-  // already attached so we focus on the GAP.
-  const need: Record<string, number> = {};
-  const have: Record<string, number> = {};
-
-  for (const eng of target.attachedEnergy) {
-    const ed = getDefinitionSafe(state, eng.definitionId);
-    const t = ed.types?.[0] ?? "Colorless";
-    have[t] = (have[t] ?? 0) + 1;
-  }
-
-  // Look at each attack and tally outstanding non-Colorless requirements.
-  // Colorless slots can be filled by anything, so we tally them last.
-  let totalColorlessNeed = 0;
-  let totalCostInProgress = 0;
-  for (const attack of attacks) {
-    const cost = attack.cost ?? [];
-    if (cost.length === 0) continue;
-    totalCostInProgress = Math.max(totalCostInProgress, cost.length);
-    const remaining: Record<string, number> = { ...have };
-    let colorlessSlots = 0;
-    for (const c of cost) {
-      if (c === "Colorless") {
-        colorlessSlots += 1;
-      } else if ((remaining[c] ?? 0) > 0) {
-        remaining[c]! -= 1;
-      } else {
-        // This typed cost is still unmet — add to need.
-        need[c] = (need[c] ?? 0) + 1;
-      }
-    }
-    // Colorless slots can be filled by leftover energy of any type. Add to
-    // the colorless tally only after accounting for what we already have.
-    const leftover = Object.values(remaining).reduce((a, b) => a + b, 0);
-    totalColorlessNeed += Math.max(0, colorlessSlots - leftover);
-  }
-
-  // Score each candidate energy by how much "need" it covers.
-  const scored = energiesInHand.map((energy) => {
-    const ed = getDefinitionSafe(state, energy.definitionId);
-    const types = ed.types ?? ["Colorless"];
-    let score = 0;
-    for (const t of types) {
-      if (t === "Colorless") {
-        // Colorless covers any Colorless slot.
-        if (totalColorlessNeed > 0) score += 30;
-        else score += 5; // mild fallback bonus
-      } else if ((need[t] ?? 0) > 0) {
-        // High value — fills a specific typed gap in an attack cost.
-        score += 100 + (need[t]! * 20);
-      } else {
-        // Energy type the attack doesn't actually need. Still useful as a
-        // Colorless filler, but much less so than the right type.
-        if (totalColorlessNeed > 0) score += 15;
-        else score -= 5; // genuinely wrong type
-      }
-    }
-    return { energy, score };
-  }).sort((a, b) => b.score - a.score);
-
+  if ((scored[0]?.score ?? 0) < RETREAT_ENERGY_SCORE) return null;
   return scored[0]!.energy;
 }
 
@@ -2204,7 +2224,7 @@ export function pickHeuristicMainAction(
       );
       const bestEnergyForTarget = targetMon
         ? pickBestEnergyForTarget(state, energiesInHand, targetMon)
-        : energiesInHand[0];
+        : null;
       if (bestEnergyForTarget) {
         return {
           type: "ATTACH_ENERGY",
@@ -2410,10 +2430,33 @@ export function pickBestEnergyTarget(state: EngineState, playerId: PlayerId, ctx
     return { id: pokemon.instanceId, score };
   }).sort((a, b) => b.score - a.score);
 
-  // Skip when every option is a deeply-negative target: true no-energy Pokémon
-  // (Dusknoir / Munkidori, scored ≤ -200) OR an already-fully-loaded board where
-  // attaching more would be wasted (capped at -90). Mildly-negative scores still
-  // attach — a sub-optimal energy beats wasting the turn's only attachment.
+  // Hand energy decides who may receive it. An attack-cost match on the deck's
+  // attacker beats every other home. Off-color energy is attached only when it
+  // pays a retreat the Pokémon cannot already pay — and only if nobody can use
+  // that energy for an attack.
+  const handEnergies = player.hand.filter(
+    (card) => getDefinitionSafe(state, card.definitionId).supertype === "Energy",
+  );
+  if (handEnergies.length > 0) {
+    const bestUse = (instanceId: string): number => {
+      const pokemon = allPokemon.find((mon) => mon.instanceId === instanceId);
+      if (!pokemon) return -100;
+      return Math.max(...handEnergies.map((energy) => energyAttachmentValue(state, pokemon, energy)));
+    };
+    const forAttack = scored.filter(
+      (entry) => entry.score > -80 && bestUse(entry.id) >= ATTACK_ENERGY_SCORE,
+    );
+    if (forAttack.length > 0) return forAttack[0]!.id;
+    const forRetreat = scored.filter(
+      (entry) => entry.score > -80 && bestUse(entry.id) >= RETREAT_ENERGY_SCORE,
+    );
+    const activeRetreat = forRetreat.find((entry) => entry.id === player.active?.instanceId);
+    if (activeRetreat) return activeRetreat.id;
+    return forRetreat[0]?.id ?? null;
+  }
+
+  // No energy in hand: still name the deck's attacker so callers that only ask
+  // "who should be loaded" keep the same answer.
   const best = scored[0];
   if (!best || best.score < -80) return null;
   return best.id;

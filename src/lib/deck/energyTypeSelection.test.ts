@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { pickBestEnergyForTarget } from "./metaGameRunner";
+import { pickBestEnergyForTarget, pickBestEnergyTarget } from "./metaGameRunner";
+import { buildStrategyContext } from "./deckStrategy";
 import { createCardInstance } from "../models/instance";
 import { GamePhase, PlayerId, Zone } from "../models/enums";
 import { emptyTurnFlags, type EngineState } from "../engine/types";
@@ -9,6 +10,7 @@ function mockPokemon(
   name: string,
   attacks: { name: string; cost: string[]; convertedEnergyCost: number; damage: string }[],
   types: string[],
+  retreatCost: string[] = [],
 ): CardDefinition {
   return {
     apiId: name,
@@ -19,6 +21,7 @@ function mockPokemon(
     types,
     abilities: [],
     attacks: attacks.map((a) => ({ ...a, text: "" })),
+    retreatCost,
     set: { id: "t", name: "t" },
     number: "1",
     images: { small: "", large: "" },
@@ -162,6 +165,122 @@ describe("pickBestEnergyForTarget — choose energy by attack-cost shortfall", (
 
     const picked = pickBestEnergyForTarget(state, [onlyOne], target);
     expect(picked).toBe(onlyOne);
+  });
+
+  it("holds an off-color Energy that does not pay an attack or a retreat", () => {
+    const attacker = mockPokemon(
+      "Attacker",
+      [{ name: "Hit", cost: ["Fire"], convertedEnergyCost: 1, damage: "30" }],
+      ["Fire"],
+    );
+    const target = createCardInstance("Attacker", PlayerId.P1, Zone.Active);
+    const grass = createCardInstance("Grass-energy", PlayerId.P1, Zone.Hand);
+    const state = buildState(
+      { Attacker: attacker, "Grass-energy": mockEnergy("Grass") },
+      target,
+      [grass],
+    );
+
+    expect(pickBestEnergyForTarget(state, [grass], target)).toBeNull();
+  });
+
+  it("attaches off-color Energy only when the Pokémon still cannot retreat", () => {
+    const attacker = mockPokemon(
+      "Attacker",
+      [{ name: "Hit", cost: ["Fire"], convertedEnergyCost: 1, damage: "30" }],
+      ["Fire"],
+      ["Colorless"],
+    );
+    const target = createCardInstance("Attacker", PlayerId.P1, Zone.Active);
+    const grass = createCardInstance("Grass-energy", PlayerId.P1, Zone.Hand);
+    const state = buildState(
+      { Attacker: attacker, "Grass-energy": mockEnergy("Grass") },
+      target,
+      [grass],
+    );
+
+    expect(pickBestEnergyForTarget(state, [grass], target)?.definitionId).toBe("Grass-energy");
+  });
+
+  it("prefers the attack's color over an off-color Energy that could also pay retreat", () => {
+    const attacker = mockPokemon(
+      "Attacker",
+      [{ name: "Hit", cost: ["Fire"], convertedEnergyCost: 1, damage: "30" }],
+      ["Fire"],
+      ["Colorless"],
+    );
+    const target = createCardInstance("Attacker", PlayerId.P1, Zone.Active);
+    const fire = createCardInstance("Fire-energy", PlayerId.P1, Zone.Hand);
+    const grass = createCardInstance("Grass-energy", PlayerId.P1, Zone.Hand);
+    const state = buildState(
+      { Attacker: attacker, "Fire-energy": mockEnergy("Fire"), "Grass-energy": mockEnergy("Grass") },
+      target,
+      [fire, grass],
+    );
+
+    expect(pickBestEnergyForTarget(state, [fire, grass], target)?.definitionId).toBe("Fire-energy");
+  });
+
+  it("loads the deck attacker with its attack color before a bench Pokémon", () => {
+    const dragapult = mockPokemon(
+      "Dragapult ex",
+      [{ name: "Phantom Dive", cost: ["Fire", "Psychic"], convertedEnergyCost: 2, damage: "200" }],
+      ["Psychic"],
+    );
+    const dreepy = mockPokemon(
+      "Dreepy",
+      [{ name: "Headbutt", cost: ["Psychic"], convertedEnergyCost: 1, damage: "10" }],
+      ["Psychic"],
+    );
+    const active = createCardInstance("Dreepy", PlayerId.P1, Zone.Active);
+    const bench = createCardInstance("Dragapult ex", PlayerId.P1, Zone.Bench);
+    const psychic = createCardInstance("Psychic-energy", PlayerId.P1, Zone.Hand);
+    const state = buildState(
+      {
+        "Dragapult ex": dragapult,
+        Dreepy: dreepy,
+        "Psychic-energy": mockEnergy("Psychic"),
+      },
+      active,
+      [psychic],
+    );
+    state.players[PlayerId.P1].bench = [bench];
+    const ctx = buildStrategyContext(["Dragapult ex", "Dreepy", "Drakloak"]);
+
+    expect(pickBestEnergyTarget(state, PlayerId.P1, ctx)).toBe(bench.instanceId);
+    expect(pickBestEnergyForTarget(state, [psychic], bench)?.definitionId).toBe("Psychic-energy");
+  });
+
+  it("does not put an off-color Energy on the deck attacker when retreat is already paid", () => {
+    const dragapult = mockPokemon(
+      "Dragapult ex",
+      [{ name: "Phantom Dive", cost: ["Psychic"], convertedEnergyCost: 1, damage: "200" }],
+      ["Psychic"],
+    );
+    const munkidori = mockPokemon(
+      "Munkidori",
+      [{ name: "Adrena-Brain", cost: ["Darkness"], convertedEnergyCost: 1, damage: "0" }],
+      ["Darkness"],
+    );
+    const active = createCardInstance("Dragapult ex", PlayerId.P1, Zone.Active);
+    active.attachedEnergy = [createCardInstance("Psychic-energy", PlayerId.P1, Zone.Active)];
+    const bench = createCardInstance("Munkidori", PlayerId.P1, Zone.Bench);
+    const darkness = createCardInstance("Darkness-energy", PlayerId.P1, Zone.Hand);
+    const state = buildState(
+      {
+        "Dragapult ex": dragapult,
+        Munkidori: munkidori,
+        "Psychic-energy": mockEnergy("Psychic"),
+        "Darkness-energy": mockEnergy("Darkness"),
+      },
+      active,
+      [darkness],
+    );
+    state.players[PlayerId.P1].bench = [bench];
+    const ctx = buildStrategyContext(["Dragapult ex", "Dreepy", "Munkidori"]);
+
+    expect(pickBestEnergyTarget(state, PlayerId.P1, ctx)).toBeNull();
+    expect(pickBestEnergyForTarget(state, [darkness], active)).toBeNull();
   });
 
   it("returns null when hand has no energies", () => {
